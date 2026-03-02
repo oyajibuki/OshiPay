@@ -533,6 +533,86 @@ input::placeholder {
     text-decoration: none !important;
 }
 
+/* ── ランディングページ専用 ── */
+.lp-container {
+    padding: 20px 0 60px;
+    text-align: center;
+}
+.lp-hero {
+    margin-bottom: 40px;
+}
+.lp-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.lp-tagline {
+    font-size: 1.2rem;
+    color: rgba(240,240,245,0.7);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+.lp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin: 40px 0;
+}
+.lp-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 24px;
+    padding: 30px;
+    text-align: left;
+    transition: all 0.3s ease;
+}
+.lp-card:hover {
+    background: rgba(255,255,255,0.05);
+    transform: translateY(-5px);
+}
+.lp-card-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+}
+.lp-card-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #fff;
+}
+.lp-card-text {
+    font-size: 14px;
+    color: rgba(240,240,245,0.6);
+    line-height: 1.6;
+}
+.lp-step {
+    font-size: 13px;
+    color: #8b5cf6;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+    display: block;
+}
+.legal-links {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 40px;
+    font-size: 11px;
+    color: rgba(240,240,245,0.3);
+}
+.legal-links a {
+    color: inherit;
+    text-decoration: none;
+}
+.legal-links a:hover {
+    color: #8b5cf6;
+}
+
 /* パーティクル */
 .particles-bg {
     position: fixed;
@@ -575,7 +655,16 @@ st.markdown(particles_html, unsafe_allow_html=True)
 # ページルーティング (query params)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 params = st.query_params
-page = params.get("page", "dashboard")
+# 何もパラメータがない場合は lp をデフォルトにする
+page = params.get("page", "lp") if not params else params.get("page", "lp")
+
+# 特定のパラメータがある場合はそれぞれのページへ誘導
+if not params.get("page"):
+    if params.get("user") or params.get("acct"):
+        page = "support"
+    else:
+        page = "lp"
+
 support_user = params.get("user", "")
 support_name = params.get("name", "")
 support_icon = params.get("icon", "🎤")
@@ -636,6 +725,80 @@ if page == "success":
     st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={encoded_text}", use_container_width=True)
 
     st.markdown('<div class="oshi-footer animate-fade-in delay-3">Powered by <a href="?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🔥 ランディングページ
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+elif page == "lp":
+    st.markdown("""
+    <div class="lp-container animate-fade-in">
+        <div class="lp-hero">
+            <div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>
+            <h1 class="lp-title">その感動、今すぐカタチに。</h1>
+            <p class="lp-tagline">
+                アカウントを作ってQRコードを表示するだけ。<br>
+                あなたの活動を応援したい気持ちを、ダイレクトに受け取れます。
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 「はじめる」ボタン
+    if st.button("🚀 今すぐはじめる（無料）", use_container_width=True, key="lp_start"):
+        st.query_params.page = "dashboard"
+        st.rerun()
+
+    st.markdown("""
+    <div class="lp-container animate-fade-in delay-1">
+        <span class="lp-step">Use Cases</span>
+        <h2 style="font-size:24px; margin-bottom:30px;">いろんなシーンで応援を</h2>
+        
+        <div class="lp-grid">
+            <div class="lp-card">
+                <div class="lp-card-icon">🎤</div>
+                <div class="lp-card-title">ストリートパフォーマンス</div>
+                <div class="lp-card-text">QRコードを貼るだけで、聴衆から直接応援が届きます。小銭を持ち歩かない時代に最適です。</div>
+            </div>
+            <div class="lp-card">
+                <div class="lp-card-icon">☕</div>
+                <div class="lp-card-title">カフェ・飲食店</div>
+                <div class="lp-card-text">素晴らしいサービスへの感謝をチップとして。店員さん個人への応援をスマートに実現。</div>
+            </div>
+            <div class="lp-card">
+                <div class="lp-card-icon">🧹</div>
+                <div class="lp-card-title">施設の清掃・維持</div>
+                <div class="lp-card-text">いつも綺麗な環境への感謝を。トイレの清掃員さんなど、影で支える人へお礼を。</div>
+            </div>
+            <div class="lp-card">
+                <div class="lp-card-icon">🔥</div>
+                <div class="lp-card-title">あらゆるプロジェクト</div>
+                <div class="lp-card-text">情熱を持って活動するすべての人に。登録不要、最短1分で投げ銭の受付を開始。</div>
+            </div>
+        </div>
+
+        <div class="oshi-divider"></div>
+        
+        <div style="margin-top:40px;">
+            <p style="font-size:14px; color:rgba(240,240,245,0.6); margin-bottom:20px;">
+                安心のStripe決済を利用。応援額の90%があなたの手元に。
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("🔥 応援を受け取りたい方はこちら（無料登録）", use_container_width=True, key="lp_start_bottom"):
+        st.query_params.page = "dashboard"
+        st.rerun()
+
+    st.markdown("""
+    <div class="legal-links animate-fade-in delay-3">
+        <a href="#">利用規約</a>
+        <a href="#">プライバシーポリシー</a>
+        <a href="#">特定商取引法に基づく表記</a>
+    </div>
+    <div class="oshi-footer animate-fade-in delay-3">© 2026 OshiPay ― 応援を、もっとシンプルに。</div>
+    """, unsafe_allow_html=True)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
