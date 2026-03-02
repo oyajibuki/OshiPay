@@ -8,6 +8,9 @@ import streamlit.components.v1 as components
 import stripe
 import qrcode
 import urllib.parse
+import smtplib
+from email.mime.text import MIMEText
+from email.utils import formatdate
 
 # ── ページ設定 ──
 st.set_page_config(
@@ -81,6 +84,49 @@ def create_account_link(account_id, return_params=""):
         type="account_onboarding",
     )
     return link.url
+
+
+def send_support_email(to_email, creator_name, amount, message):
+    """クリエイターに応援メッセージと金額をメールで通知"""
+    try:
+        smtp_server = st.secrets.get("SMTP_SERVER")
+        smtp_port = st.secrets.get("SMTP_PORT", 587)
+        smtp_user = st.secrets.get("SMTP_USER")
+        smtp_pass = st.secrets.get("SMTP_PASS")
+
+        if not all([smtp_server, smtp_user, smtp_pass]):
+            return False, "SMTP設定が不足しています"
+
+        subject = f"🔥 {creator_name}さんに応援が届きました！ (OshiPay)"
+        body = f"""
+{creator_name}さん
+
+OshiPayを通じて応援が届きました！
+
+💰 応援金額: {amount:,}円
+💬 メッセージ:
+{message if message else "（メッセージなし）"}
+
+温かいサポート、嬉しいですね！
+引き続き活動を頑張ってください！
+
+--
+OshiPay
+{BASE_URL}
+"""
+        msg = MIMEText(body)
+        msg["Subject"] = subject
+        msg["From"] = smtp_user
+        msg["To"] = to_email
+        msg["Date"] = formatdate(localtime=True)
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+        return True, "送信成功"
+    except Exception as e:
+        return False, str(e)
 
 
 def check_account_status(account_id):
@@ -533,75 +579,6 @@ input::placeholder {
     text-decoration: none !important;
 }
 
-/* ── ランディングページ専用 ── */
-.lp-container {
-    padding: 20px 0 60px;
-    text-align: center;
-}
-.lp-hero {
-    margin-bottom: 40px;
-}
-.lp-title {
-    font-size: 3.5rem;
-    font-weight: 800;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.lp-tagline {
-    font-size: 1.2rem;
-    color: rgba(240,240,245,0.7);
-    margin-bottom: 2rem;
-    line-height: 1.6;
-}
-.lp-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
-    margin: 40px 0;
-}
-.lp-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 24px;
-    padding: 30px;
-    text-align: left;
-    transition: all 0.3s ease;
-}
-.lp-card:hover {
-    background: rgba(255,255,255,0.05);
-    transform: translateY(-5px);
-}
-.lp-card-icon {
-    font-size: 32px;
-    margin-bottom: 16px;
-}
-.lp-card-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: #fff;
-}
-.lp-card-text {
-    font-size: 14px;
-    color: rgba(240,240,245,0.6);
-    line-height: 1.6;
-}
-.lp-step {
-    font-size: 13px;
-    color: #8b5cf6;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 20px;
-    display: block;
-}
-.legal-links {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    margin-top: 40px;
     font-size: 11px;
     color: rgba(240,240,245,0.3);
 }
@@ -655,15 +632,15 @@ st.markdown(particles_html, unsafe_allow_html=True)
 # ページルーティング (query params)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 params = st.query_params
-# 何もパラメータがない場合は lp をデフォルトにする
-page = params.get("page", "lp") if not params else params.get("page", "lp")
+# デフォルトを dashboard に戻す
+page = params.get("page", "dashboard")
 
 # 特定のパラメータがある場合はそれぞれのページへ誘導
 if not params.get("page"):
     if params.get("user") or params.get("acct"):
         page = "support"
     else:
-        page = "lp"
+        page = "dashboard"
 
 support_user = params.get("user", "")
 support_name = params.get("name", "")
@@ -671,6 +648,7 @@ support_icon = params.get("icon", "🎤")
 connect_acct = params.get("acct", "")  # Stripe Connect アカウントID
 success_name = params.get("s_name", "")  # 決済成功時の名前
 success_amount = params.get("s_amt", "") # 決済成功時の金額
+session_id = params.get("session_id", "") # 決済成功時のセッションID
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -715,6 +693,35 @@ if page == "success":
     st.markdown('<div class="section-subtitle">あなたの応援が届きました！<br>温かいサポート、ありがとうございます 🙏✨</div>', unsafe_allow_html=True)
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
 
+    # メール送信ロジック（一度だけ実行）
+    if session_id and "processed_sessions" not in st.session_state:
+        st.session_state.processed_sessions = set()
+
+    if session_id and session_id not in st.session_state.processed_sessions:
+        try:
+            # セッション詳細を取得
+            checkout_session = stripe.checkout.Session.retrieve(session_id, expand=["payment_intent"])
+            msg_content = checkout_session.metadata.get("support_message", "")
+            amt_val = checkout_session.amount_total
+            
+            # クリエイターのアカウント情報を取得
+            creator_acct_id = checkout_session.metadata.get("user_id")
+            if creator_acct_id:
+                creator_acct = stripe.Account.retrieve(creator_acct_id)
+                creator_email = creator_acct.email
+                creator_name = creator_acct.settings.dashboard.display_name or creator_name
+                
+                if creator_email:
+                    success, error = send_support_email(creator_email, creator_name, amt_val, msg_content)
+                    if success:
+                        st.toast("応援メッセージをメールで送信しました！📧")
+                    else:
+                        st.warning(f"メール送信に失敗しました: {error}")
+            
+            st.session_state.processed_sessions.add(session_id)
+        except Exception as e:
+            st.error(f"情報の取得に失敗しました: {e}")
+
     # Xシェア文言のカスタマイズ
     if success_name and success_amount:
         share_text = f"{success_name}さんに{success_amount}円 応援したよ！\nhttps://oshipay.streamlit.app/ \n#OshiPay"
@@ -724,81 +731,16 @@ if page == "success":
     encoded_text = urllib.parse.quote(share_text)
     st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={encoded_text}", use_container_width=True)
 
-    st.markdown('<div class="oshi-footer animate-fade-in delay-3">Powered by <a href="?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
-
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 🔥 ランディングページ
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-elif page == "lp":
     st.markdown("""
-    <div class="lp-container animate-fade-in">
-        <div class="lp-hero">
-            <div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>
-            <h1 class="lp-title">その感動、今すぐカタチに。</h1>
-            <p class="lp-tagline">
-                アカウントを作ってQRコードを表示するだけ。<br>
-                あなたの活動を応援したい気持ちを、ダイレクトに受け取れます。
-            </p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # 「はじめる」ボタン
-    if st.button("🚀 今すぐはじめる（無料）", use_container_width=True, key="lp_start"):
-        st.query_params.page = "dashboard"
-        st.rerun()
-
-    st.markdown("""
-    <div class="lp-container animate-fade-in delay-1">
-        <span class="lp-step">Use Cases</span>
-        <h2 style="font-size:24px; margin-bottom:30px;">いろんなシーンで応援を</h2>
-        
-        <div class="lp-grid">
-            <div class="lp-card">
-                <div class="lp-card-icon">🎤</div>
-                <div class="lp-card-title">ストリートパフォーマンス</div>
-                <div class="lp-card-text">QRコードを貼るだけで、聴衆から直接応援が届きます。小銭を持ち歩かない時代に最適です。</div>
-            </div>
-            <div class="lp-card">
-                <div class="lp-card-icon">☕</div>
-                <div class="lp-card-title">カフェ・飲食店</div>
-                <div class="lp-card-text">素晴らしいサービスへの感謝をチップとして。店員さん個人への応援をスマートに実現。</div>
-            </div>
-            <div class="lp-card">
-                <div class="lp-card-icon">🧹</div>
-                <div class="lp-card-title">施設の清掃・維持</div>
-                <div class="lp-card-text">いつも綺麗な環境への感謝を。トイレの清掃員さんなど、影で支える人へお礼を。</div>
-            </div>
-            <div class="lp-card">
-                <div class="lp-card-icon">🔥</div>
-                <div class="lp-card-title">あらゆるプロジェクト</div>
-                <div class="lp-card-text">情熱を持って活動するすべての人に。登録不要、最短1分で投げ銭の受付を開始。</div>
-            </div>
-        </div>
-
-        <div class="oshi-divider"></div>
-        
-        <div style="margin-top:40px;">
-            <p style="font-size:14px; color:rgba(240,240,245,0.6); margin-bottom:20px;">
-                安心のStripe決済を利用。応援額の90%があなたの手元に。
-            </p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if st.button("🔥 応援を受け取りたい方はこちら（無料登録）", use_container_width=True, key="lp_start_bottom"):
-        st.query_params.page = "dashboard"
-        st.rerun()
-
-    st.markdown("""
-    <div class="legal-links animate-fade-in delay-3">
+    <div class="oshi-footer animate-fade-in delay-3">Powered by <a href="?page=dashboard">OshiPay</a></div>
+    <div class="legal-links animate-fade-in delay-3" style="margin-top:20px;">
         <a href="#">利用規約</a>
         <a href="#">プライバシーポリシー</a>
         <a href="#">特定商取引法に基づく表記</a>
     </div>
-    <div class="oshi-footer animate-fade-in delay-3">© 2026 OshiPay ― 応援を、もっとシンプルに。</div>
     """, unsafe_allow_html=True)
+
+
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -868,6 +810,11 @@ elif page == "support" and support_user:
     else:
         st.markdown('<div class="selected-amount-display">&nbsp;</div>', unsafe_allow_html=True)
 
+    # 応援メッセージ入力
+    st.markdown('<p style="font-size:12px;font-weight:600;color:rgba(240,240,245,0.6);text-transform:uppercase;letter-spacing:1px;margin-top:24px;margin-bottom:12px;">応援メッセージ（140文字まで）</p>', unsafe_allow_html=True)
+    support_message = st.text_area("応援のメッセージを添えてみませんか？", max_chars=140, placeholder="素敵なパフォーマンスでした！応援しています！", label_visibility="collapsed")
+
+
     # 応援するボタン
     if st.button("🔥 応援する！", key="support_btn", use_container_width=True):
         amount = st.session_state.selected_amount
@@ -890,11 +837,12 @@ elif page == "support" and support_user:
                         "quantity": 1,
                     }],
                     "mode": "payment",
-                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(display_name)}&s_amt={amount}",
+                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(display_name)}&s_amt={amount}&session_id={{CHECKOUT_SESSION_ID}}",
                     "cancel_url": f"{BASE_URL}?page=cancel",
                     "metadata": {
-                        "user_id": support_user,
+                        "user_id": support_user if not connect_acct else connect_acct,
                         "display_name": display_name,
+                        "support_message": support_message,
                     },
                 }
 
@@ -920,7 +868,15 @@ elif page == "support" and support_user:
                 st.error(f"決済エラー: {e}")
 
     st.markdown('<p style="text-align:center;margin-top:14px;font-size:11px;color:rgba(240,240,245,0.35);line-height:1.6;">クレジットカードで安全にお支払い（Stripe）<br>応援額の90%がクリエイターに届きます</p>', unsafe_allow_html=True)
-    st.markdown('<div class="oshi-footer animate-fade-in delay-3">Powered by <a href="?page=dashboard">OshiPay</a> ― 応援を、もっとシンプルに。</div>', unsafe_allow_html=True)
+    # フッター (応援ページ)
+    st.markdown("""
+    <div class="oshi-footer animate-fade-in delay-3" style="margin-top:40px;">Powered by <a href="?page=dashboard">OshiPay</a></div>
+    <div class="legal-links animate-fade-in delay-3" style="margin-top:20px;">
+        <a href="#">利用規約</a>
+        <a href="#">プライバシーポリシー</a>
+        <a href="#">特定商取引法に基づく表記</a>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
