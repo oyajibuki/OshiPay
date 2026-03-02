@@ -100,10 +100,6 @@ def create_connect_account():
             "routing_number": "1100000",
             "account_number": "0001234",
         },
-        tos_acceptance={
-            "date": int(__import__("time").time()),
-            "ip": "127.0.0.1",
-        },
     )
     return account.id
 
