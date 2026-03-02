@@ -788,14 +788,16 @@ elif page == "support" and support_user:
     if "selected_amount" not in st.session_state:
         st.session_state.selected_amount = None
 
-    # 金額ボタン（2列構成にすることで、モバイルでも 100, 500, 1000 ... と順に並びやすくする）
-    cols = st.columns(2)
-    for i, amount in enumerate(PRESET_AMOUNTS):
-        col = cols[i % 2]
-        with col:
-            if st.button(f"¥{amount:,}", key=f"amt_{amount}", use_container_width=True):
-                st.session_state.selected_amount = amount
-                st.session_state.custom_mode = False
+    # 金額ボタン（行ごとに columns を作ることで、モバイルでスタックされても順序が崩れないようにする）
+    for i in range(0, len(PRESET_AMOUNTS), 2):
+        cols = st.columns(2)
+        for j in range(2):
+            if i + j < len(PRESET_AMOUNTS):
+                amount = PRESET_AMOUNTS[i + j]
+                with cols[j]:
+                    if st.button(f"¥{amount:,}", key=f"amt_{amount}", use_container_width=True):
+                        st.session_state.selected_amount = amount
+                        st.session_state.custom_mode = False
 
     # 任意の金額
     if "custom_mode" not in st.session_state:
