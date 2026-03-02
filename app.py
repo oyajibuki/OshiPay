@@ -633,7 +633,7 @@ page = params.get("page", "lp")
 
 # ページ種類に応じた動的なCSS適用 (LPのみフルワイド)
 if page == "lp":
-    # 巧妙な方法で親ウィンドウにメッセージリスナーを注入し、iframeを全画面に固定
+    # LPページを画面全体に固定表示し、iframe自身のスクロールに任せる
     st.markdown("""
         <style>
         /* LPページを画面全体に固定表示し、iframe自身のスクロールに任せる */
@@ -641,7 +641,7 @@ if page == "lp":
             max-width: none !important;
             padding: 0 !important;
         }
-        iframe { 
+        iframe {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -654,17 +654,6 @@ if page == "lp":
         [data-testid="stHeader"], footer { display: none !important; }
         .stApp { overflow: hidden !important; }
         </style>
-        
-        <img src="x" onerror="
-            if (!window.oshi_bridge_active) {
-                window.oshi_bridge_active = true;
-                window.addEventListener('message', function(e) {
-                    if (e.data && e.data.type === 'navigate') {
-                        window.location.href = e.data.url;
-                    }
-                });
-            }
-        " style="display:none;">
     """, unsafe_allow_html=True)
 else:
     st.markdown("""
@@ -811,10 +800,10 @@ elif page == "lp":
             with open(lp_path, "r", encoding="utf-8") as f:
                 lp_html = f.read()
             
-            # リンクをブリッジ通信形式に確実に置換
-            lp_html = lp_html.replace('href="?page=dashboard"', 'href="javascript:void(0)" onclick="window.parent.postMessage({type:\'navigate\', url:\'/?page=dashboard\'}, \'*\');"')
-            lp_html = lp_html.replace('href="/?page=dashboard"', 'href="javascript:void(0)" onclick="window.parent.postMessage({type:\'navigate\', url:\'/?page=dashboard\'}, \'*\');"')
-            
+            # 残存する相対リンクを window.top.location.href による直接ナビゲーションに置換
+            lp_html = lp_html.replace('href="?page=dashboard"', 'href="javascript:void(0)" onclick="window.top.location.href=\'/?page=dashboard\';"')
+            lp_html = lp_html.replace('href="/?page=dashboard"', 'href="javascript:void(0)" onclick="window.top.location.href=\'/?page=dashboard\';"')
+
             # scrolling=True にして iframe内のスクロールを有効化
             # (CSSの position: fixed; height: 100vh; によって画面全域をカバー)
             st.components.v1.html(lp_html, height=1000, scrolling=True)
