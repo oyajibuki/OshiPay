@@ -7,6 +7,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import stripe
 import qrcode
+import urllib.parse
 
 # ── ページ設定 ──
 st.set_page_config(
@@ -631,7 +632,6 @@ if page == "success":
     else:
         share_text = "OshiPay で応援しました！🔥 #OshiPay"
     
-    import urllib.parse
     encoded_text = urllib.parse.quote(share_text)
     st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={encoded_text}", use_container_width=True)
 
@@ -727,7 +727,7 @@ elif page == "support" and support_user:
                         "quantity": 1,
                     }],
                     "mode": "payment",
-                    "success_url": f"{BASE_URL}?page=success&s_name={display_name}&s_amt={amount}",
+                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(display_name)}&s_amt={amount}",
                     "cancel_url": f"{BASE_URL}?page=cancel",
                     "metadata": {
                         "user_id": support_user,
