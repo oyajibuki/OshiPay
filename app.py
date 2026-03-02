@@ -788,9 +788,10 @@ elif page == "lp":
             with open(lp_path, "r", encoding="utf-8") as f:
                 lp_html = f.read()
             
-            # ボタンクリックで dashboard へ遷移するように Aタグを動的に修正
+            # 全てのダッシュボードリンクに target="_top" を付与（iframe内からの親画面遷移を保証）
             lp_html = lp_html.replace('href="?page=dashboard"', 'href="?page=dashboard" target="_top"')
-            st.components.v1.html(lp_html, height=6000, scrolling=True)
+            # 表示高度を調整（コンテンツ量に合わせて短縮して余白を消す）
+            st.components.v1.html(lp_html, height=4100, scrolling=False)
         except Exception as e:
             st.error(f"LPの読み込み中にエラーが発生しました: {e}")
     else:
