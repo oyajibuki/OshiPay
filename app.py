@@ -28,7 +28,7 @@ except Exception:
     stripe.api_key = os.environ.get("STRIPE_SECRET", "")
 
 # プリセット金額
-PRESET_AMOUNTS = [100, 500, 1000, 10000, 30000]
+PRESET_AMOUNTS = [100, 500, 1000, 5000, 10000, 30000]
 
 # プラットフォーム手数料（10%）
 PLATFORM_FEE_PERCENT = 10
