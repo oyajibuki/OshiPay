@@ -788,10 +788,10 @@ elif page == "support" and support_user:
     if "selected_amount" not in st.session_state:
         st.session_state.selected_amount = None
 
-    # 金額ボタン（Streamlitのcolumns）
-    cols = st.columns(3)
+    # 金額ボタン（2列構成にすることで、モバイルでも 100, 500, 1000 ... と順に並びやすくする）
+    cols = st.columns(2)
     for i, amount in enumerate(PRESET_AMOUNTS):
-        col = cols[i % 3]
+        col = cols[i % 2]
         with col:
             if st.button(f"¥{amount:,}", key=f"amt_{amount}", use_container_width=True):
                 st.session_state.selected_amount = amount
