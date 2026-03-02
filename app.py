@@ -11,6 +11,7 @@ import urllib.parse
 import smtplib
 from email.mime.text import MIMEText
 from email.utils import formatdate
+from PIL import Image
 
 # ── ページ設定 ──
 st.set_page_config(
@@ -143,20 +144,40 @@ def check_account_status(account_id):
 
 
 def generate_qr_base64(data: str) -> str:
-    """QRコードを生成しBase64文字列で返す"""
+    """QRコードを生成し、中央にロゴを配置してBase64文字列で返す"""
     qr = qrcode.QRCode(
         version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,  # ロゴ挿入のためエラー訂正を高める
         box_size=10,
-        border=2,
+        border=4,
     )
     qr.add_data(data)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="#6c2bd9", back_color="white")
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    # QRコードを画像として生成 (RGB)
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert('RGB')
+    
+    # ロゴ画像の読み込み
+    logo_path = "assets/oshi_logo.png"
+    if os.path.exists(logo_path):
+        logo = Image.open(logo_path).convert("RGBA")
+        
+        # ロゴのリサイズ (QRコードの約20%程度)
+        qr_width, qr_height = qr_img.size
+        logo_size = int(qr_width * 0.22)
+        logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
+        
+        # 貼り付け位置（中央）
+        pos = ((qr_width - logo_size) // 2, (qr_height - logo_size) // 2)
+        
+        # ロゴを合成（透過対応）
+        qr_img.paste(logo, pos, logo)
+    
+    # バッファに保存してBase64化
+    buffered = io.BytesIO()
+    qr_img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    return f"data:image/png;base64,{img_str}"
 
 
 def get_qr_bytes(data: str) -> bytes:
