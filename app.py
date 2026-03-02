@@ -143,11 +143,11 @@ def check_account_status(account_id):
         return None
 
 
-def generate_qr_base64(data: str) -> str:
-    """QRコードを生成し、中央にロゴを配置してBase64文字列で返す"""
+def generate_qr_data(data: str) -> tuple[str, bytes]:
+    """QRコードを生成し、中央にロゴを配置して(Base64文字列, バイト列)を返す"""
     qr = qrcode.QRCode(
         version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,  # ロゴ挿入のためエラー訂正を高める
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
         box_size=10,
         border=4,
     )
@@ -160,41 +160,25 @@ def generate_qr_base64(data: str) -> str:
     # ロゴ画像の読み込み
     logo_path = "assets/oshi_logo.png"
     if os.path.exists(logo_path):
-        logo = Image.open(logo_path).convert("RGBA")
-        
-        # ロゴのリサイズ (QRコードの約20%程度)
-        qr_width, qr_height = qr_img.size
-        logo_size = int(qr_width * 0.22)
-        logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
-        
-        # 貼り付け位置（中央）
-        pos = ((qr_width - logo_size) // 2, (qr_height - logo_size) // 2)
-        
-        # ロゴを合成（透過対応）
-        qr_img.paste(logo, pos, logo)
+        try:
+            logo = Image.open(logo_path).convert("RGBA")
+            qr_width, qr_height = qr_img.size
+            logo_size = int(qr_width * 0.22)
+            logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
+            pos = ((qr_width - logo_size) // 2, (qr_height - logo_size) // 2)
+            qr_img.paste(logo, pos, logo)
+        except Exception:
+            pass # ロゴ読み込み失敗時は通常のQRのみ
     
-    # バッファに保存してBase64化
+    # バッファに保存
     buffered = io.BytesIO()
     qr_img.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    return img_str
+    qr_bytes = buffered.getvalue()
+    img_b64 = base64.b64encode(qr_bytes).decode()
+    
+    return img_b64, qr_bytes
 
 
-def get_qr_bytes(data: str) -> bytes:
-    """QRコードをバイト列で返す（ダウンロード用）"""
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
-        box_size=10,
-        border=2,
-    )
-    qr.add_data(data)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="#6c2bd9", back_color="white")
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-    return buffer.getvalue()
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1001,29 +985,40 @@ else:
                 selected_icon = st.session_state.selected_icon
                 support_url = f"{BASE_URL}?page=support&user={user_id}&name={creator_name}&icon={selected_icon}&acct={acct_id}"
 
-                qr_b64 = generate_qr_base64(support_url)
-                qr_bytes = get_qr_bytes(support_url)
+                qr_b64, qr_bytes = generate_qr_data(support_url)
+                
+                # 状態を保存
+                st.session_state.last_qr = {
+                    "b64": qr_b64,
+                    "bytes": qr_bytes,
+                    "url": support_url,
+                    "user_id": user_id
+                }
 
-                st.markdown(f"""
-                <div style="text-align:center;margin:24px 0;animation:slideUp 0.5s ease both;">
-                    <div class="qr-frame">
-                        <img src="data:image/png;base64,{qr_b64}" alt="QRコード" />
-                    </div>
-                    <p style="font-size:11px;color:rgba(240,240,245,0.35);text-align:center;word-break:break-all;max-width:300px;margin:16px auto;line-height:1.5;">{support_url}</p>
+        # 生成済みQRコードがある場合は表示
+        if "last_qr" in st.session_state:
+            res = st.session_state.last_qr
+            st.markdown(f"""
+            <div style="text-align:center;margin:24px 0;animation:slideUp 0.5s ease both;">
+                <div class="qr-frame">
+                    <img src="data:image/png;base64,{res['b64']}" alt="QRコード" />
                 </div>
-                """, unsafe_allow_html=True)
+                <p style="font-size:11px;color:rgba(240,240,245,0.35);text-align:center;word-break:break-all;max-width:300px;margin:16px auto;line-height:1.5;">{res['url']}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.download_button(
-                        "💾 QR保存",
-                        data=qr_bytes,
-                        file_name=f"oshiPay-qr-{user_id}.png",
-                        mime="image/png",
-                        use_container_width=True,
-                    )
-                with col2:
-                    if st.button("📋 URLコピー", use_container_width=True):
-                        st.code(support_url, language=None)
+            col1, col2 = st.columns(2)
+            with col1:
+                st.download_button(
+                    "💾 QR保存",
+                    data=res['bytes'],
+                    file_name=f"oshiPay-qr-{res['user_id']}.png",
+                    mime="image/png",
+                    use_container_width=True,
+                )
+            with col2:
+                if st.button("📋 URLコピー", use_container_width=True):
+                    st.code(res['url'], language=None)
+                    st.toast("URLをコピーできる状態にしました！")
 
     st.markdown('<div class="oshi-footer animate-fade-in delay-3">Powered by <a href="#">OshiPay</a></div>', unsafe_allow_html=True)
