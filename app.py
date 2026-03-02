@@ -633,26 +633,19 @@ page = params.get("page", "lp")
 
 # ページ種類に応じた動的なCSS適用 (LPのみフルワイド)
 if page == "lp":
-    # LPページを画面全体に固定表示し、iframe自身のスクロールに任せる
+    # LP用CSS（iframeなし・直接レンダリング）
     st.markdown("""
         <style>
-        /* LPページを画面全体に固定表示し、iframe自身のスクロールに任せる */
         .stMainBlockContainer, .block-container {
             max-width: none !important;
             padding: 0 !important;
+            margin: 0 !important;
         }
-        iframe {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            z-index: 999999 !important;
-            border: none !important;
-        }
-        /* 親画面のスクロールとヘッダーを完全に消す */
         [data-testid="stHeader"], footer { display: none !important; }
-        .stApp { overflow: hidden !important; }
+        /* Streamlitのメインエリアのデフォルトpadding除去 */
+        section[data-testid="stMain"] > div:first-child { padding: 0 !important; }
+        /* LP上にStreamlitのパーティクルを非表示 */
+        .particles-bg { display: none !important; }
         </style>
     """, unsafe_allow_html=True)
 else:
@@ -797,16 +790,58 @@ elif page == "lp":
     
     if os.path.exists(lp_path):
         try:
+            import re
             with open(lp_path, "r", encoding="utf-8") as f:
                 lp_html = f.read()
-            
-            # 残存する相対リンクを target="_top" による直接ナビゲーションに置換
-            lp_html = lp_html.replace('href="?page=dashboard"', 'href="/?page=dashboard" target="_top"')
-            lp_html = lp_html.replace('href="/?page=dashboard"', 'href="/?page=dashboard" target="_top"')
 
-            # scrolling=True にして iframe内のスクロールを有効化
-            # (CSSの position: fixed; height: 100vh; によって画面全域をカバー)
-            st.components.v1.html(lp_html, height=1000, scrolling=True)
+            # <head>内の<style>タグを抽出
+            head_styles = "".join(re.findall(r"<style[^>]*>.*?</style>", lp_html, re.DOTALL | re.IGNORECASE))
+
+            # <body>のclass属性と内容を抽出
+            body_match = re.search(r"<body([^>]*)>(.*?)</body>", lp_html, re.DOTALL | re.IGNORECASE)
+            if body_match:
+                body_attrs    = body_match.group(1)
+                body_content  = body_match.group(2)
+            else:
+                body_attrs   = ""
+                body_content = lp_html
+
+            # <script>タグを除去（img onerror で後から注入）
+            body_content = re.sub(r"<script\b[^>]*>.*?</script>", "", body_content, flags=re.DOTALL | re.IGNORECASE)
+
+            # body の class 属性を取得
+            body_cls_m  = re.search(r'class="([^"]*)"', body_attrs)
+            body_classes = body_cls_m.group(1) if body_cls_m else ""
+
+            # Tailwind・Lucide・IntersectionObserverをimg onerrorトリックで注入
+            # （st.markdown は React の dangerouslySetInnerHTML を使うため <script> が実行されない。
+            #   img の onerror は実行されるため、これを利用してスクリプトをロードする）
+            script_loader = (
+                '<img src="__oshi_lp_noop__" style="display:none" alt="" onerror="(function(){'
+                'if(window._oshiLpInit)return; window._oshiLpInit=true;'
+                'var h=document.head;'
+                "var t=document.createElement('script'); t.src='https://cdn.tailwindcss.com'; h.appendChild(t);"
+                "var l=document.createElement('script'); l.src='https://unpkg.com/lucide@latest/dist/umd/lucide.min.js';"
+                "l.onload=function(){ if(typeof lucide!='undefined') lucide.createIcons(); }; h.appendChild(l);"
+                'setTimeout(function(){'
+                '  var obs=new IntersectionObserver(function(es){'
+                '    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add(\'is-visible\'); obs.unobserve(e.target); } });'
+                '  },{threshold:0.1,rootMargin:\'0px 0px -50px 0px\'});'
+                '  document.querySelectorAll(\'.fade-in-section\').forEach(function(el){ obs.observe(el); });'
+                '},300);'
+                '})()">'
+            )
+
+            # 組み立て：head styles + body wrapper(インラインbg保証) + scripts + body content
+            full_html = (
+                head_styles
+                + f'<div class="{body_classes}" style="background:#0a0a0f;min-height:100vh;">'
+                + script_loader
+                + body_content
+                + "</div>"
+            )
+
+            st.markdown(full_html, unsafe_allow_html=True)
         except Exception as e:
             st.error(f"LPの読み込み中にエラーが発生しました: {e}")
     else:
