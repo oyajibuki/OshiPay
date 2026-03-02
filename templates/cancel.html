@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>キャンセル — OshiPay</title>
+    <meta name="description" content="OshiPay — 応援がキャンセルされました。" />
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+    <canvas id="particles-canvas"></canvas>
+
+    <div class="page-wrapper">
+        <div class="container">
+            <!-- Logo -->
+            <div class="logo animate-fade-in">
+                <span class="logo-icon">🔥</span>
+                <span class="logo-text">OshiPay</span>
+            </div>
+
+            <!-- Cancel Card -->
+            <div class="glass-card animate-slide-up delay-1" style="margin-top: 16px;">
+                <div class="cancel-icon">🤔</div>
+                <h1 class="success-title">キャンセルしました</h1>
+                <p class="success-message">
+                    決済はキャンセルされました。<br>
+                    またいつでも応援できます！<br>
+                    お気持ちだけで嬉しいです 😊
+                </p>
+
+                <a href="javascript:history.back()" class="btn btn-primary">
+                    ← 戻って応援する
+                </a>
+
+                <div style="margin-top: 14px;">
+                    <a href="/" class="btn btn-ghost" style="width: 100%;">
+                        トップに戻る
+                    </a>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer animate-fade-in delay-3">
+                <p class="footer-text">
+                    Powered by <a href="#" class="footer-link">OshiPay</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

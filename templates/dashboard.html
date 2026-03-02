@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OshiPay — QRコード発行</title>
+  <meta name="description" content="OshiPay — 応援QRコードを発行して、あなたの活動を応援してもらおう" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <canvas id="particles-canvas"></canvas>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <!-- Logo -->
+      <div class="logo animate-fade-in">
+        <span class="logo-icon">🔥</span>
+        <span class="logo-text">OshiPay</span>
+      </div>
+      <p class="logo-tagline animate-fade-in delay-1">応援を、もっとシンプルに。</p>
+
+      <!-- Main Card -->
+      <div class="glass-card animate-slide-up delay-2">
+        <h1 class="section-title">QRコードを発行</h1>
+        <p class="section-subtitle">あなた専用のQRコードを作成して<br>応援を受け取りましょう</p>
+
+        <form id="qr-form">
+          <div class="input-group">
+            <label class="input-label" for="creator-name">表示名</label>
+            <input
+              type="text"
+              id="creator-name"
+              class="input-field"
+              placeholder="例: ストリートミュージシャン太郎"
+              required
+              maxlength="50"
+            />
+          </div>
+
+          <div class="input-group">
+            <label class="input-label" for="user-id">ユーザーID（任意）</label>
+            <input
+              type="text"
+              id="user-id"
+              class="input-field"
+              placeholder="自動生成されます"
+              maxlength="20"
+            />
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            ✨ QRコードを生成
+          </button>
+        </form>
+
+        <!-- QR Result -->
+        <div id="qr-result" style="display:none;"></div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer animate-fade-in delay-4">
+        <p class="footer-text">
+          Powered by <a href="#" class="footer-link">OshiPay</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

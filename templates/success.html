@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>応援完了 🎉 — OshiPay</title>
+    <meta name="description" content="応援ありがとうございます！OshiPay で応援が完了しました。" />
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+    <canvas id="confetti-canvas"></canvas>
+
+    <div class="page-wrapper">
+        <div class="container">
+            <!-- Logo -->
+            <div class="logo animate-fade-in">
+                <span class="logo-icon">🔥</span>
+                <span class="logo-text">OshiPay</span>
+            </div>
+
+            <!-- Success Card -->
+            <div class="glass-card animate-slide-up delay-1" style="margin-top: 16px;">
+                <div class="success-icon">🎉</div>
+                <h1 class="success-title">応援完了！</h1>
+                <p class="success-message">
+                    あなたの応援が届きました！<br>
+                    温かいサポート、ありがとうございます 🙏✨
+                </p>
+
+                <div class="divider"></div>
+
+                <!-- Share Section -->
+                <p class="input-label" style="text-align:center; margin-bottom: 16px;">応援をシェアしよう</p>
+
+                <div style="display: flex; gap: 10px;">
+                    <a href="https://twitter.com/intent/tweet?text=OshiPay%20%E3%81%A7%E5%BF%9C%E6%8F%B4%E3%81%97%E3%81%BE%E3%81%97%E3%81%9F%EF%BC%81%F0%9F%94%A5%20%23OshiPay"
+                        target="_blank" class="btn btn-secondary" style="flex:1;">
+                        𝕏 シェア
+                    </a>
+                    <button class="btn btn-secondary" onclick="copyUrl(window.location.href)" style="flex:1;">
+                        📋 リンクコピー
+                    </button>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <a href="/" class="btn btn-ghost" style="width: 100%;">
+                        ← トップに戻る
+                    </a>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer animate-fade-in delay-3">
+                <p class="footer-text">
+                    Powered by <a href="#" class="footer-link">OshiPay</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

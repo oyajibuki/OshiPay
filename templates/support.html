@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ display_name }} を応援 — OshiPay</title>
+    <meta name="description" content="{{ display_name }} を OshiPay で応援しよう。QRひとつで、応援完了。" />
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+    <canvas id="particles-canvas"></canvas>
+
+    <div class="page-wrapper">
+        <div class="container">
+            <!-- Logo -->
+            <div class="logo animate-fade-in">
+                <span class="logo-icon">🔥</span>
+                <span class="logo-text">OshiPay</span>
+            </div>
+            <p class="logo-tagline animate-fade-in delay-1">その感動、今すぐカタチに。</p>
+
+            <!-- Main Card -->
+            <div class="glass-card animate-slide-up delay-2">
+                <!-- Support Target -->
+                <div class="support-target">
+                    <div class="support-avatar">🎤</div>
+                    <h1 class="support-name">{{ display_name }}</h1>
+                    <p class="support-label">を応援しよう</p>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Amount Selection -->
+                <p class="input-label" style="margin-bottom: 12px;">応援する金額を選んでください</p>
+
+                <div class="amount-grid">
+                    {% for amount in preset_amounts %}
+                    <button class="amount-btn" data-amount="{{ amount }}">
+                        ¥{{ "{:,}".format(amount) }}
+                    </button>
+                    {% endfor %}
+                    <button class="amount-btn large" data-amount="custom">
+                        💰 任意の金額を入力
+                    </button>
+                </div>
+
+                <!-- Custom Amount Input -->
+                <div id="custom-amount-wrapper" class="custom-amount-wrapper">
+                    <input type="number" id="custom-amount" class="input-field" placeholder="金額を入力（100円〜）" min="100"
+                        max="1000000" step="100" />
+                </div>
+
+                <!-- Selected Amount Display -->
+                <div class="selected-display">
+                    <span id="selected-amount" class="selected-amount"></span>
+                </div>
+
+                <!-- Support Button -->
+                <button id="support-btn" class="btn btn-primary" data-user-id="{{ user_id }}"
+                    data-display-name="{{ display_name }}">
+                    🔥 応援する！
+                </button>
+
+                <p style="text-align:center; margin-top:14px; font-size:11px; color: var(--text-muted);">
+                    クレジットカードで安全にお支払い（Stripe）
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer animate-fade-in delay-4">
+                <p class="footer-text">
+                    Powered by <a href="#" class="footer-link">OshiPay</a> ― 応援を、もっとシンプルに。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
