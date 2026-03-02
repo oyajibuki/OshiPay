@@ -126,7 +126,7 @@ footer {visibility: hidden;}
     letter-spacing: 1px;
 }
 
-/* ── グラスカード ── */
+/* ── グラスカード (装飾用、Streamlit widgetは包めないので背景として使用) ── */
 .glass-card {
     background: rgba(255,255,255,0.04);
     backdrop-filter: blur(20px);
@@ -145,6 +145,12 @@ footer {visibility: hidden;}
     top: 0; left: 0; right: 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+/* ── メインコンテンツブロックにグラス効果を適用 ── */
+.stMainBlockContainer > div > div > div > div {
+    position: relative;
+    z-index: 1;
 }
 
 /* ── セクションタイトル ── */
@@ -295,37 +301,43 @@ div[data-testid="stHorizontalBlock"] .stDownloadButton > button,
 }
 
 /* ── Input スタイル ── */
-.stTextInput > div > div > input {
+input, .stTextInput input, .stNumberInput input,
+[data-baseweb="input"] input,
+[data-baseweb="base-input"] input {
     background: rgba(255,255,255,0.05) !important;
+    background-color: rgba(255,255,255,0.05) !important;
     border: 1px solid rgba(255,255,255,0.08) !important;
     border-radius: 14px !important;
     color: #f0f0f5 !important;
     font-family: 'Inter', 'Noto Sans JP', sans-serif !important;
     font-size: 15px !important;
     padding: 14px 18px !important;
+    caret-color: #8b5cf6 !important;
 }
-.stTextInput > div > div > input:focus {
+input:focus, .stTextInput input:focus, .stNumberInput input:focus {
     border-color: #8b5cf6 !important;
     box-shadow: 0 0 0 3px rgba(139,92,246,0.15) !important;
 }
-.stTextInput > label {
+input::placeholder {
+    color: rgba(240,240,245,0.3) !important;
+}
+[data-baseweb="base-input"] {
+    background-color: rgba(255,255,255,0.05) !important;
+    border-color: rgba(255,255,255,0.08) !important;
+    border-radius: 14px !important;
+}
+.stTextInput label, .stNumberInput label {
     font-size: 12px !important;
     font-weight: 600 !important;
     color: rgba(240,240,245,0.6) !important;
     text-transform: uppercase !important;
     letter-spacing: 1px !important;
 }
-.stNumberInput > label {
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    color: rgba(240,240,245,0.6) !important;
-}
-.stNumberInput > div > div > input {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
+/* ── Streamlit警告/エラー ── */
+.stAlert {
+    background: rgba(255,255,255,0.04) !important;
     border-radius: 14px !important;
-    color: #f0f0f5 !important;
-    font-size: 15px !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
 }
 
 /* ── QR表示 ── */
