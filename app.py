@@ -25,6 +25,9 @@ except Exception:
 # プリセット金額
 PRESET_AMOUNTS = [100, 500, 1000, 10000, 30000]
 
+# プラットフォーム手数料（10%）
+PLATFORM_FEE_PERCENT = 10
+
 # アイコン選択肢
 ICON_OPTIONS = {
     "🎤": "歌手・MC",
@@ -40,6 +43,51 @@ ICON_OPTIONS = {
     "🎭": "役者・パフォーマー",
     "🔥": "その他",
 }
+
+# ベースURL
+BASE_URL = os.environ.get("APP_URL", "https://oshipay.streamlit.app")
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Stripe Connect ヘルパー関数
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+def create_connect_account():
+    """Stripe Express接続アカウントを作成"""
+    account = stripe.Account.create(
+        type="express",
+        country="JP",
+        capabilities={
+            "card_payments": {"requested": True},
+            "transfers": {"requested": True},
+        },
+    )
+    return account.id
+
+
+def create_account_link(account_id, return_params=""):
+    """Stripeオンボーディング用のリンクを生成"""
+    return_url = f"{BASE_URL}?page=dashboard&acct={account_id}{return_params}"
+    refresh_url = f"{BASE_URL}?page=dashboard&acct={account_id}&refresh=1{return_params}"
+    link = stripe.AccountLink.create(
+        account=account_id,
+        refresh_url=refresh_url,
+        return_url=return_url,
+        type="account_onboarding",
+    )
+    return link.url
+
+
+def check_account_status(account_id):
+    """接続アカウントの状態を確認"""
+    try:
+        account = stripe.Account.retrieve(account_id)
+        return {
+            "charges_enabled": account.charges_enabled,
+            "payouts_enabled": account.payouts_enabled,
+            "details_submitted": account.details_submitted,
+        }
+    except Exception:
+        return None
 
 
 def generate_qr_base64(data: str) -> str:
@@ -525,6 +573,7 @@ page = params.get("page", "dashboard")
 support_user = params.get("user", "")
 support_name = params.get("name", "")
 support_icon = params.get("icon", "🎤")
+connect_acct = params.get("acct", "")  # Stripe Connect アカウントID
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -649,10 +698,10 @@ elif page == "support" and support_user:
             st.warning("金額を選んでください")
         else:
             try:
-                base_url = os.environ.get("APP_URL", "https://oshipay.streamlit.app")
-                session = stripe.checkout.Session.create(
-                    payment_method_types=["card"],
-                    line_items=[{
+                # Stripe Checkout Session 作成
+                checkout_params = {
+                    "payment_method_types": ["card"],
+                    "line_items": [{
                         "price_data": {
                             "currency": "jpy",
                             "product_data": {
@@ -663,14 +712,27 @@ elif page == "support" and support_user:
                         },
                         "quantity": 1,
                     }],
-                    mode="payment",
-                    success_url=f"{base_url}?page=success",
-                    cancel_url=f"{base_url}?page=cancel",
-                    metadata={
+                    "mode": "payment",
+                    "success_url": f"{BASE_URL}?page=success",
+                    "cancel_url": f"{BASE_URL}?page=cancel",
+                    "metadata": {
                         "user_id": support_user,
                         "display_name": display_name,
                     },
-                )
+                }
+
+                # Stripe Connect: クリエイターへの自動振り分け
+                if connect_acct:
+                    fee = int(amount * PLATFORM_FEE_PERCENT / 100)
+                    checkout_params["payment_intent_data"] = {
+                        "application_fee_amount": fee,
+                        "transfer_data": {
+                            "destination": connect_acct,
+                        },
+                    }
+
+                session = stripe.checkout.Session.create(**checkout_params)
+
                 # JavaScriptでStripe決済ページへリダイレクト
                 components.html(
                     f'<script>window.top.location.href = "{session.url}";</script>',
@@ -692,72 +754,122 @@ else:
     st.markdown('<div class="oshi-logo animate-fade-in"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="oshi-tagline animate-fade-in delay-1">応援を、もっとシンプルに。</div>', unsafe_allow_html=True)
 
-
     st.markdown('<div class="section-title">QRコードを発行</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-subtitle">あなた専用のQRコードを作成して<br>応援を受け取りましょう</div>', unsafe_allow_html=True)
 
-    creator_name = st.text_input("表示名", placeholder="例: ストリートミュージシャン太郎", max_chars=50)
-    user_id = st.text_input("ユーザーID（任意）", placeholder="自動生成されます", max_chars=20)
+    # ── Stripe Connect の状態チェック ──
+    acct_id = connect_acct or st.session_state.get("connect_acct_id", "")
+    acct_ready = False
+    refresh_needed = params.get("refresh", "") == "1"
 
-    # アイコン選択
-    st.markdown('<p style="font-size:12px;font-weight:600;color:rgba(240,240,245,0.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;margin-top:8px;">アイコンを選択</p>', unsafe_allow_html=True)
-
-    icon_cols = st.columns(6)
-    icon_list = list(ICON_OPTIONS.keys())
-    if "selected_icon" not in st.session_state:
-        st.session_state.selected_icon = "🎤"
-
-    for i, emoji in enumerate(icon_list):
-        with icon_cols[i % 6]:
-            label = ICON_OPTIONS[emoji]
-            is_selected = st.session_state.selected_icon == emoji
-            if st.button(
-                emoji,
-                key=f"icon_{i}",
-                help=label,
-                use_container_width=True,
-            ):
-                st.session_state.selected_icon = emoji
-
-    # 選択中のアイコン表示
-    st.markdown(f'<div style="text-align:center;margin:8px 0;"><span style="font-size:40px;">{st.session_state.selected_icon}</span><br><span style="font-size:12px;color:rgba(240,240,245,0.5);">{ICON_OPTIONS[st.session_state.selected_icon]}</span></div>', unsafe_allow_html=True)
-
-    if st.button("✨ QRコードを生成", use_container_width=True):
-        if not creator_name:
-            st.warning("表示名を入力してください")
-        else:
-            if not user_id:
-                user_id = str(uuid.uuid4())[:8]
-
-            base_url = os.environ.get("APP_URL", "https://oshipay.streamlit.app")
-            selected_icon = st.session_state.selected_icon
-            support_url = f"{base_url}?page=support&user={user_id}&name={creator_name}&icon={selected_icon}"
-
-            qr_b64 = generate_qr_base64(support_url)
-            qr_bytes = get_qr_bytes(support_url)
-
-            st.markdown(f"""
-            <div style="text-align:center;margin:24px 0;animation:slideUp 0.5s ease both;">
-                <div class="qr-frame">
-                    <img src="data:image/png;base64,{qr_b64}" alt="QRコード" />
-                </div>
-                <p style="font-size:11px;color:rgba(240,240,245,0.35);text-align:center;word-break:break-all;max-width:300px;margin:16px auto;line-height:1.5;">{support_url}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            col1, col2 = st.columns(2)
-            with col1:
-                st.download_button(
-                    "💾 QR保存",
-                    data=qr_bytes,
-                    file_name=f"oshiPay-qr-{user_id}.png",
-                    mime="image/png",
-                    use_container_width=True,
+    if acct_id:
+        status = check_account_status(acct_id)
+        if status and status["details_submitted"]:
+            acct_ready = True
+            st.session_state["connect_acct_id"] = acct_id
+            st.markdown('<div style="text-align:center;margin:12px 0;"><span style="font-size:14px;color:#10b981;">✅ Stripeアカウント連携済み</span></div>', unsafe_allow_html=True)
+        elif refresh_needed:
+            # オンボーディング未完了 → 再度リンク生成
+            try:
+                link_url = create_account_link(acct_id)
+                components.html(
+                    f'<script>window.top.location.href = "{link_url}";</script>',
+                    height=0,
                 )
-            with col2:
-                if st.button("📋 URLコピー", use_container_width=True):
-                    st.code(support_url, language=None)
+                st.info("Stripeオンボーディングを続けてください...")
+                st.link_button("🔗 Stripe登録ページへ", link_url, use_container_width=True)
+            except Exception as e:
+                st.error(f"エラー: {e}")
+        else:
+            st.markdown('<div style="text-align:center;margin:12px 0;"><span style="font-size:14px;color:#fbbf24;">⏳ Stripeアカウント設定中...</span></div>', unsafe_allow_html=True)
+            try:
+                link_url = create_account_link(acct_id)
+                st.link_button("🔗 Stripe登録を完了する", link_url, use_container_width=True)
+            except Exception as e:
+                st.error(f"エラー: {e}")
 
+    # ── ステップ1: Stripeアカウント連携 ──
+    if not acct_id:
+        st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
+        st.markdown('<p style="font-size:13px;color:rgba(240,240,245,0.6);text-align:center;line-height:1.8;">応援を受け取るには<br>Stripeアカウントの連携が必要です</p>', unsafe_allow_html=True)
 
+        if st.button("🔗 Stripeアカウントを連携する", use_container_width=True):
+            try:
+                new_acct_id = create_connect_account()
+                st.session_state["connect_acct_id"] = new_acct_id
+                link_url = create_account_link(new_acct_id)
+                components.html(
+                    f'<script>window.top.location.href = "{link_url}";</script>',
+                    height=0,
+                )
+                st.link_button("🔗 自動で遷移しない場合はこちら", link_url, use_container_width=True)
+            except Exception as e:
+                st.error(f"エラー: {e}")
+
+        st.markdown('<p style="text-align:center;font-size:11px;color:rgba(240,240,245,0.3);margin-top:8px;">本人確認・銀行口座の登録を行います（無料）</p>', unsafe_allow_html=True)
+
+    # ── ステップ2: QRコード生成（Stripe連携済みの場合のみ） ──
+    if acct_ready:
+        st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
+
+        creator_name = st.text_input("表示名", placeholder="例: ストリートミュージシャン太郎", max_chars=50)
+        user_id = st.text_input("ユーザーID（任意）", placeholder="自動生成されます", max_chars=20)
+
+        # アイコン選択
+        st.markdown('<p style="font-size:12px;font-weight:600;color:rgba(240,240,245,0.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;margin-top:8px;">アイコンを選択</p>', unsafe_allow_html=True)
+
+        icon_cols = st.columns(6)
+        icon_list = list(ICON_OPTIONS.keys())
+        if "selected_icon" not in st.session_state:
+            st.session_state.selected_icon = "🎤"
+
+        for i, emoji in enumerate(icon_list):
+            with icon_cols[i % 6]:
+                label = ICON_OPTIONS[emoji]
+                if st.button(
+                    emoji,
+                    key=f"icon_{i}",
+                    help=label,
+                    use_container_width=True,
+                ):
+                    st.session_state.selected_icon = emoji
+
+        # 選択中のアイコン表示
+        st.markdown(f'<div style="text-align:center;margin:8px 0;"><span style="font-size:40px;">{st.session_state.selected_icon}</span><br><span style="font-size:12px;color:rgba(240,240,245,0.5);">{ICON_OPTIONS[st.session_state.selected_icon]}</span></div>', unsafe_allow_html=True)
+
+        if st.button("✨ QRコードを生成", use_container_width=True):
+            if not creator_name:
+                st.warning("表示名を入力してください")
+            else:
+                if not user_id:
+                    user_id = str(uuid.uuid4())[:8]
+
+                selected_icon = st.session_state.selected_icon
+                support_url = f"{BASE_URL}?page=support&user={user_id}&name={creator_name}&icon={selected_icon}&acct={acct_id}"
+
+                qr_b64 = generate_qr_base64(support_url)
+                qr_bytes = get_qr_bytes(support_url)
+
+                st.markdown(f"""
+                <div style="text-align:center;margin:24px 0;animation:slideUp 0.5s ease both;">
+                    <div class="qr-frame">
+                        <img src="data:image/png;base64,{qr_b64}" alt="QRコード" />
+                    </div>
+                    <p style="font-size:11px;color:rgba(240,240,245,0.35);text-align:center;word-break:break-all;max-width:300px;margin:16px auto;line-height:1.5;">{support_url}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.download_button(
+                        "💾 QR保存",
+                        data=qr_bytes,
+                        file_name=f"oshiPay-qr-{user_id}.png",
+                        mime="image/png",
+                        use_container_width=True,
+                    )
+                with col2:
+                    if st.button("📋 URLコピー", use_container_width=True):
+                        st.code(support_url, language=None)
 
     st.markdown('<div class="oshi-footer animate-fade-in delay-3">Powered by <a href="#">OshiPay</a></div>', unsafe_allow_html=True)
