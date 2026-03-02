@@ -650,6 +650,15 @@ if page == "lp":
     footer { display: none !important; }
     .stAppViewMain { overflow: auto !important; }
     </style>
+    
+    <script>
+    // LP (iframe) からの「画面移動」メッセージを待機するブリッジ
+    window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'navigate') {
+            window.top.location.href = e.data.url;
+        }
+    });
+    </script>
     """, unsafe_allow_html=True)
 else:
     st.markdown("""
@@ -796,13 +805,12 @@ elif page == "lp":
             with open(lp_path, "r", encoding="utf-8") as f:
                 lp_html = f.read()
             
-            # リンクの正規化（親ウィンドウへ確実に遷移させる）
+            # 念のため target="_top" も維持しつつ、JSブリッジを補助的に残す（HTML側で実装済みの場合はそちらが優先）
             lp_html = lp_html.replace('href="?page=dashboard"', 'href="/?page=dashboard" target="_top"')
             lp_html = lp_html.replace('href="/?page=dashboard"', 'href="/?page=dashboard" target="_top"')
             
-            # 高度を十分に確保（iPhoneでの見切れを防ぐ）
-            # scrolling=False にして親スクロールに任せる
-            st.components.v1.html(lp_html, height=4800, scrolling=False)
+            # 高度を十分に確保（iPhoneでの見切れを完全に防ぐため 8000px）
+            st.components.v1.html(lp_html, height=8000, scrolling=False)
         except Exception as e:
             st.error(f"LPの読み込み中にエラーが発生しました: {e}")
     else:
