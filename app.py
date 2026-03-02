@@ -635,12 +635,23 @@ page = params.get("page", "lp")
 if page == "lp":
     st.markdown("""
     <style>
+    /* LPページをフルスクリーンアイフレームとして扱う */
     .stMainBlockContainer, .block-container {
         max-width: none !important;
         padding: 0 !important;
+        height: 100vh !important;
+        overflow: hidden !important;
     }
-    iframe { border: none !important; }
+    iframe { 
+        border: none !important; 
+        width: 100% !important;
+        height: 100vh !important;
+    }
+    /* 親ウィンドウ（Streamlit）自体のスクロールを抑制 */
+    .stApp { overflow: hidden !important; }
     .stApp::before { display: none !important; }
+    header[data-testid="stHeader"] { display: none !important; }
+    footer { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 else:
@@ -788,10 +799,11 @@ elif page == "lp":
             with open(lp_path, "r", encoding="utf-8") as f:
                 lp_html = f.read()
             
-            # 全てのダッシュボードリンクに target="_top" を付与（iframe内からの親画面遷移を保証）
+            # リンクの置換（index.html側で既に対応済みだが念のため不整合を防ぐ）
             lp_html = lp_html.replace('href="?page=dashboard"', 'href="?page=dashboard" target="_top"')
-            # 表示高度を調整（コンテンツ量に合わせて短縮して余白を消す）
-            st.components.v1.html(lp_html, height=4100, scrolling=False)
+            
+            # scrolling=True にすることで、iframe内での自然なスクロールを許可
+            st.components.v1.html(lp_html, height=1000, scrolling=True)
         except Exception as e:
             st.error(f"LPの読み込み中にエラーが発生しました: {e}")
     else:
