@@ -779,18 +779,28 @@ elif page == "cancel":
 # 🔥 ランディングページ (提供された最新デザイン)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 elif page == "lp":
-    # ユーザー提供のHTMLファイルを直接読み込む（欠落を防ぎ、保守性を高める）
-    lp_path = "oshipay-lp/index.html"
+    # ファイルパスの解決を強化 (__file__ からの相対パス)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    lp_path = os.path.join(current_dir, "oshipay-lp", "index.html")
+    
     if os.path.exists(lp_path):
-        with open(lp_path, "r", encoding="utf-8") as f:
-            lp_html = f.read()
-        
-        # ボタンクリックで dashboard へ遷移するように Aタグを動的に修正
-        lp_html = lp_html.replace('href="?page=dashboard"', 'href="?page=dashboard" target="_top"')
-        # lucide アイコンなどのCDN読み込みも保証
-        st.components.v1.html(lp_html, height=6000, scrolling=True)
+        try:
+            with open(lp_path, "r", encoding="utf-8") as f:
+                lp_html = f.read()
+            
+            # ボタンクリックで dashboard へ遷移するように Aタグを動的に修正
+            lp_html = lp_html.replace('href="?page=dashboard"', 'href="?page=dashboard" target="_top"')
+            st.components.v1.html(lp_html, height=6000, scrolling=True)
+        except Exception as e:
+            st.error(f"LPの読み込み中にエラーが発生しました: {e}")
     else:
-        st.error("LPファイルが見つかりません。")
+        st.error(f"LPファイルが見つかりません。パス: {lp_path}")
+        # デバッグ用：カレントディレクトリのファイル一覧を表示
+        if st.checkbox("🔍 デバッグ情報を表示"):
+            st.write(f"Current Directory: {os.getcwd()}")
+            st.write(f"Files in current directory: {os.listdir('.')}")
+            if os.path.exists("oshipay-lp"):
+                st.write(f"Files in oshipay-lp: {os.listdir('oshipay-lp')}")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
