@@ -800,9 +800,9 @@ elif page == "lp":
             with open(lp_path, "r", encoding="utf-8") as f:
                 lp_html = f.read()
             
-            # 残存する相対リンクを window.top.location.href による直接ナビゲーションに置換
-            lp_html = lp_html.replace('href="?page=dashboard"', 'href="javascript:void(0)" onclick="window.top.location.href=\'/?page=dashboard\';"')
-            lp_html = lp_html.replace('href="/?page=dashboard"', 'href="javascript:void(0)" onclick="window.top.location.href=\'/?page=dashboard\';"')
+            # 残存する相対リンクを target="_top" による直接ナビゲーションに置換
+            lp_html = lp_html.replace('href="?page=dashboard"', 'href="/?page=dashboard" target="_top"')
+            lp_html = lp_html.replace('href="/?page=dashboard"', 'href="/?page=dashboard" target="_top"')
 
             # scrolling=True にして iframe内のスクロールを有効化
             # (CSSの position: fixed; height: 100vh; によって画面全域をカバー)
