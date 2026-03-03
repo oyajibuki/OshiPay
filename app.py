@@ -204,7 +204,7 @@ if page == "lp":
     }
     </style>
     """, unsafe_allow_html=True)
-    components.html(lp_html, height=5800)
+    components.html(lp_html, height=5700)
     st.stop()
 
 # ── 成功ページ ──
