@@ -42,6 +42,18 @@ BASE_URL = os.environ.get("APP_URL", "https://oshipay.streamlit.app")
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ヘルパー関数
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+def read_html_file(file_path):
+    """HTMLファイルをディスクから読み込む"""
+    try:
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        full_path = os.path.join(cur_dir, file_path)
+        if os.path.exists(full_path):
+            with open(full_path, "r", encoding="utf-8") as f:
+                return f.read()
+        return f"File not found: {file_path}"
+    except Exception as e:
+        return f"Error reading file {file_path}: {e}"
+
 def create_connect_account():
     account = stripe.Account.create(
         type="express", country="JP",
@@ -92,7 +104,7 @@ def generate_qr_data(data: str) -> tuple[str, bytes]:
     return b64, qr_bytes
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# スタイル & HTML
+# スタイル & UIパーツ
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 st.markdown("""
 <style>
@@ -129,31 +141,24 @@ if page == "lp":
 else:
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 460px !important; margin: 0 auto; }</style>", unsafe_allow_html=True)
 
-# ── 法務ページコンテンツ集約 (EMBEDDED) ──
-LEGAL_DOCS = {
-    "terms": """
-<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0a0a0f] text-slate-200 p-8"><main class="max-w-3xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-white">利用規約</h1><div class="space-y-6 text-slate-300"><section><h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第1条（目的）</h2><p>OshiPayは、活動する方への「純粋な応援」を届けるためのサービスです。</p></section><section><h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第2条（手数料）</h2><p>応援金額の10%をシステム利用料として差し引き、90%を受取人に還元します。</p></section><section><h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第3条（禁止事項）</h2><p>不正利用、法令違反を禁止します。</p></section></div></main></body></html>
-""",
-    "privacy": """
-<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0a0a0f] text-slate-200 p-8"><main class="max-w-3xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-white">プライバシーポリシー</h1><div class="space-y-6"><p>OshiPayは、プライバシー保護を最優先事項としています。運営側が応援者の個人情報やメッセージ内容を保持することはありません。</p></div></main></body></html>
-""",
-    "legal": """
-<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0a0a0f] text-slate-200 p-8"><main class="max-w-3xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-white">特定商取引法に基づく表記</h1><table class="w-full text-left border border-white/10 text-slate-300"><tr><th class="p-4 bg-white/5 border border-white/10">代表責任者</th><td class="p-4 border border-white/10">関　元喜</td></tr><tr><th class="p-4 bg-white/5 border border-white/10">所在地</th><td class="p-4 border border-white/10">〒418-0108 静岡県富士宮市猪之頭字内野941-35</td></tr><tr><th class="p-4 bg-white/5 border border-white/10">連絡先</th><td class="p-4 border border-white/10">oyajibuki@gmail.com</td></tr><tr><th class="p-4 bg-white/5 border border-white/10">販売価格</th><td class="p-4 border border-white/10">任意の応援金額</td></tr></table></main></body></html>
-"""
+# ── 外部HTMLファイルの表示 ──
+LEGAL_MAP = {
+    "terms": "role/index.html",
+    "privacy": "role/index2.html",
+    "legal": "role/index3.html"
 }
 
-if page in LEGAL_DOCS:
-    components.html(LEGAL_DOCS[page], height=1200, scrolling=True); st.stop()
+if page in LEGAL_MAP:
+    html_content = read_html_file(LEGAL_MAP[page])
+    components.html(html_content, height=2000, scrolling=True)
+    st.stop()
 
 # ── ランディングページ ──
 if page == "lp":
-    try:
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(cur_dir, "oshipay-lp", "index.html"), "r", encoding="utf-8") as f:
-            lp_html = f.read()
-        st.markdown("<style>iframe { height: 3800px !important; border: none; }</style>", unsafe_allow_html=True)
-        components.html(lp_html, height=3800); st.stop()
-    except Exception as e: st.error(e)
+    lp_html = read_html_file("oshipay-lp/index.html")
+    st.markdown("<style>iframe { height: 3800px !important; border: none; }</style>", unsafe_allow_html=True)
+    components.html(lp_html, height=3800)
+    st.stop()
 
 # ── 成功ページ ──
 if page == "success":
@@ -163,7 +168,8 @@ if page == "success":
     share_text = f"応援したよ！\n{BASE_URL} #OshiPay"
     st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
     st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True); st.stop()
+    st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
+    st.stop()
 
 # ── キャンセル ──
 elif page == "cancel":
