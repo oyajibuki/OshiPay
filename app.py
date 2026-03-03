@@ -798,23 +798,21 @@ elif page == "lp":
             # img の onerror トリックを使って JavaScript を実行し、
             # LP iframe から送られる postMessage を受信してメインウィンドウでナビゲーションを行う。
             # （iframe のサンドボックスに関係なく、メインページは自由にナビゲーションできる）
-            st.markdown(
-                '<img src="/__oshi_bridge__" style="display:none" alt="" onerror="'
-                "(function(){"
-                "if(window._oshiBridge)return;"
-                "window._oshiBridge=true;"
-                "window.addEventListener('message',function(e){"
-                "if(e.data&&typeof e.data==='string'&&e.data.indexOf('navigate:')==0){"
-                "window.location.href=e.data.slice(9);"
-                "}"
-                "});"
-                '})()">',
-                unsafe_allow_html=True
-            )
+            # Landing page bridge script
+            st.markdown("""
+                <script>
+                window.addEventListener('message', function(event) {
+                    if (typeof event.data === 'string' && event.data.startsWith('navigate:')) {
+                        const url = event.data.split('navigate:')[1];
+                        window.parent.location.href = url;
+                    }
+                });
+                </script>
+            """, unsafe_allow_html=True)
 
             # ── LP を iframe でレンダリング ──
             # components.html() は Tailwind CSS / Lucide / スクリプトが正常に動作する。
-            components.html(lp_html, height=8500, scrolling=False)
+            components.html(lp_html, height=3780, scrolling=False)
         except Exception as e:
             st.error(f"LPの読み込み中にエラーが発生しました: {e}")
     else:
