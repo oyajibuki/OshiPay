@@ -54,6 +54,22 @@ def read_html_file(file_path):
     except Exception as e:
         return f"Error reading file {file_path}: {e}"
 
+def inject_top_scroll_script(html_content):
+    """ページ上部へのスクロールを強制するJSを注入"""
+    script = """
+    <script>
+    if (window.top !== window.self) {
+        window.scrollTo(0, 0);
+    }
+    document.addEventListener("DOMContentLoaded", function() {
+        window.scrollTo(0, 0);
+    });
+    </script>
+    """
+    if "</body>" in html_content:
+        return html_content.replace("</body>", f"{script}</body>")
+    return html_content + script
+
 def create_connect_account():
     account = stripe.Account.create(
         type="express", country="JP",
@@ -136,8 +152,13 @@ st.markdown("""
 params = st.query_params
 page = params.get("page", "lp")
 
+# 法務ページ用の幅調整
+IS_LEGAL_PAGE = page in ["terms", "privacy", "legal"]
+
 if page == "lp":
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: none !important; padding: 0 !important; margin: 0 !important; }</style>", unsafe_allow_html=True)
+elif IS_LEGAL_PAGE:
+    st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 800px !important; margin: 0 auto; }</style>", unsafe_allow_html=True)
 else:
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 460px !important; margin: 0 auto; }</style>", unsafe_allow_html=True)
 
@@ -150,6 +171,8 @@ LEGAL_MAP = {
 
 if page in LEGAL_MAP:
     html_content = read_html_file(LEGAL_MAP[page])
+    # スクロール位置リセット用JSを注入
+    html_content = inject_top_scroll_script(html_content)
     components.html(html_content, height=2000, scrolling=True)
     st.stop()
 
