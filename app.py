@@ -148,9 +148,35 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── ルーティング ──
+# ── ルーティング & 永続化 ──
 params = st.query_params
 page = params.get("page", "lp")
+
+# LocalStorage から ID を復元/保存する JS
+def sync_account_id_js(acct_id=None):
+    if acct_id:
+        # IDがある場合はLocalStorageに保存
+        js = f"""
+        <script>
+        localStorage.setItem('oshipay_acct', '{acct_id}');
+        </script>
+        """
+    else:
+        # IDがない場合はLocalStorageから取得してURLに反映（リロード）
+        js = """
+        <script>
+        const savedAcct = localStorage.getItem('oshipay_acct');
+        const urlParams = new URLSearchParams(window.location.search);
+        if (savedAcct && !urlParams.has('acct') && urlParams.get('page') === 'dashboard') {
+            urlParams.set('acct', savedAcct);
+            window.location.search = urlParams.toString();
+        }
+        </script>
+        """
+    st.components.v1.html(js, height=0)
+
+if page == "dashboard":
+    sync_account_id_js(params.get("acct"))
 
 # 法務ページ用の幅調整
 IS_LEGAL_PAGE = page in ["terms", "privacy", "legal"]
@@ -295,12 +321,33 @@ else: # Dashboard
                 st.markdown(f'<script>window.top.location.href = "{url}";</script>', unsafe_allow_html=True)
             except Exception as e: st.error(e)
     else:
-        st.success("Stripe連携済み")
+        st.markdown(f"""
+        <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div style="color: #8b5cf6; font-weight: 700; font-size: 14px; margin-bottom: 4px;">✅ Stripe連携済み</div>
+            <div style="font-size: 12px; color: rgba(240,240,245,0.6); margin-bottom: 12px;">ID: <code>{acct_id}</code></div>
+            <div style="font-size: 11px; color: #f97316; font-weight: 700; margin-bottom: 8px;">⚠️ ログイン機能はありません。このページをブックマークして保存してください！</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         name = st.text_input("表示名", value=st.session_state.get("name", ""))
         icon = st.selectbox("アイコン", list(ICON_OPTIONS.keys()))
-        if st.button("✨ QRコードを生成"):
+        
+        col1, col2 = st.columns([2, 1])
+        if col1.button("✨ QRコードを生成"):
             support_url = f"{BASE_URL}?page=support&user={uuid.uuid4()}&name={urllib.parse.quote(name)}&icon={icon}&acct={acct_id}"
             st.session_state.qr_url = support_url
+        
+        # 連携解除ボタン
+        if col2.button("🚫 連携解除"):
+            st.components.v1.html("""
+            <script>
+            localStorage.removeItem('oshipay_acct');
+            const url = new URL(window.location.href);
+            url.searchParams.delete('acct');
+            window.location.href = url.href;
+            </script>
+            """, height=0)
+            st.stop()
         if "qr_url" in st.session_state:
             st.markdown(f'<div class="qr-frame"><img src="data:image/png;base64,{generate_qr_data(st.session_state.qr_url)[0]}"></div>', unsafe_allow_html=True)
             st.code(st.session_state.qr_url)
