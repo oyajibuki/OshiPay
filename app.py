@@ -800,15 +800,17 @@ elif page == "lp":
             # （iframe のサンドボックスに関係なく、メインページは自由にナビゲーションできる）
             # Landing page bridge script
             st.markdown("""
-                <script>
-                window.addEventListener('message', function(event) {
-                    if (typeof event.data === 'string' && event.data.startsWith('navigate:')) {
-                        const url = event.data.split('navigate:')[1];
-                        window.parent.location.href = url;
-                    }
-                });
-                </script>
-            """, unsafe_allow_html=True)
+                 <style>
+                 iframe[title="st.html"] {
+                     height: 3780px !important;
+                 }
+                 @media (max-width: 768px) {
+                     iframe[title="st.html"] {
+                          height: 5800px !important;
+                     }
+                 }
+                 </style>
+             """, unsafe_allow_html=True)
 
             # ── LP を iframe でレンダリング ──
             # components.html() は Tailwind CSS / Lucide / スクリプトが正常に動作する。
