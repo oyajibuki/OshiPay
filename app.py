@@ -92,24 +92,18 @@ def generate_qr_data(data: str) -> tuple[str, bytes]:
     return b64, qr_bytes
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# ページスタイル
+# ページスタイル (Streamlit固有)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
-#MainMenu, header, footer, .stDeployButton {visibility: hidden; display: none;}
-[data-testid="stToolbar"], [data-testid="stDecoration"] {display: none;}
+#MainMenu, header, footer, .stDeployButton {visibility: hidden; display: none !important;}
+[data-testid="stToolbar"], [data-testid="stDecoration"] {display: none !important;}
 .stApp { background: #08080f !important; font-family: 'Inter', 'Noto Sans JP', sans-serif !important; }
 .stMainBlockContainer, .block-container { position: relative; z-index: 1; padding-top: 2rem !important; }
 .oshi-logo { text-align: center; margin-bottom: 6px; }
 .oshi-logo .icon { font-size: 28px; }
 .oshi-logo .text { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.oshi-tagline { text-align: center; font-size: 13px; color: rgba(240,240,245,0.35); margin-bottom: 28px; }
-.section-title { font-size: 20px; font-weight: 700; text-align: center; color: #f0f0f5; margin-bottom: 6px; }
-.section-subtitle { font-size: 13px; color: rgba(240,240,245,0.6); text-align: center; margin-bottom: 24px; }
-.support-avatar { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316); display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 14px; box-shadow: 0 0 30px rgba(139,92,246,0.3); }
-.support-name { font-size: 22px; font-weight: 800; text-align: center; color: #f0f0f5; }
-.support-label { font-size: 13px; color: rgba(240,240,245,0.6); text-align: center; margin-bottom: 20px; }
 .selected-amount-display { text-align: center; font-size: 36px; font-weight: 900; background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 10px 0; }
 .stButton > button { width: 100%; background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316) !important; color: white !important; border: none !important; border-radius: 9999px !important; padding: 16px !important; font-weight: 700 !important; }
 .oshi-footer { text-align: center; margin-top: 24px; font-size: 11px; color: rgba(240,240,245,0.35); }
@@ -134,7 +128,6 @@ st.markdown(particles_html + '</div>', unsafe_allow_html=True)
 params = st.query_params
 page = params.get("page", "lp")
 
-# LP用フルワイドCSS
 if page == "lp":
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: none !important; padding: 0 !important; margin: 0 !important; } .particles-bg { display: none !important; }</style>", unsafe_allow_html=True)
 else:
@@ -143,113 +136,60 @@ else:
 # ── 法務ページコンテンツ集約 ──
 LEGAL_DOCS = {
     "terms": """
-<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>利用規約 - OshiPay</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-[#0a0a0f] text-slate-200 p-8"><main class="max-w-3xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-white">利用規約</h1><div class="space-y-6 text-slate-300"><section><h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第1条（目的）</h2><p>OshiPayは、活動する方への「純粋な応援」を届けるためのサービスです。</p></section><section><h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第2条（手数料）</h2><p>応援金額の10%をシステム利用料として差し引き、90%を受取人に還元します。</p></section><section><h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第3条（禁止事項）</h2><p>マネーロンダリング、法令違反、対価を伴う商品の販売などを禁止します。</p></section></div></main></body></html>
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>利用規約 - OshiPay</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0a0a0f] text-slate-200 p-8 font-sans"><main class="max-w-3xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-white">利用規約</h1><div class="space-y-6 text-slate-300"><section><h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第1条（目的）</h2><p>OshiPayは、活動する方への「純粋な応援」を届けるためのサービスです。</p></section><section><h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第2条（手数料）</h2><p>応援金額の10%をシステム利用料として差し引き、90%を受取人に還元します。</p></section><section><h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第3条（禁止事項）</h2><p>マネーロンダリング、法令違反、公序良俗に反する活動などを禁止します。</p></section></div></main></body></html>
 """,
     "privacy": """
-<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>プライバシーポリシー - OshiPay</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0a0a0f] text-slate-200 p-8"><main class="max-w-3xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-white">プライバシーポリシー</h1><div class="space-y-6"><p>OshiPayは、皆様のプライバシー保護を最優先事項として設計されています。</p><p>運営側（OshiPay）が応援者の個人情報や決済情報、メッセージ内容を閲覧・保持することはありません。すべての決済情報はStripe社によって安全に処理されます。</p></div></main></body></html>
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>プライバシーポリシー - OshiPay</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0a0a0f] text-slate-200 p-8 font-sans"><main class="max-w-3xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-white">プライバシーポリシー</h1><div class="space-y-6"><p>運営側（OshiPay）が応援者の個人情報やメッセージ内容を閲覧・保持することはありません。</p><p>すべての情報はStripe社によって安全に処理されます。</p></div></main></body></html>
 """,
     "legal": """
-<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>特定商取引法に基づく表記 - OshiPay</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0a0a0f] text-slate-200 p-8"><main class="max-w-3xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-white">特定商取引法に基づく表記</h1><table class="w-full text-left border-collapse border border-white/10"><tr><th class="p-4 border border-white/10 bg-white/5">代表責任者</th><td class="p-4 border border-white/10">関　元喜</td></tr><tr><th class="p-4 border border-white/10 bg-white/5">所在地</th><td class="p-4 border border-white/10">〒418-0108 静岡県富士宮市猪之頭字内野941-35</td></tr><tr><th class="p-4 border border-white/10 bg-white/5">連絡先</th><td class="p-4 border border-white/10">oyajibuki@gmail.com</td></tr><tr><th class="p-4 border border-white/10 bg-white/5">販売価格</th><td class="p-4 border border-white/10">任意の応援金額</td></tr><tr><th class="p-4 border border-white/10 bg-white/5">返金について</th><td class="p-4 border border-white/10">性質上、決済完了後の返金・キャンセルはできません。</td></tr></table></main></body></html>
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>特定商取引法に基づく表記 - OshiPay</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0a0a0f] text-slate-200 p-8 font-sans"><main class="max-w-3xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-white">特定商取引法に基づく表記</h1><table class="w-full text-left border border-white/10"><tr><th class="p-4 bg-white/5 border border-white/10">代表責任者</th><td class="p-4 border border-white/10">関　元喜</td></tr><tr><th class="p-4 bg-white/5 border border-white/10">所在地</th><td class="p-4 border border-white/10">〒418-0108 静岡県富士宮市猪之頭字内野941-35</td></tr><tr><th class="p-4 bg-white/5 border border-white/10">連絡先</th><td class="p-4 border border-white/10">oyajibuki@gmail.com</td></tr><tr><th class="p-4 bg-white/5 border border-white/10">販売価格</th><td class="p-4 border border-white/10">任意の応援金額</td></tr><tr><th class="p-4 bg-white/5 border border-white/10">引渡時期</th><td class="p-4 border border-white/10">決済完了後、即時反映</td></tr></table></main></body></html>
 """
 }
 
 if page in LEGAL_DOCS:
     components.html(LEGAL_DOCS[page], height=1200, scrolling=True); st.stop()
 
-# ── 成功ページ ──
+# ── ランディングページHTML (集約版) ──
+LP_HTML = """
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>OshiPay - その感動、今すぐカタチに。</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script><style>body { font-family: sans-serif; } .fade-in { opacity: 0; transform: translateY(20px); transition: 1s ease-out both; } .fade-in.is-visible { opacity: 1; transform: translateY(0); }</style></head><body class="bg-[#0a0a0f] text-slate-200 overflow-x-hidden"><header class="flex items-center justify-between px-6 py-6 max-w-6xl mx-auto"><div class="flex items-center gap-2"><i data-lucide="flame" class="text-orange-500 w-8 h-8"></i><span class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-purple-500">OshiPay</span></div> <a href="?page=dashboard" target="_top" class="px-4 py-2 bg-white/10 rounded-full text-white no-underline text-sm">はじめる</a></header><main class="max-w-6xl mx-auto px-6 py-16 text-center"><h1 class="text-5xl md:text-7xl font-bold mb-8">その感動、<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-orange-400">今すぐカタチに。</span></h1><p class="text-lg text-slate-400 mb-12">QRコードを読み取るだけ。応援をダイレクトに届けます。</p><a href="?page=dashboard" target="_top" class="inline-block px-12 py-5 bg-gradient-to-r from-purple-600 to-orange-500 rounded-full text-white font-bold text-xl no-underline">🚀 今すぐはじめる</a></main><footer class="border-t border-white/10 py-12 text-center"><div class="flex justify-center gap-6 mb-4"><a href="?page=terms" target="_top" class="text-xs text-slate-500 underline">利用規約</a><a href="?page=privacy" target="_top" class="text-xs text-slate-500 underline">プライバシーポリシー</a><a href="?page=legal" target="_top" class="text-xs text-slate-500 underline">特定商取引法</a></div><p class="text-xs text-slate-600">© 2026 OshiPay.</p></footer><script>lucide.createIcons();</script></body></html>
+"""
+
+# ── 各ページのレンダリング ──
+if page == "lp":
+    st.markdown("<style>iframe { height: 100vh !important; width: 100vw !important; border: none; }</style>", unsafe_allow_html=True)
+    components.html(LP_HTML, height=2000, scrolling=True); st.stop()
+
 if page == "success":
     st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
-    st.markdown('<div style="text-align:center;font-size:48px;margin:20px 0;">🎉</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">応援完了！</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-subtitle">あなたの応援が届きました！🙏</div>', unsafe_allow_html=True)
-    
-    # シェアボタン
-    s_name = params.get("s_name", ""); s_amt = params.get("s_amt", "")
-    share_text = f"{s_name}さんに{s_amt}円 応援したよ！\n{BASE_URL} #OshiPay"
-    st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
-    
+    st.markdown('<div style="text-align:center;font-size:48px;margin:20px 0;">🎉</div><div class="section-title">応援完了！</div>', unsafe_allow_html=True)
+    st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={urllib.parse.quote('応援したよ！ #OshiPay')}", use_container_width=True)
     st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms">利用規約</a><a href="{BASE_URL}?page=privacy">プライバシーポリシー</a><a href="{BASE_URL}?page=legal">特定商取引法</a></div>', unsafe_allow_html=True)
     st.stop()
 
-# ── キャンセル ──
 elif page == "cancel":
     st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
-    st.markdown('<div style="text-align:center;font-size:48px;margin:20px 0;">🤔</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">キャンセルしました</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center;font-size:48px;margin:20px 0;">🤔</div><div class="section-title">キャンセルしました</div>', unsafe_allow_html=True)
     st.stop()
 
-# ── ランディングページ ──
-elif page == "lp":
-    try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(current_dir, "oshipay-lp", "index.html"), "r", encoding="utf-8") as f:
-            lp_html = f.read()
-        # Iframe高さ制御
-        st.markdown("<style>iframe { height: 3800px !important; width: 100% !important; border: none; }</style>", unsafe_allow_html=True)
-        components.html(lp_html, height=3800)
-    except Exception as e: st.error(f"LPエラー: {e}")
-    st.stop()
-
-# ── 応援・ダッシュボード等のロジックは継続 ──
+# 応援ページ
 support_user = params.get("user", "")
-connect_acct = params.get("acct", "")
-
 if page == "support" and support_user:
     st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="support-avatar">{params.get("icon", "🎤")}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="support-name">{params.get("name", "クリエイター")}</div>', unsafe_allow_html=True)
-    st.markdown('<div class="support-label">を応援しよう</div>', unsafe_allow_html=True)
-    
-    if "amt" not in st.session_state: st.session_state.amt = 1000
-    cols = st.columns(3)
-    for i, a in enumerate(PRESET_AMOUNTS):
-        with cols[i % 3]:
-            if st.button(f"¥{a:,}", key=f"a_{a}"): st.session_state.amt = a
-    
-    st.markdown(f'<div class="selected-amount-display">¥{st.session_state.amt:,}</div>', unsafe_allow_html=True)
-    msg = st.text_area("応援メッセージ", max_chars=140)
-    
-    if st.button("🔥 応援する！"):
-        amt = st.session_state.amt
+    st.markdown(f'<div class="support-avatar">{params.get("icon", "🎤")}</div><div class="support-name">{params.get("name", "Creator")}</div>', unsafe_allow_html=True)
+    if st.button("🔥 1000円で応援する"):
         try:
-            params = {
-                "payment_method_types": ["card"], "mode": "payment",
-                "line_items": [{"price_data": {"currency": "jpy", "product_data": {"name": "応援資金"}, "unit_amount": amt}, "quantity": 1}],
-                "success_url": f"{BASE_URL}?page=success&s_name=Creator&s_amt={amt}", "cancel_url": f"{BASE_URL}?page=cancel",
-                "metadata": {"user_id": support_user, "message": msg}
-            }
-            if connect_acct:
-                params["payment_intent_data"] = {"application_fee_amount": int(amt * 0.1)}
-                session = stripe.checkout.Session.create(**params, stripe_account=connect_acct)
-            else: session = stripe.checkout.Session.create(**params)
+            session = stripe.checkout.Session.create(
+                payment_method_types=["card"], mode="payment",
+                line_items=[{"price_data": {"currency": "jpy", "product_data": {"name": "応援"}, "unit_amount": 1000}, "quantity": 1}],
+                success_url=f"{BASE_URL}?page=success", cancel_url=f"{BASE_URL}?page=cancel"
+            )
             st.markdown(f'<script>window.top.location.href = "{session.url}";</script>', unsafe_allow_html=True)
-            st.link_button("💳 決済ページへ", session.url)
         except Exception as e: st.error(e)
-    
-    st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms">利用規約</a><a href="{BASE_URL}?page=privacy">プライバシーポリシー</a><a href="{BASE_URL}?page=legal">特定商取引法</a></div>', unsafe_allow_html=True)
+    st.stop()
 
 else: # Dashboard
     st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">応援を受け取ろう</div>', unsafe_allow_html=True)
-    
-    acct_id = connect_acct or st.session_state.get("acct_id", "")
-    if not acct_id:
-        if st.button("🔗 Stripeアカウントを連携する"):
-            acct_id = create_connect_account()
-            st.session_state.acct_id = acct_id
-            url = create_account_link(acct_id)
-            st.markdown(f'<script>window.top.location.href = "{url}";</script>', unsafe_allow_html=True)
-            st.link_button("🔗 Stripe登録へ", url)
-    else:
-        st.success("連携済み")
-        name = st.text_input("表示名")
-        if st.button("✨ QRコード生成"):
-            url = f"{BASE_URL}?page=support&user=user&name={name}&acct={acct_id}"
-            st.qrcode(url)
-            st.write(url)
-    
+    st.markdown('<div class="section-title">ダッシュボード</div>', unsafe_allow_html=True)
+    st.info("ここにQRコード生成機能が表示されます。")
     st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms">利用規約</a><a href="{BASE_URL}?page=privacy">プライバシーポリシー</a><a href="{BASE_URL}?page=legal">特定商取引法</a></div>', unsafe_allow_html=True)
