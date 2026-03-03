@@ -211,13 +211,26 @@ if page == "support" and support_user:
     st.markdown(f'<div class="support-avatar">{support_icon}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-name">{support_name or "Creator"}</div><div class="support-label">を応援しよう</div>', unsafe_allow_html=True)
     if "amt" not in st.session_state: st.session_state.amt = 1000
+    
+    # プリセットボタン
     for i in range(0, len(PRESET_AMOUNTS), 3):
         cols = st.columns(3)
         for j in range(3):
             if i + j < len(PRESET_AMOUNTS):
                 a = PRESET_AMOUNTS[i + j]
-                if cols[j].button(f"¥{a:,}", key=f"amt_{a}"): st.session_state.amt = a
-    st.markdown(f'<div class="selected-amount-display">¥{st.session_state.amt:,}</div>', unsafe_allow_html=True)
+                if cols[j].button(f"¥{a:,}", key=f"amt_{a}"):
+                    st.session_state.amt = a
+                    st.rerun()
+    
+    st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
+    
+    # 任意の金額入力
+    custom_amt = st.number_input("任意の金額を入力 (円)", min_value=100, step=100, value=int(st.session_state.amt), key="custom_amt_input")
+    if custom_amt != st.session_state.amt:
+        st.session_state.amt = custom_amt
+        st.rerun()
+    
+    st.markdown(f'<div class="selected-amount-display">¥{int(st.session_state.amt):,}</div>', unsafe_allow_html=True)
     msg = st.text_area("応援メッセージ（オプション）", max_chars=140)
     if st.button("🔥 応援する！"):
         amt = st.session_state.amt
