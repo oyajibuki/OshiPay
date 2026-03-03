@@ -188,19 +188,34 @@ if page == "success":
     st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div style="text-align:center;font-size:80px;margin-bottom:20px;">🎉</div><div class="section-title">応援完了！</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-subtitle">ありがとうございます！🙏</div>', unsafe_allow_html=True)
-    # ── 応援メール送信 ──
+    
+    # ── デバッグ情報（原因特定のため一時的に表示） ──
     s_name = params.get("s_name", "")
     s_amt_str = params.get("s_amt", "0")
     s_acct = params.get("s_acct", "")
     s_msg = params.get("s_msg", "")
+    
+    with st.expander("🛠️ デバッグ情報 (メールが届かない場合、ここを確認してください)"):
+        st.write(f"- 送信元名: {s_name}")
+        st.write(f"- 金額: {s_amt_str}")
+        st.write(f"- クリエイターID: {s_acct}")
+        st.write(f"- メッセージ: {s_msg}")
+
+    # ── 応援メール送信 ──
     try:
         s_amt = int(s_amt_str)
     except ValueError:
         s_amt = 0
+    
     if s_acct and s_name and s_amt > 0:
         try:
+            # クリエイターのメールアドレスを取得
             acct_info = stripe.Account.retrieve(s_acct)
             creator_email = acct_info.get("email", "")
+            
+            if not creator_email:
+                st.info(f"💡 クリエイター({s_acct})のメールアドレスがStripeから取得できませんでした。クリエイター側でStripeの設定が完了している必要があります。")
+            
             if creator_email:
                 ok, err = send_support_email(creator_email, s_name, s_amt, s_msg)
                 if not ok:
