@@ -250,19 +250,9 @@ if page == "support" and support_user:
     st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-avatar">{support_icon}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-name">{support_name or "Creator"}</div><div class="support-label">を応援しよう</div>', unsafe_allow_html=True)
-    if "amt" not in st.session_state: st.session_state.amt = 0
+    if "amt" not in st.session_state: st.session_state.amt = 100
     
-    # プリセットボタン
-    for i in range(0, len(PRESET_AMOUNTS), 3):
-        cols = st.columns(3)
-        for j in range(3):
-            if i + j < len(PRESET_AMOUNTS):
-                a = PRESET_AMOUNTS[i + j]
-                if cols[j].button(f"¥{a:,}", key=f"amt_{a}"):
-                    st.session_state.amt = a
-                    st.rerun()
-    
-    st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-subtitle">応援する金額を選んで、メッセージを送ろう</div>', unsafe_allow_html=True)
     
     # 金額の選択肢（ドラム用）: 非線形で作成して操作性を向上
     # 100-1000(100刻み), 1000-10000(500刻み), 10000-100000(5000刻み), 100000-1000000(50000刻み)

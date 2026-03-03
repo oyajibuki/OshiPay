@@ -1,0 +1,1062 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "acct_1T6mAjFIcplqHdko",
+      "object": "account",
+      "business_profile": {
+        "annual_revenue": null,
+        "estimated_worker_count": null,
+        "mcc": "7922",
+        "minority_owned_business_designation": null,
+        "name": null,
+        "support_address": null,
+        "support_email": null,
+        "support_phone": null,
+        "support_url": null,
+        "url": null
+      },
+      "business_type": "individual",
+      "capabilities": {
+        "card_payments": "inactive",
+        "transfers": "inactive"
+      },
+      "charges_enabled": false,
+      "company": {
+        "name": null,
+        "name_kana": null,
+        "name_kanji": null
+      },
+      "controller": {
+        "fees": {
+          "payer": "application_express"
+        },
+        "is_controller": true,
+        "losses": {
+          "payments": "application"
+        },
+        "requirement_collection": "stripe",
+        "stripe_dashboard": {
+          "type": "express"
+        },
+        "type": "application"
+      },
+      "country": "JP",
+      "created": 1772518270,
+      "default_currency": "jpy",
+      "details_submitted": true,
+      "email": null,
+      "external_accounts": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/accounts/acct_1T6mAjFIcplqHdko/external_accounts"
+      },
+      "future_requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [],
+        "disabled_reason": null,
+        "errors": [],
+        "eventually_due": [],
+        "past_due": [],
+        "pending_verification": []
+      },
+      "login_links": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/accounts/acct_1T6mAjFIcplqHdko/login_links"
+      },
+      "metadata": {},
+      "payouts_enabled": false,
+      "requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [
+          "business_profile.url",
+          "external_account",
+          "individual.address_kana.city",
+          "individual.address_kana.line1",
+          "individual.address_kana.postal_code",
+          "individual.address_kana.state",
+          "individual.address_kana.town",
+          "individual.address_kanji.city",
+          "individual.address_kanji.line1",
+          "individual.address_kanji.postal_code",
+          "individual.address_kanji.state",
+          "individual.address_kanji.town",
+          "individual.dob.day",
+          "individual.dob.month",
+          "individual.dob.year",
+          "individual.email",
+          "individual.first_name_kana",
+          "individual.first_name_kanji",
+          "individual.last_name_kana",
+          "individual.last_name_kanji",
+          "individual.phone",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "disabled_reason": "rejected.fraud",
+        "errors": [],
+        "eventually_due": [
+          "business_profile.url",
+          "external_account",
+          "individual.address_kana.city",
+          "individual.address_kana.line1",
+          "individual.address_kana.postal_code",
+          "individual.address_kana.state",
+          "individual.address_kana.town",
+          "individual.address_kanji.city",
+          "individual.address_kanji.line1",
+          "individual.address_kanji.postal_code",
+          "individual.address_kanji.state",
+          "individual.address_kanji.town",
+          "individual.dob.day",
+          "individual.dob.month",
+          "individual.dob.year",
+          "individual.email",
+          "individual.first_name_kana",
+          "individual.first_name_kanji",
+          "individual.last_name_kana",
+          "individual.last_name_kanji",
+          "individual.phone",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "past_due": [
+          "business_profile.url",
+          "external_account",
+          "individual.address_kana.city",
+          "individual.address_kana.line1",
+          "individual.address_kana.postal_code",
+          "individual.address_kana.state",
+          "individual.address_kana.town",
+          "individual.address_kanji.city",
+          "individual.address_kanji.line1",
+          "individual.address_kanji.postal_code",
+          "individual.address_kanji.state",
+          "individual.address_kanji.town",
+          "individual.dob.day",
+          "individual.dob.month",
+          "individual.dob.year",
+          "individual.email",
+          "individual.first_name_kana",
+          "individual.first_name_kanji",
+          "individual.last_name_kana",
+          "individual.last_name_kanji",
+          "individual.phone",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "pending_verification": []
+      },
+      "settings": {
+        "bacs_debit_payments": {
+          "display_name": null,
+          "service_user_number": null
+        },
+        "branding": {
+          "icon": null,
+          "logo": null,
+          "primary_color": null,
+          "secondary_color": null
+        },
+        "card_issuing": {
+          "tos_acceptance": {
+            "date": null,
+            "ip": null
+          }
+        },
+        "card_payments": {
+          "decline_on": {
+            "avs_failure": false,
+            "cvc_failure": false
+          },
+          "statement_descriptor_prefix": null,
+          "statement_descriptor_prefix_kana": null,
+          "statement_descriptor_prefix_kanji": null
+        },
+        "dashboard": {
+          "display_name": null,
+          "timezone": "Etc/UTC"
+        },
+        "invoices": {
+          "default_account_tax_ids": null,
+          "hosted_payment_method_save": "offer"
+        },
+        "payments": {
+          "statement_descriptor": "",
+          "statement_descriptor_kana": null,
+          "statement_descriptor_kanji": null
+        },
+        "payouts": {
+          "debit_negative_balances": true,
+          "schedule": {
+            "delay_days": 4,
+            "interval": "weekly",
+            "weekly_anchor": "friday",
+            "weekly_payout_days": [
+              "friday"
+            ]
+          },
+          "statement_descriptor": null
+        },
+        "sepa_debit_payments": {}
+      },
+      "tos_acceptance": {
+        "date": null
+      },
+      "type": "express"
+    },
+    {
+      "id": "acct_1T6l9fF2Q5KFJJzj",
+      "object": "account",
+      "business_profile": {
+        "annual_revenue": null,
+        "estimated_worker_count": null,
+        "mcc": "7922",
+        "minority_owned_business_designation": null,
+        "name": null,
+        "support_address": null,
+        "support_email": null,
+        "support_phone": null,
+        "support_url": null,
+        "url": null
+      },
+      "business_type": "individual",
+      "capabilities": {
+        "card_payments": "inactive",
+        "transfers": "inactive"
+      },
+      "charges_enabled": false,
+      "company": {
+        "name": null,
+        "name_kana": null,
+        "name_kanji": null
+      },
+      "controller": {
+        "fees": {
+          "payer": "application_express"
+        },
+        "is_controller": true,
+        "losses": {
+          "payments": "application"
+        },
+        "requirement_collection": "stripe",
+        "stripe_dashboard": {
+          "type": "express"
+        },
+        "type": "application"
+      },
+      "country": "JP",
+      "created": 1772514361,
+      "default_currency": "jpy",
+      "details_submitted": false,
+      "email": null,
+      "external_accounts": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/accounts/acct_1T6l9fF2Q5KFJJzj/external_accounts"
+      },
+      "future_requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [
+          "external_account",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "disabled_reason": null,
+        "errors": [],
+        "eventually_due": [
+          "external_account",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "past_due": [
+          "external_account",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "pending_verification": []
+      },
+      "login_links": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/accounts/acct_1T6l9fF2Q5KFJJzj/login_links"
+      },
+      "metadata": {},
+      "payouts_enabled": false,
+      "requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [
+          "business_profile.url",
+          "external_account",
+          "individual.address_kana.city",
+          "individual.address_kana.line1",
+          "individual.address_kana.postal_code",
+          "individual.address_kana.state",
+          "individual.address_kana.town",
+          "individual.address_kanji.city",
+          "individual.address_kanji.line1",
+          "individual.address_kanji.postal_code",
+          "individual.address_kanji.state",
+          "individual.address_kanji.town",
+          "individual.dob.day",
+          "individual.dob.month",
+          "individual.dob.year",
+          "individual.email",
+          "individual.first_name_kana",
+          "individual.first_name_kanji",
+          "individual.last_name_kana",
+          "individual.last_name_kanji",
+          "individual.phone",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "disabled_reason": "requirements.past_due",
+        "errors": [],
+        "eventually_due": [
+          "business_profile.url",
+          "external_account",
+          "individual.address_kana.city",
+          "individual.address_kana.line1",
+          "individual.address_kana.postal_code",
+          "individual.address_kana.state",
+          "individual.address_kana.town",
+          "individual.address_kanji.city",
+          "individual.address_kanji.line1",
+          "individual.address_kanji.postal_code",
+          "individual.address_kanji.state",
+          "individual.address_kanji.town",
+          "individual.dob.day",
+          "individual.dob.month",
+          "individual.dob.year",
+          "individual.email",
+          "individual.first_name_kana",
+          "individual.first_name_kanji",
+          "individual.last_name_kana",
+          "individual.last_name_kanji",
+          "individual.phone",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "past_due": [
+          "business_profile.url",
+          "external_account",
+          "individual.address_kana.city",
+          "individual.address_kana.line1",
+          "individual.address_kana.postal_code",
+          "individual.address_kana.state",
+          "individual.address_kana.town",
+          "individual.address_kanji.city",
+          "individual.address_kanji.line1",
+          "individual.address_kanji.postal_code",
+          "individual.address_kanji.state",
+          "individual.address_kanji.town",
+          "individual.dob.day",
+          "individual.dob.month",
+          "individual.dob.year",
+          "individual.email",
+          "individual.first_name_kana",
+          "individual.first_name_kanji",
+          "individual.last_name_kana",
+          "individual.last_name_kanji",
+          "individual.phone",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "pending_verification": []
+      },
+      "settings": {
+        "bacs_debit_payments": {
+          "display_name": null,
+          "service_user_number": null
+        },
+        "branding": {
+          "icon": null,
+          "logo": null,
+          "primary_color": null,
+          "secondary_color": null
+        },
+        "card_issuing": {
+          "tos_acceptance": {
+            "date": null,
+            "ip": null
+          }
+        },
+        "card_payments": {
+          "decline_on": {
+            "avs_failure": false,
+            "cvc_failure": false
+          },
+          "statement_descriptor_prefix": null,
+          "statement_descriptor_prefix_kana": null,
+          "statement_descriptor_prefix_kanji": null
+        },
+        "dashboard": {
+          "display_name": null,
+          "timezone": "Etc/UTC"
+        },
+        "invoices": {
+          "default_account_tax_ids": null,
+          "hosted_payment_method_save": "offer"
+        },
+        "payments": {
+          "statement_descriptor": "",
+          "statement_descriptor_kana": null,
+          "statement_descriptor_kanji": null
+        },
+        "payouts": {
+          "debit_negative_balances": true,
+          "schedule": {
+            "delay_days": 4,
+            "interval": "weekly",
+            "weekly_anchor": "friday",
+            "weekly_payout_days": [
+              "friday"
+            ]
+          },
+          "statement_descriptor": null
+        },
+        "sepa_debit_payments": {}
+      },
+      "tos_acceptance": {
+        "date": null
+      },
+      "type": "express"
+    },
+    {
+      "id": "acct_1T6agwF8c6vQTJoJ",
+      "object": "account",
+      "business_profile": {
+        "annual_revenue": null,
+        "estimated_worker_count": null,
+        "mcc": "7922",
+        "minority_owned_business_designation": null,
+        "name": null,
+        "support_address": null,
+        "support_email": null,
+        "support_phone": null,
+        "support_url": null,
+        "url": "https://oyajibuki.github.io/tools/"
+      },
+      "business_type": "individual",
+      "capabilities": {
+        "bancontact_payments": "active",
+        "card_payments": "active",
+        "eps_payments": "active",
+        "ideal_payments": "active",
+        "link_payments": "active",
+        "transfers": "active"
+      },
+      "charges_enabled": true,
+      "company": {
+        "name": null,
+        "name_kana": null,
+        "name_kanji": null
+      },
+      "controller": {
+        "fees": {
+          "payer": "application_express"
+        },
+        "is_controller": true,
+        "losses": {
+          "payments": "application"
+        },
+        "requirement_collection": "stripe",
+        "stripe_dashboard": {
+          "type": "express"
+        },
+        "type": "application"
+      },
+      "country": "JP",
+      "created": 1772474140,
+      "default_currency": "jpy",
+      "details_submitted": true,
+      "email": "mseki502@gmail.com",
+      "external_accounts": {
+        "object": "list",
+        "data": [
+          {
+            "id": "ba_1T6ak9F8c6vQTJoJ2hl3j13O",
+            "object": "bank_account",
+            "account": "acct_1T6agwF8c6vQTJoJ",
+            "account_holder_name": "セキモトキ",
+            "account_holder_type": null,
+            "account_type": "futsu",
+            "available_payout_methods": [
+              "standard"
+            ],
+            "bank_name": "住信ＳＢＩネット銀行",
+            "country": "JP",
+            "currency": "jpy",
+            "default_for_currency": true,
+            "fingerprint": "s4WMEnuRPNP8fANg",
+            "future_requirements": {
+              "currently_due": [],
+              "errors": [],
+              "past_due": [],
+              "pending_verification": []
+            },
+            "last4": "9567",
+            "metadata": {},
+            "requirements": {
+              "currently_due": [],
+              "errors": [],
+              "past_due": [],
+              "pending_verification": []
+            },
+            "routing_number": "0038102",
+            "status": "new"
+          }
+        ],
+        "has_more": false,
+        "total_count": 1,
+        "url": "/v1/accounts/acct_1T6agwF8c6vQTJoJ/external_accounts"
+      },
+      "future_requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [],
+        "disabled_reason": null,
+        "errors": [],
+        "eventually_due": [],
+        "past_due": [],
+        "pending_verification": []
+      },
+      "individual": {
+        "id": "person_1T6aiQF8c6vQTJoJt5gbKXQ8",
+        "object": "person",
+        "account": "acct_1T6agwF8c6vQTJoJ",
+        "created": 1772474230,
+        "email": "mseki502@gmail.com",
+        "first_name": "元喜",
+        "first_name_kana": "モトキ",
+        "first_name_kanji": "元喜",
+        "last_name": "関",
+        "last_name_kana": "セキ",
+        "last_name_kanji": "関",
+        "relationship": {
+          "authorizer": false,
+          "director": false,
+          "executive": false,
+          "legal_guardian": false,
+          "owner": false,
+          "percent_ownership": null,
+          "representative": true,
+          "title": null
+        }
+      },
+      "login_links": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/accounts/acct_1T6agwF8c6vQTJoJ/login_links"
+      },
+      "metadata": {},
+      "payouts_enabled": true,
+      "requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [],
+        "disabled_reason": null,
+        "errors": [],
+        "eventually_due": [],
+        "past_due": [],
+        "pending_verification": []
+      },
+      "settings": {
+        "bacs_debit_payments": {
+          "display_name": null,
+          "service_user_number": null
+        },
+        "branding": {
+          "icon": null,
+          "logo": null,
+          "primary_color": null,
+          "secondary_color": null
+        },
+        "card_issuing": {
+          "tos_acceptance": {
+            "date": null,
+            "ip": null
+          }
+        },
+        "card_payments": {
+          "decline_on": {
+            "avs_failure": false,
+            "cvc_failure": false
+          },
+          "statement_descriptor_prefix": null,
+          "statement_descriptor_prefix_kana": null,
+          "statement_descriptor_prefix_kanji": null
+        },
+        "dashboard": {
+          "display_name": "oyajibuki.github.io",
+          "timezone": "Etc/UTC"
+        },
+        "invoices": {
+          "default_account_tax_ids": null,
+          "hosted_payment_method_save": "offer"
+        },
+        "payments": {
+          "statement_descriptor": "",
+          "statement_descriptor_kana": null,
+          "statement_descriptor_kanji": null
+        },
+        "payouts": {
+          "debit_negative_balances": true,
+          "schedule": {
+            "delay_days": 4,
+            "interval": "weekly",
+            "weekly_anchor": "friday",
+            "weekly_payout_days": [
+              "friday"
+            ]
+          },
+          "statement_descriptor": null
+        },
+        "sepa_debit_payments": {}
+      },
+      "tos_acceptance": {
+        "date": 1772474512
+      },
+      "type": "express"
+    },
+    {
+      "id": "acct_1T6aIaF7nXaeQCl4",
+      "object": "account",
+      "business_profile": {
+        "annual_revenue": null,
+        "estimated_worker_count": null,
+        "mcc": "7922",
+        "minority_owned_business_designation": null,
+        "name": null,
+        "support_address": null,
+        "support_email": null,
+        "support_phone": null,
+        "support_url": null,
+        "url": null
+      },
+      "business_type": "individual",
+      "capabilities": {
+        "card_payments": "inactive",
+        "transfers": "inactive"
+      },
+      "charges_enabled": false,
+      "company": {
+        "name": null,
+        "name_kana": null,
+        "name_kanji": null
+      },
+      "controller": {
+        "fees": {
+          "payer": "application_express"
+        },
+        "is_controller": true,
+        "losses": {
+          "payments": "application"
+        },
+        "requirement_collection": "stripe",
+        "stripe_dashboard": {
+          "type": "express"
+        },
+        "type": "application"
+      },
+      "country": "JP",
+      "created": 1772472630,
+      "default_currency": "jpy",
+      "details_submitted": false,
+      "email": null,
+      "external_accounts": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/accounts/acct_1T6aIaF7nXaeQCl4/external_accounts"
+      },
+      "future_requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [
+          "external_account",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "disabled_reason": null,
+        "errors": [],
+        "eventually_due": [
+          "external_account",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "past_due": [
+          "external_account",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "pending_verification": []
+      },
+      "login_links": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/accounts/acct_1T6aIaF7nXaeQCl4/login_links"
+      },
+      "metadata": {},
+      "payouts_enabled": false,
+      "requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [
+          "business_profile.url",
+          "external_account",
+          "individual.address_kana.city",
+          "individual.address_kana.line1",
+          "individual.address_kana.postal_code",
+          "individual.address_kana.state",
+          "individual.address_kana.town",
+          "individual.address_kanji.city",
+          "individual.address_kanji.line1",
+          "individual.address_kanji.postal_code",
+          "individual.address_kanji.state",
+          "individual.address_kanji.town",
+          "individual.dob.day",
+          "individual.dob.month",
+          "individual.dob.year",
+          "individual.email",
+          "individual.first_name_kana",
+          "individual.first_name_kanji",
+          "individual.last_name_kana",
+          "individual.last_name_kanji",
+          "individual.phone",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "disabled_reason": "requirements.past_due",
+        "errors": [],
+        "eventually_due": [
+          "business_profile.url",
+          "external_account",
+          "individual.address_kana.city",
+          "individual.address_kana.line1",
+          "individual.address_kana.postal_code",
+          "individual.address_kana.state",
+          "individual.address_kana.town",
+          "individual.address_kanji.city",
+          "individual.address_kanji.line1",
+          "individual.address_kanji.postal_code",
+          "individual.address_kanji.state",
+          "individual.address_kanji.town",
+          "individual.dob.day",
+          "individual.dob.month",
+          "individual.dob.year",
+          "individual.email",
+          "individual.first_name_kana",
+          "individual.first_name_kanji",
+          "individual.last_name_kana",
+          "individual.last_name_kanji",
+          "individual.phone",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "past_due": [
+          "business_profile.url",
+          "external_account",
+          "individual.address_kana.city",
+          "individual.address_kana.line1",
+          "individual.address_kana.postal_code",
+          "individual.address_kana.state",
+          "individual.address_kana.town",
+          "individual.address_kanji.city",
+          "individual.address_kanji.line1",
+          "individual.address_kanji.postal_code",
+          "individual.address_kanji.state",
+          "individual.address_kanji.town",
+          "individual.dob.day",
+          "individual.dob.month",
+          "individual.dob.year",
+          "individual.email",
+          "individual.first_name_kana",
+          "individual.first_name_kanji",
+          "individual.last_name_kana",
+          "individual.last_name_kanji",
+          "individual.phone",
+          "tos_acceptance.date",
+          "tos_acceptance.ip"
+        ],
+        "pending_verification": []
+      },
+      "settings": {
+        "bacs_debit_payments": {
+          "display_name": null,
+          "service_user_number": null
+        },
+        "branding": {
+          "icon": null,
+          "logo": null,
+          "primary_color": null,
+          "secondary_color": null
+        },
+        "card_issuing": {
+          "tos_acceptance": {
+            "date": null,
+            "ip": null
+          }
+        },
+        "card_payments": {
+          "decline_on": {
+            "avs_failure": false,
+            "cvc_failure": false
+          },
+          "statement_descriptor_prefix": null,
+          "statement_descriptor_prefix_kana": null,
+          "statement_descriptor_prefix_kanji": null
+        },
+        "dashboard": {
+          "display_name": null,
+          "timezone": "Etc/UTC"
+        },
+        "invoices": {
+          "default_account_tax_ids": null,
+          "hosted_payment_method_save": "offer"
+        },
+        "payments": {
+          "statement_descriptor": "",
+          "statement_descriptor_kana": null,
+          "statement_descriptor_kanji": null
+        },
+        "payouts": {
+          "debit_negative_balances": true,
+          "schedule": {
+            "delay_days": 4,
+            "interval": "weekly",
+            "weekly_anchor": "friday",
+            "weekly_payout_days": [
+              "friday"
+            ]
+          },
+          "statement_descriptor": null
+        },
+        "sepa_debit_payments": {}
+      },
+      "tos_acceptance": {
+        "date": null
+      },
+      "type": "express"
+    },
+    {
+      "id": "acct_1T6ZJIF1qt2e8lEP",
+      "object": "account",
+      "business_profile": {
+        "annual_revenue": null,
+        "estimated_worker_count": null,
+        "mcc": "5734",
+        "minority_owned_business_designation": null,
+        "name": null,
+        "support_address": null,
+        "support_email": null,
+        "support_phone": null,
+        "support_url": null,
+        "url": "https://oyajibuki.github.io/tools/"
+      },
+      "business_type": "individual",
+      "capabilities": {
+        "bancontact_payments": "active",
+        "card_payments": "active",
+        "eps_payments": "active",
+        "ideal_payments": "active",
+        "link_payments": "active",
+        "transfers": "active"
+      },
+      "charges_enabled": true,
+      "company": {
+        "name": null,
+        "name_kana": null,
+        "name_kanji": null
+      },
+      "controller": {
+        "fees": {
+          "payer": "application_express"
+        },
+        "is_controller": true,
+        "losses": {
+          "payments": "application"
+        },
+        "requirement_collection": "stripe",
+        "stripe_dashboard": {
+          "type": "express"
+        },
+        "type": "application"
+      },
+      "country": "JP",
+      "created": 1772468830,
+      "default_currency": "jpy",
+      "details_submitted": true,
+      "email": "mseki502@yahoo.co.jp",
+      "external_accounts": {
+        "object": "list",
+        "data": [
+          {
+            "id": "ba_1T6ZNDF1qt2e8lEPZXIBat7D",
+            "object": "bank_account",
+            "account": "acct_1T6ZJIF1qt2e8lEP",
+            "account_holder_name": "セキモトキ",
+            "account_holder_type": null,
+            "account_type": "futsu",
+            "available_payout_methods": [
+              "standard"
+            ],
+            "bank_name": "住信ＳＢＩネット銀行",
+            "country": "JP",
+            "currency": "jpy",
+            "default_for_currency": true,
+            "fingerprint": "s4WMEnuRPNP8fANg",
+            "future_requirements": {
+              "currently_due": [],
+              "errors": [],
+              "past_due": [],
+              "pending_verification": []
+            },
+            "last4": "9567",
+            "metadata": {},
+            "requirements": {
+              "currently_due": [],
+              "errors": [],
+              "past_due": [],
+              "pending_verification": []
+            },
+            "routing_number": "0038102",
+            "status": "new"
+          }
+        ],
+        "has_more": false,
+        "total_count": 1,
+        "url": "/v1/accounts/acct_1T6ZJIF1qt2e8lEP/external_accounts"
+      },
+      "future_requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [],
+        "disabled_reason": null,
+        "errors": [],
+        "eventually_due": [],
+        "past_due": [],
+        "pending_verification": []
+      },
+      "individual": {
+        "id": "person_1T6ZKoF1qt2e8lEP8KrMmNnQ",
+        "object": "person",
+        "account": "acct_1T6ZJIF1qt2e8lEP",
+        "created": 1772468922,
+        "email": "mseki502@yahoo.co.jp",
+        "first_name": "元喜",
+        "first_name_kana": "モトキ",
+        "first_name_kanji": "元喜",
+        "last_name": "関",
+        "last_name_kana": "セキ",
+        "last_name_kanji": "関",
+        "relationship": {
+          "authorizer": false,
+          "director": false,
+          "executive": false,
+          "legal_guardian": false,
+          "owner": false,
+          "percent_ownership": null,
+          "representative": true,
+          "title": null
+        }
+      },
+      "login_links": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/accounts/acct_1T6ZJIF1qt2e8lEP/login_links"
+      },
+      "metadata": {},
+      "payouts_enabled": true,
+      "requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [],
+        "disabled_reason": null,
+        "errors": [],
+        "eventually_due": [],
+        "past_due": [],
+        "pending_verification": []
+      },
+      "settings": {
+        "bacs_debit_payments": {
+          "display_name": null,
+          "service_user_number": null
+        },
+        "branding": {
+          "icon": null,
+          "logo": null,
+          "primary_color": null,
+          "secondary_color": null
+        },
+        "card_issuing": {
+          "tos_acceptance": {
+            "date": null,
+            "ip": null
+          }
+        },
+        "card_payments": {
+          "decline_on": {
+            "avs_failure": false,
+            "cvc_failure": false
+          },
+          "statement_descriptor_prefix": null,
+          "statement_descriptor_prefix_kana": null,
+          "statement_descriptor_prefix_kanji": null
+        },
+        "dashboard": {
+          "display_name": "oyajibuki.github.io",
+          "timezone": "Etc/UTC"
+        },
+        "invoices": {
+          "default_account_tax_ids": null,
+          "hosted_payment_method_save": "offer"
+        },
+        "payments": {
+          "statement_descriptor": "",
+          "statement_descriptor_kana": null,
+          "statement_descriptor_kanji": null
+        },
+        "payouts": {
+          "debit_negative_balances": true,
+          "schedule": {
+            "delay_days": 4,
+            "interval": "weekly",
+            "weekly_anchor": "friday",
+            "weekly_payout_days": [
+              "friday"
+            ]
+          },
+          "statement_descriptor": null
+        },
+        "sepa_debit_payments": {}
+      },
+      "tos_acceptance": {
+        "date": 1772469168
+      },
+      "type": "express"
+    }
+  ],
+  "has_more": false,
+  "url": "/v1/accounts"
+}
