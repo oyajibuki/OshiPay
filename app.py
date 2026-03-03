@@ -801,12 +801,12 @@ elif page == "lp":
             # Landing page bridge script
             st.markdown("""
                  <style>
-                 iframe[title="st.html"] {
+                 iframe[title="st.iframe"] {
                      height: 3780px !important;
                  }
                  @media (max-width: 768px) {
-                     iframe[title="st.html"] {
-                          height: 5800px !important;
+                     iframe[title="st.iframe"] {
+                          height: 5500px !important;
                      }
                  }
                  </style>
