@@ -196,7 +196,7 @@ if page == "lp":
     st.markdown("""
     <style>
     /* デフォルト (PC) の高さ */
-    iframe { height: 3750px !important; border: none; }
+    iframe { height: 3300px !important; border: none; }
 
     /* モバイル用の高さ調整 (幅768px以下) */
     @media (max-width: 768px) {
