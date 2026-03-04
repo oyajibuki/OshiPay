@@ -180,7 +180,7 @@ else:
 LEGAL_MAP = {
     "terms": "role/index.html",
     "privacy": "role/index2.html",
-    "legal": "role/index3.html"
+    "legal": "role/index3v2.html"
 }
 
 if page in LEGAL_MAP:
@@ -295,6 +295,26 @@ if page == "support" and support_user:
     is_disabled = st.session_state.amt < 100
     if is_disabled:
         st.info("💡 応援は100円から受け付けています。金額を選択してください。")
+
+    # ── 改正特商法に基づく最終確認表示 ──
+    st.markdown(f"""
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin-top: 20px; margin-bottom: 20px;">
+        <div style="font-size: 13px; color: #f0f0f5; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">最終確認</div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-size: 12px; color: rgba(240,240,245,0.6);">支払総額（税込）</span>
+            <span style="font-size: 14px; color: #f97316; font-weight: 700;">¥{int(st.session_state.amt):,}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-size: 12px; color: rgba(240,240,245,0.6);">支払時期</span>
+            <span style="font-size: 12px; color: #f0f0f5;">決済手続き完了時</span>
+        </div>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
+            <div style="font-size: 11px; color: rgba(240,240,245,0.5); line-height: 1.4;">
+                ※デジタルコンテンツおよび投げ銭の性質上、決済手続き完了後のキャンセル、返金、返品には一切応じられません。
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     if st.button("🔥 応援する！", disabled=is_disabled):
         amt = st.session_state.amt
