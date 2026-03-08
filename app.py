@@ -187,7 +187,7 @@ if page in LEGAL_MAP:
     html_content = read_html_file(LEGAL_MAP[page])
     # スクロール位置リセット用JSを注入
     html_content = inject_top_scroll_script(html_content)
-    components.html(html_content, height=2000, scrolling=True)
+    components.html(html_content, height=5000, scrolling=False)
     st.stop()
 
 # ── ランディングページ ──
@@ -345,60 +345,48 @@ else: # Dashboard
         st.markdown('<div class="header">応援用QRコードを作成</div>', unsafe_allow_html=True)
         st.write("応援（決済）を受け取るためのStripeアカウントを作成、または連携します。")
 
-        # ── 利用規約同意チェックボックス ──
-        st.markdown(f"""
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);
-                    border-radius:12px;padding:14px 16px;margin-bottom:8px;font-size:12px;
-                    color:rgba(240,240,245,0.7);line-height:1.6;">
-            本サービスを利用する前に、
-            <a href="{BASE_URL}?page=terms" target="_top"
-               style="color:#8b5cf6;text-decoration:underline;">利用規約</a>
-            をお読みください。特に以下の点にご注意ください。<br>
-            ・正当なサービス・活動への応援・チップとしてご利用ください（軽犯罪法第1条第22号）<br>
-            ・決済完了後の返金・キャンセルは原則対応しておりません
-        </div>
-        """, unsafe_allow_html=True)
-        terms_agreed = st.checkbox(
-            "利用規約を読み、内容に同意します（必須）",
-            key="terms_agreed"
-        )
+        # 明示的なボタンによる発行の意思確認（利用規約同意を含む）
+        if st.checkbox(
+            "利用規約に同意して、新規にQRコードを発行して応援を受け取りますか？",
+            help="チェックを入れることで利用規約（軽犯罪法第1条第22号への遵守・返金不可等）に同意したものとみなします。"
+        ):
+            if "onboarding_url" not in st.session_state:
+                if st.button("🔗 Stripeアカウントを連携する"):
+                    with st.spinner("Stripeと連携する準備をしています... (数秒かかります)"):
+                        try:
+                            # アカウント作成（ウェブサイトURLなどを事前注入）
+                            acct_id = create_connect_account()
+                            # 登録用リンクを取得して保存
+                            st.session_state.onboarding_url = create_account_link(acct_id)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"連携エラー: {e}")
 
-        if not terms_agreed:
-            st.info("続けるには利用規約への同意が必要です。")
-        else:
-            # 明示的なボタンによる発行の意思確認
-            if st.checkbox("新規にQRコードを発行して応援を受け取りますか？"):
-                if "onboarding_url" not in st.session_state:
-                    if st.button("🔗 Stripeアカウントを連携する"):
-                        with st.spinner("Stripeと連携する準備をしています... (数秒かかります)"):
-                            try:
-                                # アカウント作成（ウェブサイトURLなどを事前注入）
-                                acct_id = create_connect_account()
-                                # 登録用リンクを取得して保存
-                                st.session_state.onboarding_url = create_account_link(acct_id)
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"連携エラー: {e}")
-
-                if "onboarding_url" in st.session_state:
-                    st.markdown(f"""
-                    <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 20px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 12px;">🌟</div>
-                        <div style="color: #f0f0f5; font-weight: 700; font-size: 16px; margin-bottom: 8px;">ステップ 1/2: Stripeで本人確認</div>
-                        <div style="font-size: 13px; color: rgba(240,240,245,0.7); margin-bottom: 20px;">
-                            下のボタンを押して、Stripeの画面で「本人確認」と「銀行口座」の設定を完了させてください。<br>
-                            完了すると自動的にここに戻ってきます。
-                        </div>
+            if "onboarding_url" in st.session_state:
+                st.markdown(f"""
+                <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 20px; text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 12px;">🌟</div>
+                    <div style="color: #f0f0f5; font-weight: 700; font-size: 16px; margin-bottom: 8px;">ステップ 1/2: Stripeで本人確認</div>
+                    <div style="font-size: 13px; color: rgba(240,240,245,0.7); margin-bottom: 20px;">
+                        下のボタンを押して、Stripeの画面で「本人確認」と「銀行口座」の設定を完了させてください。<br>
+                        完了すると自動的にここに戻ってきます。
                     </div>
-                    """, unsafe_allow_html=True)
-                    st.link_button("👉 Stripeの登録画面へ進む", st.session_state.onboarding_url, type="primary")
-                    # 念のための自動リダイレクトJSも併用
-                    components.html(f'<script>window.top.location.href = "{st.session_state.onboarding_url}";</script>', height=0)
-                    if st.button("❌ キャンセルしてやり直す"):
-                        del st.session_state.onboarding_url
-                        st.rerun()
-            else:
-                st.warning("発行・連携を進めるには上のチェックボックスをオンにしてください。")
+                </div>
+                """, unsafe_allow_html=True)
+                st.link_button("👉 Stripeの登録画面へ進む", st.session_state.onboarding_url, type="primary")
+                # 念のための自動リダイレクトJSも併用
+                components.html(f'<script>window.top.location.href = "{st.session_state.onboarding_url}";</script>', height=0)
+                if st.button("❌ キャンセルしてやり直す"):
+                    del st.session_state.onboarding_url
+                    st.rerun()
+        else:
+            st.markdown(f"""
+            <div style="font-size:12px;color:rgba(240,240,245,0.5);margin-top:6px;line-height:1.7;">
+                チェックを入れると発行ステップに進めます。<br>
+                事前に <a href="{BASE_URL}?page=terms" target="_top"
+                style="color:#8b5cf6;">利用規約</a> をご確認ください。
+            </div>
+            """, unsafe_allow_html=True)
     else:
         st.markdown(f"""
         <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
