@@ -468,8 +468,8 @@ if page == "lp":
     </script>
     <style>
     @media (max-width: 768px) {
-        [data-testid="stCustomComponentV1"],
-        [data-testid="stCustomComponentV1"] > iframe {
+        [data-testid="stIFrame"],
+        [data-testid="stIFrame"] > iframe {
             height: 5900px !important;
             min-height: 5900px !important;
         }
