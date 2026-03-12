@@ -97,7 +97,7 @@ def send_support_email(to_email, creator_name, amount, message):
         smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
         smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
         if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = f"🔥 {creator_name}さんに応援が届きました！ (OshiPay)"
+        subject = f"{creator_name}さんに応援が届きました！ (OshiPay)"
         body = f"{creator_name}さん\n\nOshiPayを通じて応援が届きました！\n\n💰 応援金額: {amount:,}円\n💬 メッセージ:\n{message if message else '（なし）'}\n\n--\nOshiPay\n{BASE_URL}"
         msg = MIMEText(body); msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
         with smtplib.SMTP(smtp_server, smtp_port) as server:
@@ -151,7 +151,7 @@ def generate_coin_image(creator_name, amount, date_str, support_id, rank=1, repl
 
     ■ スコア計算
       rank_pts   : #1-9=3, #10-99=2, #100-999=1, #1000+=0
-      amount_pts : ¥100,000+=3, ¥10,000+=2, ¥1,000+=1, <¥1,000=0
+      amount_pts : 100,000+=3, 10,000+=2, 1,000+=1, <1,000=0
       score = rank_pts + amount_pts  (0〜6)
 
     ■ 本体色（score基準）
@@ -237,7 +237,7 @@ def generate_coin_image(creator_name, amount, date_str, support_id, rank=1, repl
     draw.text((cx, cy-50), rank_str, font=font_rank, fill=b_text, anchor="mm")
 
     # 金額
-    draw.text((cx, cy+30), f"\u00a5{amount:,}", font=font_amt, fill=b_text, anchor="mm")
+    draw.text((cx, cy+30), f"{amount:,}", font=font_amt, fill=b_text, anchor="mm")
 
     # クリエイター名
     cn = creator_name if len(creator_name) <= 14 else creator_name[:13] + "\u2026"
@@ -478,7 +478,7 @@ if page == "lp":
 
 # ── 成功ページ ──
 if page == "success":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div style="text-align:center;font-size:80px;margin-bottom:20px;">🎉</div><div class="section-title">応援完了！</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-subtitle">ありがとうございます！🙏</div>', unsafe_allow_html=True)
 
@@ -593,7 +593,7 @@ if page == "success":
 # ── 応援証明ページ（サポーター向け）──
 if page == "my_support":
     s_sid = params.get("sid", "")
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🏅 応援証明</div>', unsafe_allow_html=True)
 
     if not s_sid:
@@ -635,7 +635,7 @@ if page == "my_support":
         tier_label = "BRONZE";  tier_color = "#A06830"
 
     rank_str     = f"#{coin_rank:03d}" if coin_rank <= 999 else f"#{coin_rank}"
-    amt_disp     = f"¥{record['amount']:,}"
+    amt_disp     = f"{record['amount']:,}"
     created_disp = record["created_at"][:10]
 
     # rim_badge_htmlを事前計算（nested f-stringバグ回避）
@@ -706,7 +706,7 @@ if page == "my_support":
 # ── 返信ダッシュボードページ（クリエイター向け）──
 if page == "reply_view":
     rv_acct = params.get("acct", "")
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">💌 返信ダッシュボード</div>', unsafe_allow_html=True)
 
     if not rv_acct:
@@ -761,7 +761,7 @@ if page == "reply_view":
 
     for idx, record in enumerate(supports):
         sid = record["support_id"]
-        amt_disp = f"¥{record['amount']:,}"
+        amt_disp = f"{record['amount']:,}"
         date_disp = record["created_at"][:10]
         msg_disp = record["message"] if record["message"] else "（メッセージなし）"
         has_reply = bool(record["reply_emoji"] or record["reply_text"])
@@ -833,7 +833,7 @@ if page == "reply_view":
 
 # ── 応援履歴ページ（サポーター向け）──
 if page == "my_history":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">📋 応援履歴</div>', unsafe_allow_html=True)
 
     sids_param = params.get("sids", "")
@@ -870,7 +870,7 @@ if page == "my_history":
     st.markdown(f'<div style="font-size:13px;color:rgba(240,240,245,0.5);margin-bottom:16px;">{len(records)}件の応援記録</div>', unsafe_allow_html=True)
 
     for record in records:
-        amt_disp = f"¥{record['amount']:,}"
+        amt_disp = f"{record['amount']:,}"
         date_disp = record["created_at"][:10]
         msg_disp = record["message"] if record["message"] else "（メッセージなし）"
         has_reply = bool(record.get("reply_emoji") or record.get("reply_text"))
@@ -906,13 +906,13 @@ if page == "my_history":
 
 # ── キャンセル ──
 if page == "cancel":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div style="text-align:center;font-size:80px;margin-bottom:20px;">🤔</div><div class="section-title">キャンセルしました</div>', unsafe_allow_html=True)
     st.stop()
 
 # ── テストページ（開発用）──
 if page == "test":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🧪 テスト用シミュレーター</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-subtitle">Stripe決済をスキップして機能を確認</div>', unsafe_allow_html=True)
     st.warning("⚠️ このページは開発テスト専用です。本番では使わないでください。")
@@ -954,7 +954,7 @@ if page == "test":
                         color:rgba(240,240,245,0.85);">
                 <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
                     <b style="color:#c4b5fd;">{s['creator_name']}</b>
-                    <span style="font-weight:700;color:#f97316;">¥{s['amount']:,}</span>
+                    <span style="font-weight:700;color:#f97316;">{s['amount']:,}</span>
                 </div>
                 <div style="font-size:11px;color:rgba(240,240,245,0.45);margin-bottom:4px;">
                     acct: {s['creator_acct']} &nbsp;|&nbsp; {s['created_at'][:10]}
@@ -977,7 +977,7 @@ if page == "ranking":
     now = datetime.datetime.now(datetime.timezone.utc)
     month_label = f"{now.year}年{now.month}月"
 
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🏆 月間応援ランキング</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;color:rgba(240,240,245,0.5);font-size:13px;margin-bottom:28px;">{month_label}</div>', unsafe_allow_html=True)
 
@@ -1025,7 +1025,7 @@ if page == "ranking":
                     f'<span style="font-size:15px;min-width:22px;">{row_medal}</span>'
                     f'<span style="flex:1;font-size:13px;">{name_html}</span>'
                     f'<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:{tier_bg};color:{tier_color};border:1px solid {tier_color};white-space:nowrap;">{tier_label}</span>'
-                    f'<span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;margin-left:8px;">¥{amt:,}</span>'
+                    f'<span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;margin-left:8px;">{amt:,}</span>'
                     f'</div>'
                 )
                 sup_rows_html += row_div
@@ -1036,7 +1036,7 @@ if page == "ranking":
                 f'<span style="font-size:26px;min-width:32px;">{medal}</span>'
                 f'<a href="{creator_url}" target="_top" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{creator["name"]}</a>'
                 f'<span style="font-size:11px;color:rgba(240,240,245,0.4);">月間合計</span>'
-                f'<span style="font-size:18px;font-weight:900;color:#f97316;">¥{creator["total"]:,}</span>'
+                f'<span style="font-size:18px;font-weight:900;color:#f97316;">{creator["total"]:,}</span>'
                 f'</div>'
                 f'{sup_rows_html}'
                 f'</div>'
@@ -1046,7 +1046,7 @@ if page == "ranking":
     # フッター（OshiPay宣伝）
     footer_html = (
         f'<div style="margin-top:40px;padding:20px 24px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:16px;text-align:center;">'
-        f'<div style="font-size:20px;font-weight:900;color:#f97316;margin-bottom:6px;">🔥 OshiPayで推しを応援しよう</div>'
+        f'<div style="font-size:20px;font-weight:900;color:#f97316;margin-bottom:6px;">OshiPayで推しを応援しよう</div>'
         f'<div style="font-size:12px;color:rgba(240,240,245,0.55);margin-bottom:12px;">あなたの応援がランキングに刻まれます</div>'
         f'<span style="font-size:12px;color:#f97316;background:rgba(249,115,22,0.15);padding:6px 14px;border-radius:8px;">{BASE_URL}</span>'
         f'</div>'
@@ -1086,7 +1086,7 @@ if page == "coin_preview":
 
 # ── 開発ナビゲーション ──
 if page == "nav":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🗺️ 全ページ一覧</div>', unsafe_allow_html=True)
     st.markdown('<div style="background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.4);border-radius:10px;padding:10px 14px;font-size:12px;color:#f97316;margin-bottom:24px;">⚠️ 開発確認用ページ — ダミーアカウント使用</div>', unsafe_allow_html=True)
     _qname = urllib.parse.quote("テストクリエイター")
@@ -1117,7 +1117,7 @@ support_name = params.get("name", "")
 support_icon = params.get("icon", "🎤")
 
 if page == "support" and support_user:
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-avatar">{support_icon}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-name">{support_name or "Creator"}</div><div class="support-label">を応援しよう</div>', unsafe_allow_html=True)
     if "amt" not in st.session_state: st.session_state.amt = 100
@@ -1148,7 +1148,7 @@ if page == "support" and support_user:
         st.session_state.amt = selected_amt
         st.rerun()
 
-    st.markdown(f'<div class="selected-amount-display">¥{int(st.session_state.amt):,}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="selected-amount-display">{int(st.session_state.amt):,}</div>', unsafe_allow_html=True)
     msg = st.text_area("応援メッセージ（オプション）", max_chars=140)
 
     st.markdown('<div class="section-subtitle" style="text-align:left;margin-bottom:4px;">👤 お名前（任意）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:8px;">入力するとランキングにお名前が表示されます</div>', unsafe_allow_html=True)
@@ -1166,7 +1166,7 @@ if page == "support" and support_user:
         <div style="font-size: 13px; color: #f0f0f5; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">最終確認</div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="font-size: 12px; color: rgba(240,240,245,0.6);">支払総額（税込）</span>
-            <span style="font-size: 14px; color: #f97316; font-weight: 700;">¥{int(st.session_state.amt):,}</span>
+            <span style="font-size: 14px; color: #f97316; font-weight: 700;">{int(st.session_state.amt):,}</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="font-size: 12px; color: rgba(240,240,245,0.6);">支払時期</span>
@@ -1212,7 +1212,7 @@ if page == "support" and support_user:
 elif page == "portfolio":
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 600px !important; margin: 0 auto; }</style>", unsafe_allow_html=True)
     p_id = params.get("id", "")
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     if not p_id:
         st.error("サポーターIDが指定されていません。")
         st.stop()
@@ -1237,7 +1237,7 @@ elif page == "portfolio":
     
     c1, c2 = st.columns(2)
     with c1:
-        st.markdown(f'<div style="background:rgba(255,165,0,0.1); border-radius:12px; padding:16px; text-align:center;"><div style="font-size:12px; color:rgba(255,255,255,0.6);">累計応援額</div><div style="font-size:24px; font-weight:700; color:#f97316;">¥{total_amount:,}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background:rgba(255,165,0,0.1); border-radius:12px; padding:16px; text-align:center;"><div style="font-size:12px; color:rgba(255,255,255,0.6);">累計応援額</div><div style="font-size:24px; font-weight:700; color:#f97316;">{total_amount:,}</div></div>', unsafe_allow_html=True)
     with c2:
         st.markdown(f'<div style="background:rgba(139,92,246,0.1); border-radius:12px; padding:16px; text-align:center;"><div style="font-size:12px; color:rgba(255,255,255,0.6);">応援した推し</div><div style="font-size:24px; font-weight:700; color:#c4b5fd;">{len(creators)}人</div></div>', unsafe_allow_html=True)
     
@@ -1248,7 +1248,7 @@ elif page == "portfolio":
         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <div style="font-weight:700;color:#f0f0f5;font-size:15px;">{s['creator_name']} 様へ ¥{s['amount']:,}</div>
+                    <div style="font-weight:700;color:#f0f0f5;font-size:15px;">{s['creator_name']} 様へ {s['amount']:,}</div>
                     <div style="font-size:11px;color:rgba(240,240,245,0.5);margin-top:4px;">{s['created_at'][:10]}</div>
                 </div>
                 <a href="{my_url}" target="_top" style="font-size:12px;color:#8b5cf6;text-decoration:none;">📄 証明証</a>
@@ -1256,14 +1256,14 @@ elif page == "portfolio":
         </div>
         """, unsafe_allow_html=True)
     
-    share_text = f"私のOshiPay応援実績はこちら！総額 ¥{total_amount:,}\n#OshiPay\n{BASE_URL}?page=portfolio&id={p_id}"
+    share_text = f"私のOshiPay応援実績はこちら！総額 {total_amount:,}\n#OshiPay\n{BASE_URL}?page=portfolio&id={p_id}"
     st.link_button("𝕏 で公開する", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
-    st.link_button("🔥 あなたもOshiPayを始めよう", f"{BASE_URL}?page=lp", use_container_width=True)
+    st.link_button("あなたもOshiPayを始めよう", f"{BASE_URL}?page=lp", use_container_width=True)
     st.stop()
 
 # ── サポーター用ダッシュボード ──
 elif page == "supporter_dashboard":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">サポーター・ダッシュボード</div>', unsafe_allow_html=True)
     
     if "supporter_auth" not in st.session_state:
@@ -1389,7 +1389,7 @@ elif page == "supporter_dashboard":
     st.stop()
 
 else: # Dashboard
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">QRコードを発行</div>', unsafe_allow_html=True)
     # アカウントIDの特定
     acct_id = connect_acct or params.get("acct")
