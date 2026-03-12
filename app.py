@@ -1059,9 +1059,6 @@ if page == "nav":
     st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🗺️ 全ページ一覧</div>', unsafe_allow_html=True)
     st.markdown('<div style="background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.4);border-radius:10px;padding:10px 14px;font-size:12px;color:#f97316;margin-bottom:24px;">⚠️ 開発確認用ページ — ダミーアカウント使用</div>', unsafe_allow_html=True)
-    _acct  = "acct_1T6mAjFIcplqHdko"
-    _sup   = "sup_ecfa46e6"
-    _sid   = "a4b5d9c5-885f-40f7-a934-fac773f51b81"
     _qname = urllib.parse.quote("テストクリエイター")
     def _nav_header(txt):
         st.markdown(f'<div style="font-size:13px;font-weight:700;color:rgba(240,240,245,0.5);letter-spacing:0.08em;margin:20px 0 8px;">{txt}</div>', unsafe_allow_html=True)
@@ -1298,7 +1295,7 @@ elif page == "supporter_dashboard":
     # 応援を紐づける
     st.markdown('<div class="header" style="font-size:16px;">🎫 過去の応援を紐づける</div>', unsafe_allow_html=True)
     st.markdown('<div style="font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:10px;">応援証明書（<code>?page=my_support&sid=xxx</code>）の <code>xxx</code> の部分（support_id）を入力してください。</div>', unsafe_allow_html=True)
-    claim_id = st.text_input("応援証明書IDを入力", value="a4b5d9c5-885f-40f7-a934-fac773f51b81", placeholder="例： 123e4567-e89b-12d3...")
+    claim_id = st.text_input("応援証明書IDを入力", placeholder="例： 123e4567-e89b-12d3...")
     if st.button("このアカウントに紐づける"):
         if claim_id:
             s_data = get_support(claim_id)
