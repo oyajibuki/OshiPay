@@ -455,7 +455,27 @@ if page in LEGAL_MAP:
 # ── ランディングページ ──
 if page == "lp":
     lp_html = read_html_file("oshipay-lp/index.html")
-    # 初期高さ3750px（JS発火後にwindow.frameElementで自動リサイズ）
+    # postMessageナビゲーション受信 + モバイル用iframe高さCSSフォールバック
+    st.markdown("""
+    <script>
+    (function(){
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'lp_navigate' && e.data.url) {
+                window.location.href = e.data.url;
+            }
+        });
+    })();
+    </script>
+    <style>
+    @media (max-width: 768px) {
+        [data-testid="stCustomComponentV1"],
+        [data-testid="stCustomComponentV1"] > iframe {
+            height: 5900px !important;
+            min-height: 5900px !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
     components.html(lp_html, height=3750)
     st.stop()
 

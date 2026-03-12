@@ -391,14 +391,14 @@
   <!-- ランキング・サポーターダッシュボードへのリンク -->
   <div style="text-align:center;padding:16px 0 8px;background:#0a0a0f;">
     <a href="https://oshipay.streamlit.app/?page=ranking"
-      onclick="window.top.location.href=this.href;return false;"
+      onclick="window.parent.postMessage({type:'lp_navigate',url:'https://oshipay.streamlit.app/?page=ranking'},'*');return false;"
       style="display:inline-block;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.5);padding:10px 24px;border-radius:12px;color:#fbbf24;text-decoration:none;font-weight:700;font-size:14px;">
       🏆 月間応援ランキングを見る
     </a>
   </div>
   <div style="text-align:center;padding-bottom:40px;background:#0a0a0f;">
     <a href="https://oshipay.streamlit.app/?page=supporter_dashboard"
-      onclick="window.top.location.href=this.href;return false;"
+      onclick="window.parent.postMessage({type:'lp_navigate',url:'https://oshipay.streamlit.app/?page=supporter_dashboard'},'*');return false;"
       style="display:inline-block;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.5);padding:10px 20px;border-radius:12px;color:#c4b5fd;text-decoration:none;font-weight:700;font-size:14px;">
       🦸 過去の応援を管理する（サポーターダッシュボードへ）
     </a>
@@ -451,21 +451,10 @@
       const fadeElements = document.querySelectorAll('.fade-in-section');
       fadeElements.forEach(el => observer.observe(el));
 
-      // iframeとその親コンテナをコンテンツ高さに合わせてリサイズ
+      // 高さをpostMessageでStreamlit親ウィンドウに通知
       const sendHeight = () => {
         const height = document.documentElement.scrollHeight;
-        try {
-          // srcdocのiframeはwindow.frameElementでアクセス可能
-          if (window.frameElement) {
-            window.frameElement.style.height = height + 'px';
-            window.frameElement.style.minHeight = height + 'px';
-            const parent = window.frameElement.parentElement;
-            if (parent) {
-              parent.style.height = height + 'px';
-              parent.style.minHeight = height + 'px';
-            }
-          }
-        } catch(e) {}
+        window.parent.postMessage({ type: 'lp_height', height: height }, '*');
       };
       window.addEventListener('load', sendHeight);
       window.addEventListener('resize', sendHeight);
