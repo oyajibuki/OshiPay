@@ -17,8 +17,7 @@ from PIL import Image
 
 # ── ページ設定 ──
 st.set_page_config(
-    page_title="OshiPay — 応援を、もっとシンプルに。",
-    page_icon="🔥",
+    page_title="OshiPay",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
