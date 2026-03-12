@@ -389,18 +389,19 @@
   </section>
 
   <!-- ランキング・サポーターダッシュボードへのリンク -->
-  <div style="text-align:center;padding:16px 0 8px;background:#0a0a0f;">
-    <a href="https://oshipay.streamlit.app/?page=ranking"
-      onclick="window.parent.postMessage({type:'lp_navigate',url:'https://oshipay.streamlit.app/?page=ranking'},'*');return false;"
-      style="display:inline-block;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.5);padding:10px 24px;border-radius:12px;color:#fbbf24;text-decoration:none;font-weight:700;font-size:14px;">
-      🏆 月間応援ランキングを見る
+  <div class="flex flex-col items-center gap-4 py-8 px-6" style="background:#0a0a0f;">
+    <a href="https://oshipay.streamlit.app/?page=ranking" target="_blank" rel="noopener noreferrer"
+      class="group relative w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-purple-600 to-orange-500 rounded-full text-white font-bold text-lg hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] transition-all duration-300 hover:scale-105 overflow-hidden text-center no-underline">
+      <div class="absolute inset-0 bg-white/20 group-hover:translate-x-full -translate-x-full skew-x-12 transition-transform duration-500"></div>
+      <span class="relative z-10">🏆 月間応援ランキングを見る</span>
     </a>
-  </div>
-  <div style="text-align:center;padding-bottom:40px;background:#0a0a0f;">
-    <a href="https://oshipay.streamlit.app/?page=supporter_dashboard"
-      onclick="window.parent.postMessage({type:'lp_navigate',url:'https://oshipay.streamlit.app/?page=supporter_dashboard'},'*');return false;"
-      style="display:inline-block;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.5);padding:10px 20px;border-radius:12px;color:#c4b5fd;text-decoration:none;font-weight:700;font-size:14px;">
-      🦸 過去の応援を管理する（サポーターダッシュボードへ）
+    <a href="https://oshipay.streamlit.app/?page=supporter_dashboard" target="_blank" rel="noopener noreferrer"
+      class="group relative w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-purple-600 to-orange-500 rounded-full text-white font-bold text-lg hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] transition-all duration-300 hover:scale-105 overflow-hidden text-center no-underline">
+      <div class="absolute inset-0 bg-white/20 group-hover:translate-x-full -translate-x-full skew-x-12 transition-transform duration-500"></div>
+      <span class="flex flex-col items-center justify-center relative z-10 leading-tight">
+        <span>🦸 過去の応援を管理する</span>
+        <span class="text-sm font-semibold">サポーターダッシュボードへ</span>
+      </span>
     </a>
   </div>
 
