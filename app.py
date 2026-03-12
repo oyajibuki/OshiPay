@@ -384,7 +384,7 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
 #MainMenu, header, footer, .stDeployButton {visibility: hidden; display: none !important;}
-[data-testid="stToolbar"], [data-testid="stDecoration"] {display: none !important;}
+[data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stHeader"] {display: none !important;}
 .stApp { background: #08080f !important; font-family: 'Inter', 'Noto Sans JP', sans-serif !important; }
 .stMainBlockContainer, .block-container { position: relative; z-index: 1; padding-top: 2rem !important; }
 .oshi-logo { text-align: center; margin-bottom: 6px; }
