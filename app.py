@@ -563,10 +563,28 @@ if page == "success":
         except Exception:
             pass  # メール失敗はサイレントに
 
+    if s_sup_id:
+        st.markdown(
+            f'<div style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.4);'
+            f'border-radius:16px;padding:20px;margin:16px 0;text-align:center;">'
+            f'<div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:6px;">あなたのサポーターID</div>'
+            f'<div style="font-size:22px;font-weight:900;color:#c4b5fd;letter-spacing:0.05em;font-family:monospace;">{s_sup_id}</div>'
+            f'<div style="font-size:11px;color:rgba(240,240,245,0.4);margin-top:8px;">このIDでアカウント登録するとコインが積み重なります</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<div style="text-align:center;margin-bottom:16px;">'
+            f'<a href="{BASE_URL}?page=supporter_dashboard" target="_top" '
+            f'style="display:inline-block;font-size:13px;font-weight:700;color:#c4b5fd;'
+            f'text-decoration:none;background:rgba(139,92,246,0.15);'
+            f'border:1px solid rgba(139,92,246,0.4);border-radius:12px;padding:10px 20px;">'
+            f'🦸 このIDでアカウント登録する</a></div>',
+            unsafe_allow_html=True
+        )
     portfolio_url = f"{BASE_URL}?page=portfolio&id={s_sup_id}" if s_sup_id else BASE_URL
     share_text = f"{s_name}にOshiPayで応援したよ！\n#OshiPay2\n{portfolio_url}"
     st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
-    st.markdown(f'<div style="text-align:center;margin-top:20px;"><a href="{BASE_URL}?page=supporter_dashboard" target="_top" style="display:inline-block; font-size:14px; font-weight:700; color:#c4b5fd; text-decoration:none; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.4); border-radius:12px; padding:10px 20px;">🦸 サポーター機能で応援を記録する</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;margin-top:10px;"><a href="{BASE_URL}?page=my_history" target="_top" style="font-size:12px;color:rgba(240,240,245,0.4); text-decoration:underline;">（ブラウザ限定）簡易履歴を見る</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay2</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
@@ -668,6 +686,18 @@ if page == "my_support":
     )
     st.markdown(card_html, unsafe_allow_html=True)
 
+    if record.get("supporter_id"):
+        st.markdown(
+            f'<div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);'
+            f'border-radius:12px;padding:14px;margin:12px 0;text-align:center;">'
+            f'<div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:4px;">サポーターID</div>'
+            f'<div style="font-size:16px;font-weight:700;color:#c4b5fd;font-family:monospace;">{record["supporter_id"]}</div>'
+            f'<div style="font-size:10px;color:rgba(240,240,245,0.35);margin-top:4px;">'
+            f'<a href="{BASE_URL}?page=supporter_dashboard" target="_top" style="color:#c4b5fd;text-decoration:underline;">'
+            f'アカウント登録</a>するとコインが積み重なります</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
     st.markdown(f'<div style="text-align:center;margin-top:16px;"><a href="{BASE_URL}?page=coin_preview" target="_top" style="font-size:11px;color:rgba(240,240,245,0.3);text-decoration:underline;">🪙 コイン全色プレビューを見る</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="oshi-footer" style="margin-top:12px;">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay2</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
@@ -1238,8 +1268,8 @@ elif page == "supporter_dashboard":
     
     if "supporter_auth" not in st.session_state:
         st.info("過去の応援を一つにまとめた、公開ポートフォリオを作成できます。")
-        tab_login, tab_register = st.tabs(["🔑 ログイン", "✨ 新規アカウント作成"])
-        
+        tab_login, tab_register, tab_forgot = st.tabs(["🔑 ログイン", "✨ 新規登録", "🔓 パスワードを忘れた"])
+
         with tab_login:
             l_id = st.text_input("サポーターID", key="l_id")
             l_pass = st.text_input("パスワード", type="password", key="l_pass")
@@ -1253,30 +1283,67 @@ elif page == "supporter_dashboard":
                         st.rerun()
                     else:
                         st.error("パスワードが違います。")
-                        
+
         with tab_register:
-            st.markdown('<div style="font-size:12px; color:rgba(255,255,255,0.6); margin-bottom:10px;">名前とパスワードを決めるだけですぐに作成できます！</div>', unsafe_allow_html=True)
-            r_name = st.text_input("表示名 (公開されます)", key="r_name")
-            r_pass = st.text_input("パスワードを決める", type="password", key="r_pass")
+            st.markdown('<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px;">応援完了画面に表示されたサポーターIDとメールアドレスで登録します。</div>', unsafe_allow_html=True)
+            r_sid  = st.text_input("サポーターID（応援完了画面に表示されたID）", key="r_sid", placeholder="sup_xxxxxxxx")
+            r_email = st.text_input("メールアドレス", key="r_email", placeholder="example@email.com")
+            r_name = st.text_input("表示名（公開されます）", key="r_name")
+            r_pass = st.text_input("パスワードを設定", type="password", key="r_pass")
             if st.button("新規アカウントを作成", type="primary", use_container_width=True):
-                if r_name and r_pass:
-                    new_id = f"sup_{str(uuid.uuid4())[:8]}"
-                    try:
-                        get_db().table("supporters").insert({
-                            "supporter_id": new_id,
-                            "display_name": r_name,
-                            "password_hash": hash_password(r_pass)
-                        }).execute()
-                        st.success(f"登録完了！あなたのサポーターIDは `{new_id}` です。")
-                        st.session_state["supporter_auth"] = {
-                            "supporter_id": new_id,
-                            "display_name": r_name
-                        }
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"登録エラー: {e}")
+                if r_sid and r_email and r_name and r_pass:
+                    existing = get_db().table("supporters").select("*").eq("supporter_id", r_sid).execute()
+                    if existing.data:
+                        row = existing.data[0]
+                        if row.get("password_hash"):
+                            st.error("このIDは既に登録済みです。ログインしてください。")
+                        else:
+                            get_db().table("supporters").update({
+                                "display_name": r_name,
+                                "email": r_email,
+                                "password_hash": hash_password(r_pass)
+                            }).eq("supporter_id", r_sid).execute()
+                            st.success("登録完了！ログインしました。")
+                            st.session_state["supporter_auth"] = {"supporter_id": r_sid, "display_name": r_name, "email": r_email}
+                            st.rerun()
+                    else:
+                        sup_check = get_db().table("supports").select("support_id").eq("supporter_id", r_sid).execute()
+                        if not sup_check.data:
+                            st.error("このサポーターIDが見つかりません。応援完了画面に表示されたIDを入力してください。")
+                        else:
+                            try:
+                                get_db().table("supporters").insert({
+                                    "supporter_id": r_sid,
+                                    "display_name": r_name,
+                                    "email": r_email,
+                                    "password_hash": hash_password(r_pass)
+                                }).execute()
+                                st.success("登録完了！ログインしました。")
+                                st.session_state["supporter_auth"] = {"supporter_id": r_sid, "display_name": r_name, "email": r_email}
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"登録エラー: {e}")
                 else:
-                    st.warning("表示名とパスワードの両方を入力してください。")
+                    st.warning("全ての項目を入力してください。")
+
+        with tab_forgot:
+            st.markdown('<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px;">登録時のサポーターIDとメールアドレスを入力すると、仮パスワードが発行されます。</div>', unsafe_allow_html=True)
+            f_sid   = st.text_input("サポーターID", key="f_sid", placeholder="sup_xxxxxxxx")
+            f_email = st.text_input("登録メールアドレス", key="f_email", placeholder="example@email.com")
+            if st.button("仮パスワードを発行", use_container_width=True):
+                if f_sid and f_email:
+                    resp = get_db().table("supporters").select("*").eq("supporter_id", f_sid).execute()
+                    if not resp.data:
+                        st.error("アカウントが見つかりません。")
+                    elif resp.data[0].get("email") != f_email.strip():
+                        st.error("メールアドレスが一致しません。")
+                    else:
+                        temp_pass = uuid.uuid4().hex[:8]
+                        get_db().table("supporters").update({"password_hash": hash_password(temp_pass)}).eq("supporter_id", f_sid).execute()
+                        st.success("仮パスワードが発行されました。ログイン後にパスワードを変更してください。")
+                        st.info(f"🔑 仮パスワード: `{temp_pass}`")
+                else:
+                    st.warning("IDとメールアドレスを入力してください。")
         st.stop()
         
     sup_user = st.session_state["supporter_auth"]
@@ -1315,6 +1382,23 @@ elif page == "supporter_dashboard":
     st.code(portfolio_url, language="text")
     
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
+    with st.expander("🔑 パスワードを変更する"):
+        cp_curr = st.text_input("現在のパスワード", type="password", key="cp_curr")
+        cp_new  = st.text_input("新しいパスワード", type="password", key="cp_new")
+        cp_new2 = st.text_input("新しいパスワード（確認）", type="password", key="cp_new2")
+        if st.button("パスワードを更新", key="cp_btn"):
+            if cp_curr and cp_new and cp_new2:
+                if cp_new != cp_new2:
+                    st.error("新しいパスワードが一致しません。")
+                else:
+                    chk = get_db().table("supporters").select("password_hash").eq("supporter_id", sup_user["supporter_id"]).execute()
+                    if chk.data and chk.data[0]["password_hash"] == hash_password(cp_curr):
+                        get_db().table("supporters").update({"password_hash": hash_password(cp_new)}).eq("supporter_id", sup_user["supporter_id"]).execute()
+                        st.success("パスワードを更新しました！")
+                    else:
+                        st.error("現在のパスワードが違います。")
+            else:
+                st.warning("全ての項目を入力してください。")
     if st.button("🚪 ログアウト", type="secondary"):
         del st.session_state["supporter_auth"]
         st.rerun()
@@ -1330,7 +1414,7 @@ else: # Dashboard
         st.markdown('<div class="header">応援用QRコードを作成・復元</div>', unsafe_allow_html=True)
         st.write("新しく応援（決済）を受け取るための設定を行うか、以前作成したアカウントを復元します。")
         
-        tab_new, tab_recover = st.tabs(["✨ 新規作成", "🔑 既存アカウントの復元"])
+        tab_new, tab_recover, tab_forgot_c = st.tabs(["✨ 新規作成", "🔑 既存アカウントの復元", "🔓 パスワードを忘れた"])
         
         with tab_new:
             st.info("新しく応援受け取りを開始するには、管理用パスワードを作成してください。")
@@ -1409,6 +1493,31 @@ else: # Dashboard
                             st.error("パスワードが間違っています。")
                 else:
                     st.error("アカウントIDとパスワードを正しく入力してください。")
+
+        with tab_forgot_c:
+            st.markdown('<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px;">Stripe連携時のメールアドレスで本人確認し、仮パスワードを発行します。</div>', unsafe_allow_html=True)
+            fc_acct  = st.text_input("アカウントID", key="fc_acct", placeholder="acct_xxxxxxxxxxxxxxxxxx")
+            fc_email = st.text_input("Stripe登録メールアドレス", key="fc_email", placeholder="example@email.com")
+            if st.button("仮パスワードを発行", key="fc_btn", use_container_width=True):
+                if fc_acct and fc_email:
+                    try:
+                        acct_info = stripe.Account.retrieve(fc_acct)
+                        stripe_email = acct_info.get("email", "")
+                        if stripe_email.lower() == fc_email.strip().lower():
+                            temp_pass = uuid.uuid4().hex[:8]
+                            resp = get_db().table("creators").select("acct_id").eq("acct_id", fc_acct).execute()
+                            if resp.data:
+                                get_db().table("creators").update({"password_hash": hash_password(temp_pass)}).eq("acct_id", fc_acct).execute()
+                            else:
+                                register_creator(fc_acct, temp_pass)
+                            st.success("本人確認完了！ログイン後にパスワードを変更してください。")
+                            st.info(f"🔑 仮パスワード: `{temp_pass}`")
+                        else:
+                            st.error("メールアドレスが一致しません。Stripe連携時のメールアドレスを入力してください。")
+                    except Exception:
+                        st.error("アカウントIDが見つかりません。")
+                else:
+                    st.warning("IDとメールアドレスを入力してください。")
     else:
         # 認証チェック
         if st.session_state.get("creator_auth") != acct_id:
@@ -1458,6 +1567,25 @@ else: # Dashboard
             </a>
         </div>
         """, unsafe_allow_html=True)
+
+        # パスワード変更
+        with st.expander("🔑 パスワードを変更する"):
+            cc_curr = st.text_input("現在のパスワード", type="password", key="cc_curr")
+            cc_new  = st.text_input("新しいパスワード", type="password", key="cc_new")
+            cc_new2 = st.text_input("新しいパスワード（確認）", type="password", key="cc_new2")
+            if st.button("パスワードを更新", key="cc_btn"):
+                if cc_curr and cc_new and cc_new2:
+                    if cc_new != cc_new2:
+                        st.error("新しいパスワードが一致しません。")
+                    else:
+                        chk = get_db().table("creators").select("password_hash").eq("acct_id", acct_id).execute()
+                        if chk.data and chk.data[0]["password_hash"] == hash_password(cc_curr):
+                            get_db().table("creators").update({"password_hash": hash_password(cc_new)}).eq("acct_id", acct_id).execute()
+                            st.success("パスワードを更新しました！")
+                        else:
+                            st.error("現在のパスワードが違います。")
+                else:
+                    st.warning("全ての項目を入力してください。")
 
         # 連携解除ボタン
         if col2.button("🚫 連携解除"):
