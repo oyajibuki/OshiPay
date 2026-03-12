@@ -697,7 +697,7 @@ if page == "reply_view":
             </div>
         </div>
         """, unsafe_allow_html=True)
-        rv_pass = st.text_input("パスワード", type="password", key="rv_pass", value="test1234")
+        rv_pass = st.text_input("パスワード", type="password", key="rv_pass")
         if st.button("🔓 ロックを解除", type="primary", use_container_width=True):
             if verify_creator(rv_acct, rv_pass):
                 st.session_state["reply_auth"] = rv_acct
@@ -1072,10 +1072,10 @@ if page == "nav":
     st.link_button("🔥 応援ページ（クリエイターに投げ銭）", f"{BASE_URL}?page=support&user=test&acct={_acct}&name={_qname}&icon=%F0%9F%8E%A4", use_container_width=True)
     st.link_button("🏅 コインページ（返信なし Bronze → 実際は FOUNDER #001）", f"{BASE_URL}?page=my_support&sid={_sid}", use_container_width=True)
     st.link_button("📋 応援履歴（ブラウザ保存）", f"{BASE_URL}?page=my_history", use_container_width=True)
-    st.link_button("🦸 サポーターDL（ログイン: sup_ecfa46e6 / test1234）", f"{BASE_URL}?page=supporter_dashboard", use_container_width=True)
+    st.link_button("🦸 サポーターDL", f"{BASE_URL}?page=supporter_dashboard", use_container_width=True)
     st.link_button("📊 ポートフォリオ（公開実績）", f"{BASE_URL}?page=portfolio&id={_sup}", use_container_width=True)
     _nav_header("🎤 クリエイター導線")
-    st.link_button("🛠️ クリエイターDL（QRコード発行 / ログイン: acct_1T6mAjFIcplqHdko / test1234）", f"{BASE_URL}?page=dashboard", use_container_width=True)
+    st.link_button("🛠️ クリエイターDL（QRコード発行）", f"{BASE_URL}?page=dashboard", use_container_width=True)
     st.link_button("💌 返信ダッシュボード（応援への返信）", f"{BASE_URL}?page=reply_view&acct={_acct}", use_container_width=True)
     _nav_header("📄 法的ページ")
     col1, col2, col3 = st.columns(3)
@@ -1084,7 +1084,7 @@ if page == "nav":
     col3.link_button("特定商取引法", f"{BASE_URL}?page=legal", use_container_width=True)
     _nav_header("🧪 開発")
     st.link_button("テストシミュレーター（決済スキップ）", f"{BASE_URL}?page=test", use_container_width=True)
-    st.markdown('<div style="margin-top:32px;padding:16px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:12px;font-size:12px;color:rgba(240,240,245,0.6);line-height:1.8;">💡 <b style="color:#c4b5fd;">⑤ サポーターID自動入力の確認手順</b><br>① 上の「サポーターDL」でログイン（sup_ecfa46e6 / test1234）<br>② ログイン後、画面内のリンクから「応援ページ」へ遷移<br>③ サポーターIDが自動入力されているのを確認</div>', unsafe_allow_html=True)
+    st.markdown('<div style="margin-top:32px;padding:16px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:12px;font-size:12px;color:rgba(240,240,245,0.6);line-height:1.8;">💡 <b style="color:#c4b5fd;">⑤ サポーターID自動入力の確認手順</b><br>① 上の「サポーターDL」でログイン<br>② ログイン後、画面内のリンクから「応援ページ」へ遷移<br>③ サポーターIDが自動入力されているのを確認</div>', unsafe_allow_html=True)
     st.stop()
 
 # ── 応援・ダッシュボード ──
@@ -1248,8 +1248,8 @@ elif page == "supporter_dashboard":
         tab_login, tab_register = st.tabs(["🔑 ログイン", "✨ 新規アカウント作成"])
         
         with tab_login:
-            l_id = st.text_input("サポーターID", key="l_id", value="sup_ecfa46e6")
-            l_pass = st.text_input("パスワード", type="password", key="l_pass", value="test1234")
+            l_id = st.text_input("サポーターID", key="l_id")
+            l_pass = st.text_input("パスワード", type="password", key="l_pass")
             if st.button("ログイン", use_container_width=True):
                 resp = get_db().table("supporters").select("*").eq("supporter_id", l_id).execute()
                 if not resp.data:
@@ -1394,8 +1394,8 @@ else: # Dashboard
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            recover_input = st.text_input("アカウントID", value="acct_1T6mAjFIcplqHdko", placeholder="acct_xxxxxxxxxxxxxxxxxx", label_visibility="collapsed")
-            recover_pass = st.text_input("パスワード", type="password", value="test1234", placeholder="パスワードを入力")
+            recover_input = st.text_input("アカウントID", placeholder="acct_xxxxxxxxxxxxxxxxxx", label_visibility="collapsed")
+            recover_pass = st.text_input("パスワード", type="password", placeholder="パスワードを入力")
             if st.button("✅ このアカウントで開く", use_container_width=True):
                 rid = recover_input.strip()
                 if rid.startswith("acct_") and len(rid) > 10 and recover_pass:
