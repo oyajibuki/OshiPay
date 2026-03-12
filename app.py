@@ -713,12 +713,30 @@ if page == "reply_view":
     st.markdown('<div class="section-title">💌 返信ダッシュボード</div>', unsafe_allow_html=True)
 
     if not rv_acct:
-        st.error("アカウントIDが指定されていません。ダッシュボードから開いてください。")
+        st.markdown('<div class="section-subtitle">クリエーターIDとパスワードでログイン</div>', unsafe_allow_html=True)
+        rv_lp_acct = st.text_input("クリエーターID", placeholder="acct_xxxxxxxxxxxxxxxxxx", key="rv_lp_acct")
+        rv_lp_pass = st.text_input("パスワード", type="password", key="rv_lp_pass")
+        if st.button("🔓 ログイン", type="primary", use_container_width=True):
+            _rid = rv_lp_acct.strip()
+            if _rid.startswith("acct_") and rv_lp_pass:
+                if verify_creator(_rid, rv_lp_pass):
+                    st.session_state["reply_auth"] = _rid
+                    st.session_state["creator_auth"] = _rid
+                    st.query_params["acct"] = _rid
+                    st.rerun()
+                else:
+                    st.error("IDまたはパスワードが違います。")
+            else:
+                st.error("クリエーターIDとパスワードを入力してください。")
         st.stop()
 
     # ── パスワード認証 ──
     # rv_acct は URL の acct= パラメーターから取得済みのため、
     # verify_creator(rv_acct, pw) は「このURLのクリエイター専用」の認証になります。
+    # ダッシュボードからのセッション引き継ぎ（パスワード2重入力を回避）
+    if st.session_state.get("creator_auth") == rv_acct and st.session_state.get("reply_auth") != rv_acct:
+        st.session_state["reply_auth"] = rv_acct
+        st.rerun()
     if st.session_state.get("reply_auth") != rv_acct:
         st.markdown(f"""
         <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);
@@ -1398,9 +1416,30 @@ else: # Dashboard
     acct_id = connect_acct or params.get("acct")
     
     if not acct_id:
+        if not params.get("fresh"):
+            # ① localStorage からアカウントIDを自動復元 → パスワード画面へ
+            components.html(f"""<script>
+            (function(){{
+              try {{
+                var saved = localStorage.getItem('oshipay_acct');
+                if (saved && saved.startsWith('acct_')) {{
+                  window.top.location.href = '{BASE_URL}?page=dashboard&acct=' + encodeURIComponent(saved);
+                }} else {{
+                  var url = new URL(window.top.location.href);
+                  url.searchParams.set('fresh', '1');
+                  window.top.location.href = url.href;
+                }}
+              }} catch(e) {{
+                var url = new URL(window.top.location.href);
+                url.searchParams.set('fresh', '1');
+                window.top.location.href = url.href;
+              }}
+            }})();
+            </script>""", height=0)
+            st.stop()
         st.markdown('<div class="header">応援用QRコードを作成・復元</div>', unsafe_allow_html=True)
         st.write("新しく応援（決済）を受け取るための設定を行うか、以前作成したアカウントを復元します。")
-        
+
         tab_new, tab_recover, tab_forgot_c = st.tabs(["✨ 新規作成", "🔑 既存アカウントの復元", "🔓 パスワードを忘れた"])
         
         with tab_new:
@@ -1522,8 +1561,9 @@ else: # Dashboard
                     st.rerun()
                 else:
                     st.error("パスワードが違います。")
+            st.markdown(f'<div style="text-align:center;margin-top:12px;"><a href="{BASE_URL}?page=dashboard&fresh=1" target="_top" style="font-size:11px;color:rgba(240,240,245,0.35);text-decoration:underline;">🔄 別のアカウントを使う / 新規作成</a></div>', unsafe_allow_html=True)
             st.stop()
-            
+
         st.markdown(f"""
         <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
             <div style="color: #8b5cf6; font-weight: 700; font-size: 14px; margin-bottom: 4px;">✅ Stripe連携済み</div>
@@ -1532,28 +1572,24 @@ else: # Dashboard
         </div>
         """, unsafe_allow_html=True)
         
-        name = st.text_input("表示名", value=st.session_state.get("name", ""))
-        icon = st.selectbox("アイコン", list(ICON_OPTIONS.keys()))
+        _icon_list = list(ICON_OPTIONS.keys())
+        _def_name = st.session_state.get(f"creator_name_{acct_id}", "")
+        _def_icon = st.session_state.get(f"creator_icon_{acct_id}", _icon_list[0])
+        _def_icon_idx = _icon_list.index(_def_icon) if _def_icon in _icon_list else 0
+        name = st.text_input("表示名", value=_def_name)
+        icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx)
         
         col1, col2 = st.columns([2, 1])
         if col1.button("✨ QRコードを生成"):
             support_url = f"{BASE_URL}?page=support&user={uuid.uuid4()}&name={urllib.parse.quote(name)}&icon={icon}&acct={acct_id}"
             st.session_state.qr_url = support_url
             st.session_state.qr_just_generated = True
+            st.session_state[f"creator_name_{acct_id}"] = name
+            st.session_state[f"creator_icon_{acct_id}"] = icon
 
         # 返信ダッシュボードへのリンク
         reply_view_url = f"{BASE_URL}?page=reply_view&acct={acct_id}"
-        st.markdown(f"""
-        <div style="margin: 16px 0;">
-            <a href="{reply_view_url}" target="_top"
-               style="display:block; text-align:center; background:rgba(139,92,246,0.15);
-                      border:1px solid rgba(139,92,246,0.35); border-radius:12px;
-                      padding:12px 16px; color:#c4b5fd; text-decoration:none;
-                      font-weight:700; font-size:14px;">
-                💌 応援メッセージ・返信ダッシュボードを開く
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
+        st.link_button("💌 応援メッセージ・返信ダッシュボードを開く", reply_view_url, use_container_width=True)
 
         # パスワード変更
         with st.expander("🔑 パスワードを変更する"):
