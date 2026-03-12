@@ -17,7 +17,7 @@ from PIL import Image
 
 # ── ページ設定 ──
 st.set_page_config(
-    page_title="OshiPay2 — 応援を、もっとシンプルに。",
+    page_title="OshiPay — 応援を、もっとシンプルに。",
     page_icon="🔥",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -78,7 +78,7 @@ def create_connect_account():
         business_type="individual",
         business_profile={
             "mcc": "7922", 
-            "product_description": "OshiPay2 - 投げ銭サービス",
+            "product_description": "OshiPay - 投げ銭サービス",
             "url": BASE_URL
         },
     )
@@ -97,8 +97,8 @@ def send_support_email(to_email, creator_name, amount, message):
         smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
         smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
         if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = f"🔥 {creator_name}さんに応援が届きました！ (OshiPay2)"
-        body = f"{creator_name}さん\n\nOshiPay2を通じて応援が届きました！\n\n💰 応援金額: {amount:,}円\n💬 メッセージ:\n{message if message else '（なし）'}\n\n--\nOshiPay2\n{BASE_URL}"
+        subject = f"🔥 {creator_name}さんに応援が届きました！ (OshiPay)"
+        body = f"{creator_name}さん\n\nOshiPayを通じて応援が届きました！\n\n💰 応援金額: {amount:,}円\n💬 メッセージ:\n{message if message else '（なし）'}\n\n--\nOshiPay\n{BASE_URL}"
         msg = MIMEText(body); msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
@@ -478,7 +478,7 @@ if page == "lp":
 
 # ── 成功ページ ──
 if page == "success":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div style="text-align:center;font-size:80px;margin-bottom:20px;">🎉</div><div class="section-title">応援完了！</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-subtitle">ありがとうございます！🙏</div>', unsafe_allow_html=True)
 
@@ -583,17 +583,17 @@ if page == "success":
             unsafe_allow_html=True
         )
     portfolio_url = f"{BASE_URL}?page=portfolio&id={s_sup_id}" if s_sup_id else BASE_URL
-    share_text = f"{s_name}にOshiPayで応援したよ！\n#OshiPay2\n{portfolio_url}"
+    share_text = f"{s_name}にOshiPayで応援したよ！\n#OshiPay\n{portfolio_url}"
     st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
     st.markdown(f'<div style="text-align:center;margin-top:10px;"><a href="{BASE_URL}?page=my_history" target="_top" style="font-size:12px;color:rgba(240,240,245,0.4); text-decoration:underline;">（ブラウザ限定）簡易履歴を見る</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay2</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
     st.stop()
 
 # ── 応援証明ページ（サポーター向け）──
 if page == "my_support":
     s_sid = params.get("sid", "")
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🏅 応援証明</div>', unsafe_allow_html=True)
 
     if not s_sid:
@@ -699,14 +699,14 @@ if page == "my_support":
             unsafe_allow_html=True
         )
     st.markdown(f'<div style="text-align:center;margin-top:16px;"><a href="{BASE_URL}?page=coin_preview" target="_top" style="font-size:11px;color:rgba(240,240,245,0.3);text-decoration:underline;">🪙 コイン全色プレビューを見る</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="oshi-footer" style="margin-top:12px;">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay2</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="oshi-footer" style="margin-top:12px;">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
     st.stop()
 
 # ── 返信ダッシュボードページ（クリエイター向け）──
 if page == "reply_view":
     rv_acct = params.get("acct", "")
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">💌 返信ダッシュボード</div>', unsafe_allow_html=True)
 
     if not rv_acct:
@@ -828,12 +828,12 @@ if page == "reply_view":
             proof_url = f"{BASE_URL}?page=my_support&sid={sid}"
             st.markdown(f'<div style="margin-top:8px;font-size:12px;color:rgba(240,240,245,0.4);">🔗 <a href="{proof_url}" target="_top" style="color:#8b5cf6;">応援証明ページを確認</a></div>', unsafe_allow_html=True)
 
-    st.markdown(f'<div class="oshi-footer" style="margin-top:28px;">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay2</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="oshi-footer" style="margin-top:28px;">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.stop()
 
 # ── 応援履歴ページ（サポーター向け）──
 if page == "my_history":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">📋 応援履歴</div>', unsafe_allow_html=True)
 
     sids_param = params.get("sids", "")
@@ -901,18 +901,18 @@ if page == "my_history":
         """, unsafe_allow_html=True)
 
     st.markdown(f'<div style="text-align:center;margin-top:20px;"><a href="{BASE_URL}?page=supporter_dashboard" target="_top" style="display:inline-block; font-size:14px; font-weight:700; color:#c4b5fd; text-decoration:none; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.4); border-radius:12px; padding:10px 20px;">🦸 IDを作ってクラウドで一括管理する</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="oshi-footer" style="margin-top:24px;">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay2</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="oshi-footer" style="margin-top:24px;">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.stop()
 
 # ── キャンセル ──
 if page == "cancel":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div style="text-align:center;font-size:80px;margin-bottom:20px;">🤔</div><div class="section-title">キャンセルしました</div>', unsafe_allow_html=True)
     st.stop()
 
 # ── テストページ（開発用）──
 if page == "test":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🧪 テスト用シミュレーター</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-subtitle">Stripe決済をスキップして機能を確認</div>', unsafe_allow_html=True)
     st.warning("⚠️ このページは開発テスト専用です。本番では使わないでください。")
@@ -977,7 +977,7 @@ if page == "ranking":
     now = datetime.datetime.now(datetime.timezone.utc)
     month_label = f"{now.year}年{now.month}月"
 
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🏆 月間応援ランキング</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;color:rgba(240,240,245,0.5);font-size:13px;margin-bottom:28px;">{month_label}</div>', unsafe_allow_html=True)
 
@@ -1086,7 +1086,7 @@ if page == "coin_preview":
 
 # ── 開発ナビゲーション ──
 if page == "nav":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🗺️ 全ページ一覧</div>', unsafe_allow_html=True)
     st.markdown('<div style="background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.4);border-radius:10px;padding:10px 14px;font-size:12px;color:#f97316;margin-bottom:24px;">⚠️ 開発確認用ページ — ダミーアカウント使用</div>', unsafe_allow_html=True)
     _qname = urllib.parse.quote("テストクリエイター")
@@ -1117,7 +1117,7 @@ support_name = params.get("name", "")
 support_icon = params.get("icon", "🎤")
 
 if page == "support" and support_user:
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-avatar">{support_icon}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-name">{support_name or "Creator"}</div><div class="support-label">を応援しよう</div>', unsafe_allow_html=True)
     if "amt" not in st.session_state: st.session_state.amt = 100
@@ -1205,14 +1205,14 @@ if page == "support" and support_user:
             st.markdown(f'<script>window.top.location.href = "{session.url}";</script>', unsafe_allow_html=True)
             st.link_button("💳 決済ページへ", session.url)
         except Exception as e: st.error(e)
-    st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay2</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
 
 # ── サポーター公開ポートフォリオ ──
 elif page == "portfolio":
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 600px !important; margin: 0 auto; }</style>", unsafe_allow_html=True)
     p_id = params.get("id", "")
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     if not p_id:
         st.error("サポーターIDが指定されていません。")
         st.stop()
@@ -1256,14 +1256,14 @@ elif page == "portfolio":
         </div>
         """, unsafe_allow_html=True)
     
-    share_text = f"私のOshiPay応援実績はこちら！総額 ¥{total_amount:,}\n#OshiPay2\n{BASE_URL}?page=portfolio&id={p_id}"
+    share_text = f"私のOshiPay応援実績はこちら！総額 ¥{total_amount:,}\n#OshiPay\n{BASE_URL}?page=portfolio&id={p_id}"
     st.link_button("𝕏 で公開する", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
-    st.link_button("🔥 あなたもOshiPay2を始めよう", f"{BASE_URL}?page=lp", use_container_width=True)
+    st.link_button("🔥 あなたもOshiPayを始めよう", f"{BASE_URL}?page=lp", use_container_width=True)
     st.stop()
 
 # ── サポーター用ダッシュボード ──
 elif page == "supporter_dashboard":
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">サポーター・ダッシュボード</div>', unsafe_allow_html=True)
     
     if "supporter_auth" not in st.session_state:
@@ -1389,7 +1389,7 @@ elif page == "supporter_dashboard":
     st.stop()
 
 else: # Dashboard
-    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay2</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-logo"><span class="icon">🔥</span> <span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">QRコードを発行</div>', unsafe_allow_html=True)
     # アカウントIDの特定
     acct_id = connect_acct or params.get("acct")
@@ -1605,5 +1605,5 @@ else: # Dashboard
                 mime="text/plain",
                 use_container_width=True,
             )
-    st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay2</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
