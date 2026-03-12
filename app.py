@@ -1359,22 +1359,6 @@ elif page == "supporter_dashboard":
     </div>
     """, unsafe_allow_html=True)
     
-    # 応援を紐づける
-    st.markdown('<div class="header" style="font-size:16px;">🎫 過去の応援を紐づける</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:10px;">応援証明書（<code>?page=my_support&sid=xxx</code>）の <code>xxx</code> の部分（support_id）を入力してください。</div>', unsafe_allow_html=True)
-    claim_id = st.text_input("応援証明書IDを入力", placeholder="例： 123e4567-e89b-12d3...")
-    if st.button("このアカウントに紐づける"):
-        if claim_id:
-            s_data = get_support(claim_id)
-            if s_data:
-                if s_data.get("supporter_id"):
-                    st.warning("この応援記録はすでに誰かのアカウントに紐づけられています！")
-                else:
-                    get_db().table("supports").update({"supporter_id": sup_user["supporter_id"]}).eq("support_id", claim_id).execute()
-                    st.success("紐づけが完了しました！ポートフォリオに反映されました。")
-            else:
-                st.error("応援記録が見つかりません。入力内容を確認してください。")
-                
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
     st.markdown('<div class="header" style="font-size:16px;">📊 応援実績をシェアする</div>', unsafe_allow_html=True)
     portfolio_url = f"{BASE_URL}?page=portfolio&id={sup_user['supporter_id']}"
