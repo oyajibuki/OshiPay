@@ -470,13 +470,13 @@ if page == "lp":
     @media (max-width: 768px) {
         [data-testid="stIFrame"],
         [data-testid="stIFrame"] > iframe {
-            height: 5900px !important;
-            min-height: 5900px !important;
+            height: 6200px !important;
+            min-height: 6200px !important;
         }
     }
     </style>
     """, unsafe_allow_html=True)
-    components.html(lp_html, height=3750)
+    components.html(lp_html, height=3900)
     st.stop()
 
 # ── 成功ページ ──
