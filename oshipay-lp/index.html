@@ -388,6 +388,22 @@
     </div>
   </section>
 
+  <!-- ランキング・サポーターダッシュボードへのリンク -->
+  <div style="text-align:center;padding:16px 0 8px;background:#0a0a0f;">
+    <a href="https://oshipay.streamlit.app/?page=ranking"
+      onclick="window.top.location.href=this.href;return false;"
+      style="display:inline-block;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.5);padding:10px 24px;border-radius:12px;color:#fbbf24;text-decoration:none;font-weight:700;font-size:14px;">
+      🏆 月間応援ランキングを見る
+    </a>
+  </div>
+  <div style="text-align:center;padding-bottom:40px;background:#0a0a0f;">
+    <a href="https://oshipay.streamlit.app/?page=supporter_dashboard"
+      onclick="window.top.location.href=this.href;return false;"
+      style="display:inline-block;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.5);padding:10px 20px;border-radius:12px;color:#c4b5fd;text-decoration:none;font-weight:700;font-size:14px;">
+      🦸 過去の応援を管理する（サポーターダッシュボードへ）
+    </a>
+  </div>
+
   <!-- フッター -->
   <footer class="border-t border-white/10 mt-12 py-12 relative z-10">
     <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -435,15 +451,26 @@
       const fadeElements = document.querySelectorAll('.fade-in-section');
       fadeElements.forEach(el => observer.observe(el));
 
-      // 親ウィンドウにコンテンツの高さを通知（スクロール問題のデバッグ/自動調整用）
+      // iframeとその親コンテナをコンテンツ高さに合わせてリサイズ
       const sendHeight = () => {
-        const height = document.body.scrollHeight;
-        window.top.postMessage({ type: 'resize', height: height }, '*');
+        const height = document.documentElement.scrollHeight;
+        try {
+          // srcdocのiframeはwindow.frameElementでアクセス可能
+          if (window.frameElement) {
+            window.frameElement.style.height = height + 'px';
+            window.frameElement.style.minHeight = height + 'px';
+            const parent = window.frameElement.parentElement;
+            if (parent) {
+              parent.style.height = height + 'px';
+              parent.style.minHeight = height + 'px';
+            }
+          }
+        } catch(e) {}
       };
       window.addEventListener('load', sendHeight);
       window.addEventListener('resize', sendHeight);
-      // アニメーション完了後などにも高さを再計算
-      setTimeout(sendHeight, 2000);
+      setTimeout(sendHeight, 300);
+      setTimeout(sendHeight, 1500);
     });
   </script>
 </body>

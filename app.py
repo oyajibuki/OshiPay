@@ -455,24 +455,8 @@ if page in LEGAL_MAP:
 # ── ランディングページ ──
 if page == "lp":
     lp_html = read_html_file("oshipay-lp/index.html")
-    st.markdown("""
-    <style>
-    /* モバイル用の高さ調整 (幅768px以下) */
-    @media (max-width: 768px) {
-        iframe { height: 5800px !important; }
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # 初期高さ3750px（JS発火後にwindow.frameElementで自動リサイズ）
     components.html(lp_html, height=3750)
-    lp_bottom_html = (
-        f'<div style="text-align:center;padding:16px 0 8px;">'
-        f'<a href="{BASE_URL}?page=ranking" target="_top" style="display:inline-block;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.5);padding:10px 24px;border-radius:12px;color:#fbbf24;text-decoration:none;font-weight:700;font-size:14px;">🏆 月間応援ランキングを見る</a>'
-        f'</div>'
-        f'<div style="text-align:center;padding-bottom:40px;">'
-        f'<a href="{BASE_URL}?page=supporter_dashboard" target="_top" style="display:inline-block;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.5);padding:10px 20px;border-radius:12px;color:#c4b5fd;text-decoration:none;font-weight:700;font-size:14px;">🦸 過去の応援を管理する（サポーターダッシュボードへ）</a>'
-        f'</div>'
-    )
-    st.markdown(lp_bottom_html, unsafe_allow_html=True)
     st.stop()
 
 # ── 成功ページ ──
