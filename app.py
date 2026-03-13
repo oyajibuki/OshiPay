@@ -711,6 +711,10 @@ if page == "reply_view":
     rv_acct = params.get("acct", "")
     st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">💌 返信ダッシュボード</div>', unsafe_allow_html=True)
+    
+    if st.session_state.get("reply_success_msg"):
+        st.success(st.session_state["reply_success_msg"])
+        del st.session_state["reply_success_msg"]
 
     if not rv_acct:
         st.markdown('<div class="section-subtitle">クリエーターIDとパスワードでログイン</div>', unsafe_allow_html=True)
@@ -840,7 +844,7 @@ if page == "reply_view":
             if st.button("📨 送信する", key=f"send_{sid}", type="primary"):
                 ok = set_reply(sid, chosen_emoji, reply_text)
                 if ok:
-                    st.success("返信を保存しました！")
+                    st.session_state["reply_success_msg"] = "返信を保存しました！"
                     st.rerun()
                 else:
                     st.error("保存に失敗しました。")
@@ -1565,6 +1569,13 @@ else: # Dashboard
         
         _icon_list = list(ICON_OPTIONS.keys())
         _def_name = st.session_state.get(f"creator_name_{acct_id}", "")
+        if not _def_name:
+            try:
+                last_s = get_db().table("supports").select("creator_name").eq("creator_acct", acct_id).order("created_at", desc=True).limit(1).execute()
+                if last_s.data:
+                    _def_name = last_s.data[0]["creator_name"]
+            except Exception:
+                pass
         _def_icon = st.session_state.get(f"creator_icon_{acct_id}", _icon_list[0])
         _def_icon_idx = _icon_list.index(_def_icon) if _def_icon in _icon_list else 0
         name = st.text_input("表示名", value=_def_name)
@@ -1579,8 +1590,10 @@ else: # Dashboard
             st.session_state[f"creator_icon_{acct_id}"] = icon
 
         # 返信ダッシュボードへのリンク
-        reply_view_url = f"{BASE_URL}?page=reply_view&acct={acct_id}"
-        st.link_button("💌 応援メッセージ・返信ダッシュボードを開く", reply_view_url, use_container_width=True)
+        if st.button("💌 応援メッセージ・返信ダッシュボードを開く", use_container_width=True):
+            st.query_params["page"] = "reply_view"
+            st.query_params["acct"] = acct_id
+            st.rerun()
 
         # パスワード変更
         with st.expander("🔑 パスワードを変更する"):
