@@ -470,13 +470,13 @@ if page == "lp":
     @media (max-width: 768px) {
         [data-testid="stIFrame"],
         [data-testid="stIFrame"] > iframe {
-            height: 6200px !important;
-            min-height: 6200px !important;
+            height: 7500px !important;
+            min-height: 7500px !important;
         }
     }
     </style>
     """, unsafe_allow_html=True)
-    components.html(lp_html, height=3900)
+    components.html(lp_html, height=5500)
     st.stop()
 
 # ── 成功ページ ──
@@ -1417,26 +1417,17 @@ else: # Dashboard
     
     if not acct_id:
         if not params.get("fresh"):
-            # ① localStorage からアカウントIDを自動復元 → パスワード画面へ
+            # ① localStorage からアカウントIDを自動復元
             components.html(f"""<script>
             (function(){{
               try {{
                 var saved = localStorage.getItem('oshipay_acct');
                 if (saved && saved.startsWith('acct_')) {{
-                  window.top.location.href = '{BASE_URL}?page=dashboard&acct=' + encodeURIComponent(saved);
-                }} else {{
-                  var url = new URL(window.top.location.href);
-                  url.searchParams.set('fresh', '1');
-                  window.top.location.href = url.href;
+                  window.parent.location.href = '{BASE_URL}?page=dashboard&acct=' + encodeURIComponent(saved);
                 }}
-              }} catch(e) {{
-                var url = new URL(window.top.location.href);
-                url.searchParams.set('fresh', '1');
-                window.top.location.href = url.href;
-              }}
+              }} catch(e) {{}}
             }})();
             </script>""", height=0)
-            st.stop()
         st.markdown('<div class="header">応援用QRコードを作成・復元</div>', unsafe_allow_html=True)
         st.write("新しく応援（決済）を受け取るための設定を行うか、以前作成したアカウントを復元します。")
 
