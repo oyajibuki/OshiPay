@@ -460,6 +460,15 @@
       const fadeElements = document.querySelectorAll('.fade-in-section');
       fadeElements.forEach(el => observer.observe(el));
 
+      // 高さをpostMessageでStreamlit親ウィンドウに通知
+      const sendHeight = () => {
+        const height = document.documentElement.scrollHeight;
+        window.parent.postMessage({ type: 'lp_height', height: height }, '*');
+      };
+      window.addEventListener('load', sendHeight);
+      window.addEventListener('resize', sendHeight);
+      setTimeout(sendHeight, 300);
+      setTimeout(sendHeight, 1500);
     });
   </script>
 </body>

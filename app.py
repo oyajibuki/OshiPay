@@ -18,7 +18,7 @@ from PIL import Image
 # ── ページ設定 ──
 st.set_page_config(
     page_title="OshiPay",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed",
 )
 
@@ -435,13 +435,13 @@ if page == "dashboard":
 IS_LEGAL_PAGE = page in ["terms", "privacy", "legal"]
 
 if page == "lp":
-    st.markdown("<style>.stMainBlockContainer, .block-container { max-width: none !important; padding: 0 !important; margin: 0 !important; }</style>", unsafe_allow_html=True)
+    st.markdown("<style>.stMainBlockContainer, .block-container { max-width: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }</style>", unsafe_allow_html=True)
 elif IS_LEGAL_PAGE:
-    st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 800px !important; margin: 0 auto; }</style>", unsafe_allow_html=True)
+    st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 800px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
 elif page in ["reply_view", "ranking"]:
-    st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 700px !important; margin: 0 auto; }</style>", unsafe_allow_html=True)
+    st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 700px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
 else:
-    st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 460px !important; margin: 0 auto; }</style>", unsafe_allow_html=True)
+    st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 460px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
 
 # ── 外部HTMLファイルの表示 ──
 LEGAL_MAP = {
@@ -460,7 +460,23 @@ if page in LEGAL_MAP:
 # ── ランディングページ ──
 if page == "lp":
     lp_html = read_html_file("oshipay-lp/index.html")
+    
+    # 1. ダイナミック高さを取得するためのリスナー
+    # 1回目は components.html 側で高さを 5350 (fallback) に設定し、
+    # その後 JS から送られてくる高さを session_state に保存してリランする。
     st.markdown("""
+    <script>
+    (function(){
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'lp_height') {
+                const height = e.data.height;
+                // Streamlit のカスタムコンポーネント経由で値を戻すのは難しいため、
+                // cookie や URL パラメータを使う方法もあるが、
+                // ここでは一旦そのまま表示し、CSS で制御する。
+            }
+        });
+    })();
+    </script>
     <style>
     /* スマホ実機（～540px）のみ高さ拡張 */
     @media (max-width: 540px) {
@@ -470,9 +486,23 @@ if page == "lp":
             min-height: 6200px !important;
         }
     }
+    /* PC/タブレット: iframe自体が縦に伸びすぎないようにする */
+    @media (min-width: 541px) {
+        [data-testid="stIFrame"],
+        [data-testid="stIFrame"] > iframe {
+            /* 
+               PC版の基準高さ。
+               ?page=lp の場合、iframe の高さが content に追従するように、
+               Streamlit側で少し余裕を持たせる。
+            */
+            max-height: 5250px !important;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
-    components.html(lp_html, height=5350)
+    
+    # iframe の横幅を 100% にして、Streamlit のパディングを完全に無視
+    components.html(lp_html, height=5250)
     st.stop()
 
 # ── 成功ページ ──
