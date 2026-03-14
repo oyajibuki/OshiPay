@@ -18,7 +18,7 @@ from PIL import Image
 # ── ページ設定 ──
 st.set_page_config(
     page_title="OshiPay",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed",
 )
 
@@ -462,50 +462,18 @@ if page in LEGAL_MAP:
 
 # ── ランディングページ ──
 if page == "lp":
-    lp_html = read_html_file("oshipay-lp/index.html")
+    # ── 新アーキテクチャ: 自動転送 ──
+    NEW_LP_URL = "https://oyajibuki.github.io/OshiPay/"
     
-    # 1. ダイナミック高さを取得するためのリスナー
-    # 1回目は components.html 側で高さを 5350 (fallback) に設定し、
-    # その後 JS から送られてくる高さを session_state に保存してリランする。
-    st.markdown("""
-    <script>
-    (function(){
-        window.addEventListener('message', function(e) {
-            if (e.data && e.data.type === 'lp_height') {
-                const height = e.data.height;
-                // Streamlit のカスタムコンポーネント経由で値を戻すのは難しいため、
-                // cookie や URL パラメータを使う方法もあるが、
-                // ここでは一旦そのまま表示し、CSS で制御する。
-            }
-        });
-    })();
-    </script>
-    <style>
-    /* スマホ実機（～540px）のみ高さ拡張 */
-    @media (max-width: 540px) {
-        [data-testid="stIFrame"],
-        [data-testid="stIFrame"] > iframe {
-            height: 6200px !important;
-            min-height: 6200px !important;
-        }
-    }
-    /* PC/タブレット: iframe自体が縦に伸びすぎないようにする */
-    @media (min-width: 541px) {
-        [data-testid="stIFrame"],
-        [data-testid="stIFrame"] > iframe {
-            /* 
-               PC版の基準高さ。
-               ?page=lp の場合、iframe の高さが content に追従するように、
-               Streamlit側で少し余裕を持たせる。
-            */
-            max-height: 5250px !important;
-        }
-    }
-    </style>
+    st.markdown(f"""
+        <div style="text-align: center; padding: 50px; font-family: sans-serif;">
+            <h2 style="color: white;">公式サイトへ移動しています...</h2>
+            <p style="color: rgba(255,255,255,0.6);">自動的に移動しない場合は、<a href="{NEW_LP_URL}" style="color: #8b5cf6;">こちら</a>をクリックしてください。</p>
+        </div>
+        <script>
+            window.location.href = "{NEW_LP_URL}";
+        </script>
     """, unsafe_allow_html=True)
-    
-    # iframe の横幅を 100% にして、Streamlit のパディングを完全に無視
-    components.html(lp_html, height=5250)
     st.stop()
 
 # ── 成功ページ ──
