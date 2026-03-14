@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>背景削除ツール</title>
+</head>
+<body>
+  <h2>背景削除テスト</h2>
+
+  <input type="file" id="fileInput">
+  <button onclick="upload()">削除</button>
+
+  <br><br>
+  <img id="result" width="300">
+
+<script>
+async function upload() {
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) {
+    alert("画像を選んでください");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/remove-bg", {
+    method: "POST",
+    body: formData
+  });
+
+  const blob = await response.blob();
+  document.getElementById("result").src = URL.createObjectURL(blob);
+}
+</script>
+
+</body>
+</html>
