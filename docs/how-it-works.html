@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OshiPay - 使い方と機能のご紹介</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+        body {
+            background-color: #0a0a0f;
+            color: #f0f0f5;
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            border-color: rgba(139, 92, 246, 0.4);
+            transform: translateY(-2px);
+        }
+        .placeholder-box {
+            background: rgba(139, 92, 246, 0.1);
+            border: 2px dashed rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            transition: background 0.3s;
+        }
+        .placeholder-box:hover {
+            background: rgba(139, 92, 246, 0.15);
+        }
+        .number-badge {
+            background: #8b5cf6;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 18px;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+        }
+        .nav-button {
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        .nav-button.active {
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            color: white;
+        }
+    </style>
+</head>
+<body class="pb-20">
+
+    <!-- Header -->
+    <header class="py-8 px-4 text-center">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl md:text-5xl font-black mb-4 gradient-text">APP GUIDE</h1>
+            <p class="text-gray-400 text-lg">OshiPayの機能と使い方を詳しくご紹介します</p>
+        </div>
+    </header>
+
+    <!-- Navigation Selector -->
+    <div class="sticky top-4 z-50 flex justify-center gap-4 mb-12 px-4">
+        <button onclick="switchTab('creator')" id="tab-creator" class="nav-button active shadow-lg">
+            <i data-lucide="mic-2" class="inline-block w-5 h-5 mr-2"></i>クリエイター向け
+        </button>
+        <button onclick="switchTab('supporter')" id="tab-supporter" class="nav-button bg-gray-800 text-gray-400 hover:text-white">
+            <i data-lucide="heart" class="inline-block w-5 h-5 mr-2"></i>応援者（ファン）向け
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-4">
+
+        <!-- Creator Section -->
+        <section id="content-creator" class="space-y-16">
+            
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold mb-4">クリエイター登録の全手順</h2>
+                <p class="text-gray-400">安心・安全な仕組みで、収益化までの道のりを詳しく解説します。</p>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="number-badge">1</span>
+                        <h3 class="text-2xl font-bold">QRコード発行画面で「新規作成」</h3>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">
+                        ログイン画面で「新規作成」タブを選択します。管理用のパスワードを入力し、<span class="text-purple-400 font-bold">「利用規約に同意して、新規にQRコードを発行して応援を受け取りますか？」</span>のチェックボックスをオンにします。
+                    </p>
+                </div>
+                <div class="placeholder-box">
+                    <div class="text-center text-gray-500">
+                        <p class="text-4xl mb-2">[ 1 ]</p>
+                        <p>「新規作成」タブでチェックを入れた画面</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="grid md:grid-cols-2 gap-8 items-center flex-row-reverse">
+                <div class="order-2 md:order-1 placeholder-box">
+                    <div class="text-center text-gray-500">
+                        <p class="text-4xl mb-2">[ 2 ]</p>
+                        <p>「Stripeアカウントを連携する」ボタンの画面</p>
+                    </div>
+                </div>
+                <div class="order-1 md:order-2 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="number-badge">2</span>
+                        <h3 class="text-2xl font-bold">Stripeアカウントの連携開始</h3>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">
+                        画面下部のオレンジ色のグラデーションボタン<span class="text-orange-400 font-bold">「Stripeアカウントを連携する」</span>をクリックします。その後、確認画面で「Stripeの登録画面へ進む」を選択してください。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 3-6 (Stripe Flow) -->
+            <div class="bg-purple-900/10 border border-purple-500/20 rounded-3xl p-8 md:p-12 space-y-12">
+                <div class="text-center max-w-2xl mx-auto">
+                    <h3 class="text-2xl font-bold mb-4">Stripe社（決済システム）での登録</h3>
+                    <p class="text-sm text-gray-400">ここからの入力は世界標準の決済プラットフォーム「Stripe」の安全な画面で行われます。</p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Step 3 & 4 -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2">
+                            <span class="number-badge w-6 h-6 text-sm">3</span>
+                            <span class="number-badge w-6 h-6 text-sm">4</span>
+                            <h4 class="font-bold">メール・電話番号登録</h4>
+                        </div>
+                        <p class="text-sm text-gray-400">連絡用のメールアドレスを入力し、スマートフォンのSMSまたはメールによる本人認証を行います。</p>
+                        <div class="placeholder-box min-h-[150px]">
+                            <p class="text-gray-500 text-xs text-center">[ 3 ] [ 4 ]<br>メール・認証画面</p>
+                        </div>
+                    </div>
+                    <!-- Step 5 -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2">
+                            <span class="number-badge w-6 h-6 text-sm">5</span>
+                            <h4 class="font-bold">ビジネス形態の選択</h4>
+                        </div>
+                        <p class="text-sm text-gray-400">「新規ビジネスを作成する」を選択します（個人活動で問題ありません）。</p>
+                        <div class="placeholder-box min-h-[150px]">
+                            <p class="text-gray-500 text-xs text-center">[ 5 ]<br>ビジネス選択画面</p>
+                        </div>
+                    </div>
+                    <!-- Step 6 -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2">
+                            <span class="number-badge w-6 h-6 text-sm">6</span>
+                            <h4 class="font-bold">情報の入力と本人確認</h4>
+                        </div>
+                        <p class="text-sm text-gray-400">氏名、住所、電話番号、振込先銀行口座を入力し、写真付き身分証明書をスキャンします。</p>
+                        <div class="placeholder-box min-h-[150px]">
+                            <p class="text-gray-500 text-xs text-center">[ 6 ]<br>情報入力・スキャン画面</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-4 text-sm mt-8">
+                    <p class="text-red-300 font-bold mb-2">⚠️ 個人情報に関する重要事項</p>
+                    <p class="text-gray-300 leading-relaxed">
+                        Stripeに入力する氏名や銀行口座、身分証等の情報は、お金を安全に受け取るための極めて重要な情報です。正確に入力してください。<br>
+                        なお、これらの個人情報は<span class="text-white font-bold underline">Stripe社の厳格な情報管理規定に則って保護されており、OshiPay運営側が確認することは一切できません。</span>安心してご登録ください。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 7 -->
+            <div class="grid md:grid-cols-2 gap-8 items-center mt-16">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="number-badge">7</span>
+                        <h3 class="text-2xl font-bold">OshiPayに戻り、QRを発行</h3>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">
+                        すべての入力が終わり「同意して送信」すると、自動的にOshiPayの画面に戻ります。<br>
+                        先ほど決めたパスワードでログインし、<span class="text-purple-400 font-bold">表示名と好きなアイコンを選んで「QRコードを生成」をクリックすれば完了です！</span>
+                    </p>
+                </div>
+                <div class="placeholder-box">
+                    <div class="text-center text-gray-500">
+                        <p class="text-4xl mb-2">[ 7 ]</p>
+                        <p>表示名設定・QR生成完了の画面</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Supporter Section (Hidden by default) -->
+        <section id="content-supporter" class="hidden space-y-16">
+            
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold mb-4">サポーター（ファン）の楽しみ方</h2>
+                <p class="text-gray-400">アプリ不要。ブラウザだけで「推し活」がもっと楽しくなります。</p>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="number-badge">4</span>
+                        <h3 class="text-2xl font-bold">QRスキャンで応援ページへ</h3>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">
+                        ライブ会場や配信概要欄のQR/URLからアクセス。金額を選んでメッセージを入力するだけのシンプル設計です。
+                    </p>
+                </div>
+                <div class="placeholder-box">
+                    <div class="text-center text-gray-500">
+                        <p class="text-4xl mb-2">[ 4 ]</p>
+                        <p>ここに「応援ページ（入力画面）」の<br>スクショを貼ってください</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="order-2 md:order-1 placeholder-box">
+                    <div class="text-center text-gray-500">
+                        <p class="text-4xl mb-2">[ 5 ]</p>
+                        <p>ここに「応援完了後の成功画面」の<br>スクショを貼ってください</p>
+                    </div>
+                </div>
+                <div class="order-1 md:order-2 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="number-badge">5</span>
+                        <h3 class="text-2xl font-bold">世界に一つの「応援コイン」獲得</h3>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">
+                        応援が完了すると、自分の名前と「第〇〇号のサポーター」という記録が入った限定コイン画像が手に入ります。<br>
+                        <span class="text-orange-400 font-bold">「最古参」の証明や、コレクションとして楽しめます。</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="number-badge">6</span>
+                        <h3 class="text-2xl font-bold">ランキングで貢献度を確認</h3>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">
+                        月間・全期間の応援ランキングを表示。ファン同士で推しの盛り上げを競い合う「ゲーム感覚」の推し活が可能です。
+                    </p>
+                </div>
+                <div class="placeholder-box">
+                    <div class="text-center text-gray-500">
+                        <p class="text-4xl mb-2">[ 6 ]</p>
+                        <p>ここに「ランキング画面」の<br>スクショを貼ってください</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Common FAQ / Help Section -->
+        <hr class="border-gray-800 my-20">
+
+        <section class="max-w-3xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-10">よくある質問 / ヒント</h2>
+            <div class="space-y-6">
+                <div class="card p-6">
+                    <h4 class="font-bold text-purple-400 mb-2">Q. 公式サイトのHP（自分専用ページ）には何を書けばいい？</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        一番大切なのは「応援をどう活動に役立てるか」です。「新しいマイクを買いたい」「衣装を豪華にしたい」といった具体的な夢を書くと、ファンの応援意欲がグッと高まります。また、OshiPayのQRページヘのリンクを大きく目立たせましょう。
+                    </p>
+                </div>
+                <div class="card p-6">
+                    <h4 class="font-bold text-purple-400 mb-2">Q. Stripeの画面が難しそう...</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        安心してください。OshiPayはStripeの「Express」という簡易版を採用しています。複雑な設定は一切不要で、本人確認に必要な項目（氏名・口座情報等）をスマホで入力するだけで、審査なしで即座に連携が完了します。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-20 py-10 border-t border-gray-800 text-center text-gray-500 text-sm">
+        <p>© 2026 OshiPay - その感動、今すぐカタチに。</p>
+        <div class="mt-4 flex justify-center gap-4">
+            <a href="index.html" class="hover:text-purple-400">トップページに戻る</a>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        function switchTab(tab) {
+            const creatorBtn = document.getElementById('tab-creator');
+            const supporterBtn = document.getElementById('tab-supporter');
+            const creatorContent = document.getElementById('content-creator');
+            const supporterContent = document.getElementById('content-supporter');
+
+            if (tab === 'creator') {
+                creatorBtn.classList.add('active', 'bg-transparent');
+                creatorBtn.classList.remove('bg-gray-800', 'text-gray-400');
+                supporterBtn.classList.remove('active');
+                supporterBtn.classList.add('bg-gray-800', 'text-gray-400');
+                
+                creatorContent.classList.remove('hidden');
+                supporterContent.classList.add('hidden');
+            } else {
+                supporterBtn.classList.add('active', 'bg-transparent');
+                supporterBtn.classList.remove('bg-gray-800', 'text-gray-400');
+                creatorBtn.classList.remove('active');
+                creatorBtn.classList.add('bg-gray-800', 'text-gray-400');
+
+                supporterContent.classList.remove('hidden');
+                creatorContent.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
