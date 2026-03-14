@@ -18,6 +18,7 @@ from PIL import Image
 # ── ページ設定 ──
 st.set_page_config(
     page_title="OshiPay",
+    page_icon="https://oyajibuki.github.io/OshiPay/favicon.png?v=2",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
