@@ -120,13 +120,16 @@ def generate_qr_data(data: str) -> tuple[str, bytes]:
             qr_w, qr_h = qr_img.size; logo_size = int(qr_w * 0.22); logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
             qr_img.paste(logo, ((qr_w-logo_size)//2, (qr_h-logo_size)//2), logo)
         except Exception: pass
-    buf = io.BytesIO(); qr_img.save(buf, format="PNG"); qr_bytes = buf.getvalue(); b64 = base64.b64encode(qr_bytes).decode()
+    buf = io.BytesIO(); qr_img.save(buf, format="PNG"); qr_bytes = buf.getvalue(); b64 = base64.b64encode(buf.getvalue()).decode()
     return b64, qr_bytes
 
 def get_font(size):
     font_path = "assets/NotoSansJP-Bold.ttf"
     if not os.path.exists(font_path):
         os.makedirs("assets", exist_ok=True)
+        # ── 新アーキテクチャ: 自動転送 ──
+        # GitHub Pages (docsフォルダ) のURLを指定
+        NEW_LP_URL = "https://oyajibuki.github.io/OshiPay/"
         url = "https://github.com/google/fonts/raw/main/ofl/notosansjp/NotoSansJP-Bold.ttf"
         try:
             import urllib.request
