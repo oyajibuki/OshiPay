@@ -356,6 +356,11 @@ def get_monthly_ranking() -> list:
     resp = get_db().table("supports").select("*").gte("created_at", start).execute()
     return resp.data or []
 
+def get_all_time_ranking() -> list:
+    """全期間ランキング用: 全supportsを取得"""
+    resp = get_db().table("supports").select("*").execute()
+    return resp.data or []
+
 def get_supporters_map(supporter_ids: list) -> dict:
     """supporter_id リストから {supporter_id: display_name} マップを返す"""
     if not supporter_ids:
@@ -457,7 +462,8 @@ if page == "lp":
     lp_html = read_html_file("oshipay-lp/index.html")
     st.markdown("""
     <style>
-    @media (max-width: 768px) {
+    /* スマホ実機（～540px）のみ高さ拡張 */
+    @media (max-width: 540px) {
         [data-testid="stIFrame"],
         [data-testid="stIFrame"] > iframe {
             height: 6200px !important;
@@ -466,7 +472,7 @@ if page == "lp":
     }
     </style>
     """, unsafe_allow_html=True)
-    components.html(lp_html, height=5600)
+    components.html(lp_html, height=5350)
     st.stop()
 
 # ── 成功ページ ──
@@ -987,23 +993,21 @@ if page == "test":
 
     st.stop()
 
-# ── 月間ランキング ──
+# ── ランキング（月間 / 全期間）──
 if page == "ranking":
     now = datetime.datetime.now(datetime.timezone.utc)
     month_label = f"{now.year}年{now.month}月"
 
     st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">🏆 月間応援ランキング</div>', unsafe_allow_html=True)
-    st.markdown(f'<div style="text-align:center;color:rgba(240,240,245,0.5);font-size:13px;margin-bottom:28px;">{month_label}</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🏆 応援ランキング</div>', unsafe_allow_html=True)
 
-    all_supports = get_monthly_ranking()
-
-    if not all_supports:
-        st.markdown('<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.35);font-size:14px;">まだ今月の応援データがありません 🌱</div>', unsafe_allow_html=True)
-    else:
+    def render_ranking(supports, total_label):
+        if not supports:
+            st.markdown('<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.35);font-size:14px;">まだ応援データがありません 🌱</div>', unsafe_allow_html=True)
+            return
         # クリエイター別に集計
         creator_map = {}
-        for s in all_supports:
+        for s in supports:
             acct = s["creator_acct"]
             if acct not in creator_map:
                 creator_map[acct] = {"name": s["creator_name"], "acct": acct, "total": 0, "supports": []}
@@ -1050,13 +1054,21 @@ if page == "ranking":
                 f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
                 f'<span style="font-size:26px;min-width:32px;">{medal}</span>'
                 f'<a href="{creator_url}" target="_top" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{creator["name"]}</a>'
-                f'<span style="font-size:11px;color:rgba(240,240,245,0.4);">月間合計</span>'
+                f'<span style="font-size:11px;color:rgba(240,240,245,0.4);">{total_label}</span>'
                 f'<span style="font-size:18px;font-weight:900;color:#f97316;">{creator["total"]:,}</span>'
                 f'</div>'
                 f'{sup_rows_html}'
                 f'</div>'
             )
             st.markdown(card_html, unsafe_allow_html=True)
+
+    tab_monthly, tab_alltime = st.tabs([f"📅 月間 ({month_label})", "🌟 全期間"])
+
+    with tab_monthly:
+        render_ranking(get_monthly_ranking(), "月間合計")
+
+    with tab_alltime:
+        render_ranking(get_all_time_ranking(), "全期間合計")
 
     # フッター（OshiPay宣伝）
     footer_html = (
