@@ -471,10 +471,13 @@ if page == "lp":
             <h2 style="color: white;">公式サイトへ移動しています...</h2>
             <p style="color: rgba(255,255,255,0.6);">自動的に移動しない場合は、<a href="{NEW_LP_URL}" style="color: #8b5cf6;">こちら</a>をクリックしてください。</p>
         </div>
-        <script>
-            window.location.href = "{NEW_LP_URL}";
-        </script>
     """, unsafe_allow_html=True)
+    
+    components.html(f"""
+        <script>
+            window.top.location.href = "{NEW_LP_URL}";
+        </script>
+    """, height=0)
     st.stop()
 
 # ── 成功ページ ──
