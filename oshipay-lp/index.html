@@ -14,11 +14,6 @@
 
   <!-- カスタムアニメーション設定 -->
   <style>
-    html, body {
-      overscroll-behavior-y: contain;
-      height: 100%;
-      overflow-y: auto;
-    }
     body {
       font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
     }
@@ -474,6 +469,17 @@
       window.addEventListener('resize', sendHeight);
       setTimeout(sendHeight, 300);
       setTimeout(sendHeight, 1500);
+      const preventWheelOverscroll = (event) => {
+        const scrollableHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+        const maxScrollY = Math.max(0, scrollableHeight - window.innerHeight);
+        const deltaY = event.deltaY;
+        const atTop = window.scrollY <= 0 && deltaY < 0;
+        const atBottom = window.scrollY >= maxScrollY - 1 && deltaY > 0;
+        if (atTop || atBottom) {
+          event.preventDefault();
+        }
+      };
+      window.addEventListener('wheel', preventWheelOverscroll, { passive: false });
     });
   </script>
 </body>
