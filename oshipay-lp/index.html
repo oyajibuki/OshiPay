@@ -32,7 +32,7 @@
   </style>
 </head>
 
-<body class="min-h-screen bg-[#0a0a0f] text-slate-200 selection:bg-purple-500/30 overflow-x-hidden relative">
+<body class="bg-[#0a0a0f] text-slate-200 selection:bg-purple-500/30 overflow-x-hidden relative">
 
   <!-- 背景の装飾エフェクト -->
   <div
@@ -460,15 +460,6 @@
       const fadeElements = document.querySelectorAll('.fade-in-section');
       fadeElements.forEach(el => observer.observe(el));
 
-      // 高さをpostMessageでStreamlit親ウィンドウに通知
-      const sendHeight = () => {
-        const height = document.documentElement.scrollHeight;
-        window.parent.postMessage({ type: 'lp_height', height: height }, '*');
-      };
-      window.addEventListener('load', sendHeight);
-      window.addEventListener('resize', sendHeight);
-      setTimeout(sendHeight, 300);
-      setTimeout(sendHeight, 1500);
     });
   </script>
 </body>
