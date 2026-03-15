@@ -141,8 +141,8 @@
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-12">
-                    <!-- Step 3 content -->
-                    <div class="space-y-4 flex flex-col justify-between">
+                    <!-- Step 3 content (DOM: 1st, PC: col1-row1) -->
+                    <div class="space-y-4 flex flex-col justify-between md:order-1">
                         <div class="space-y-4">
                             <div class="flex items-center gap-3">
                                 <span class="number-badge text-sm">3</span>
@@ -153,20 +153,8 @@
                         <img src="assets/Step3.png" alt="メール入力" class="rounded-xl border border-white/10 w-full shadow-lg">
                     </div>
 
-                    <!-- Step 5 content -->
-                    <div class="space-y-4 flex flex-col justify-between">
-                        <div class="space-y-4">
-                            <div class="flex items-center gap-3">
-                                <span class="number-badge text-sm">5</span>
-                                <h4 class="text-xl font-bold">新規ビジネスの作成</h4>
-                            </div>
-                            <p class="text-gray-400">「新規ビジネスを作成する」を選択し、活動情報を入力します。</p>
-                        </div>
-                        <img src="assets/Step6.png" alt="認証画面" class="rounded-xl border border-white/10 w-full shadow-lg">
-                    </div>
-
-                    <!-- Step 4 content -->
-                    <div class="space-y-4 flex flex-col">
+                    <!-- Step 4 content (DOM: 2nd → mobile順序: 3→4. PC: col1-row2) -->
+                    <div class="space-y-4 flex flex-col md:order-3">
                         <div class="space-y-2 mb-2">
                             <div class="flex items-center gap-3">
                                 <span class="number-badge text-sm">4</span>
@@ -179,8 +167,20 @@
                         </div>
                     </div>
 
-                    <!-- Step 6 content -->
-                    <div class="space-y-4 flex flex-col">
+                    <!-- Step 5 content (DOM: 3rd → mobile順序: 3→4→5. PC: col2-row1) -->
+                    <div class="space-y-4 flex flex-col justify-between md:order-2">
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-3">
+                                <span class="number-badge text-sm">5</span>
+                                <h4 class="text-xl font-bold">新規ビジネスの作成</h4>
+                            </div>
+                            <p class="text-gray-400">「新規ビジネスを作成する」を選択し、活動情報を入力します。</p>
+                        </div>
+                        <img src="assets/Step6.png" alt="認証画面" class="rounded-xl border border-white/10 w-full shadow-lg">
+                    </div>
+
+                    <!-- Step 6 content (DOM: 4th, PC: col2-row2) -->
+                    <div class="space-y-4 flex flex-col md:order-4">
                         <div class="space-y-2 mb-2">
                             <div class="flex items-center gap-3">
                                 <span class="number-badge text-sm">6</span>
