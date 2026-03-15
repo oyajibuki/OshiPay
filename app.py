@@ -1041,7 +1041,7 @@ if page == "ranking":
                 row_medal = ["🥇", "🥈", "🥉"][j]
                 if sup_id:
                     port_url = f"{BASE_URL}?page=portfolio&id={sup_id}"
-                    name_html = f'<a href="{port_url}" target="_top" style="color:{tier_color};text-decoration:none;font-weight:700;">{sup_name}</a>'
+                    name_html = f'<a href="{port_url}" target="_blank" style="color:{tier_color};text-decoration:none;font-weight:700;">{sup_name}</a>'
                 else:
                     name_html = f'<span style="color:rgba(255,255,255,0.45);">{sup_name}</span>'
                 row_div = (
@@ -1055,10 +1055,10 @@ if page == "ranking":
                 sup_rows_html += row_div
 
             card_html = (
-                f'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:16px 20px;margin-bottom:12px;">'
+                f'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:16px 20px;margin-bottom:12px;cursor:pointer;" onclick="window.open(\'{creator_url}\', \'_blank\')">'
                 f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
                 f'<span style="font-size:26px;min-width:32px;">{medal}</span>'
-                f'<a href="{creator_url}" target="_top" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{creator["name"]}</a>'
+                f'<a href="{creator_url}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{creator["name"]}</a>'
                 f'<span style="font-size:11px;color:rgba(240,240,245,0.4);">{total_label}</span>'
                 f'<span style="font-size:18px;font-weight:900;color:#f97316;">{creator["total"]:,}</span>'
                 f'</div>'
