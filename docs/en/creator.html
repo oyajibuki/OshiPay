@@ -9,6 +9,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     body { font-family: 'Helvetica Neue', Arial, sans-serif; }
     .glow { box-shadow: 0 0 40px rgba(168,85,247,0.35); }
@@ -93,7 +94,7 @@
       <p class="text-xs text-slate-500 uppercase tracking-widest mb-4 font-bold">Scan to Support</p>
       <div class="float inline-block mb-4">
         <div class="bg-white p-3 rounded-2xl shadow-2xl inline-flex items-center justify-center relative">
-          <img id="qr-image" src="" alt="QR Code" class="w-40 h-40 rounded-lg">
+          <div id="qr-container" class="w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center"></div>
           <!-- OshiPay flame overlay in center -->
           <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div class="bg-[#2d2d2d] rounded-xl p-1.5 shadow-lg">
@@ -208,10 +209,12 @@
       btn.href = supportUrl;
       btn.textContent = `💜 Support ${name.split('｜')[0].split('|')[0].trim()}`;
 
-      // QR: Supabaseに保存済みなら使う、なければ動的生成（ecc=H でロゴ重ねてもスキャンOK）
-      const qrSrc = c.qr_url ||
-        `https://api.qrserver.com/v1/create-qr-code/?size=320x320&ecc=H&data=${encodeURIComponent(supportUrl)}`;
-      document.getElementById('qr-image').src = qrSrc;
+      // QR: クライアントサイドで生成（外部API不要）
+      new QRCode(document.getElementById('qr-container'), {
+        text: c.qr_url || supportUrl,
+        width: 160, height: 160,
+        correctLevel: QRCode.CorrectLevel.H
+      });
     }
 
     function renderMessages(messages) {
