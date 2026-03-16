@@ -92,11 +92,14 @@
     <div class="bg-white/[0.04] border border-white/10 rounded-3xl p-6 mb-5 text-center">
       <p class="text-xs text-slate-500 uppercase tracking-widest mb-4 font-bold">Scan to Support</p>
       <div class="float inline-block mb-4">
-        <div class="bg-white p-4 rounded-2xl shadow-2xl inline-flex items-center justify-center relative">
-          <i data-lucide="qr-code" class="w-32 h-32 text-slate-900"></i>
-          <div class="absolute inset-0 flex items-center justify-center">
-            <div class="bg-white rounded-full p-1">
-              <i data-lucide="flame" class="w-6 h-6 text-orange-500"></i>
+        <div class="bg-white p-3 rounded-2xl shadow-2xl inline-flex items-center justify-center relative">
+          <img id="qr-image" src="" alt="QR Code" class="w-40 h-40 rounded-lg">
+          <!-- OshiPay flame overlay in center -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="bg-[#2d2d2d] rounded-xl p-1.5 shadow-lg">
+              <img src="https://oyajibuki.github.io/OshiPay/favicon.png?v=2"
+                   class="w-7 h-7" alt="OshiPay"
+                   onerror="this.style.display='none'">
             </div>
           </div>
         </div>
@@ -199,11 +202,16 @@
         snsContainer.appendChild(a);
       });
 
-      // Support ボタン
+      // Support ボタン & QR
       const supportUrl = `https://oshipay.streamlit.app/?page=support&user=${encodeURIComponent(c.acct_id)}&acct=${encodeURIComponent(c.acct_id)}&name=${encodeURIComponent(name)}`;
       const btn = document.getElementById('support-btn');
       btn.href = supportUrl;
       btn.textContent = `💜 Support ${name.split('｜')[0].split('|')[0].trim()}`;
+
+      // QR: Supabaseに保存済みなら使う、なければ動的生成（ecc=H でロゴ重ねてもスキャンOK）
+      const qrSrc = c.qr_url ||
+        `https://api.qrserver.com/v1/create-qr-code/?size=320x320&ecc=H&data=${encodeURIComponent(supportUrl)}`;
+      document.getElementById('qr-image').src = qrSrc;
     }
 
     function renderMessages(messages) {
