@@ -1588,6 +1588,19 @@ else: # Dashboard
         name = st.text_input("表示名", value=_def_name)
         icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx, key=f"icon_{acct_id}")
 
+        # ── プロフィールテキスト ──
+        try:
+            _cr = get_db().table("creators").select("bio,genre,slug").eq("acct_id", acct_id).maybe_single().execute()
+            _cr_data = _cr.data or {}
+        except Exception:
+            _cr_data = {}
+        bio   = st.text_area("自己紹介（bio）", value=_cr_data.get("bio", ""), max_chars=200, key=f"bio_{acct_id}")
+        genre = st.text_input("ジャンル", value=_cr_data.get("genre", ""), key=f"genre_{acct_id}")
+        slug  = st.text_input("スラッグ（マイクロページURL用）", value=_cr_data.get("slug", ""), key=f"slug_{acct_id}", help="例: asagiri → creator.html?id=asagiri")
+        if st.button("プロフィールを保存", key=f"save_profile_{acct_id}"):
+            get_db().table("creators").update({"bio": bio, "genre": genre, "slug": slug}).eq("acct_id", acct_id).execute()
+            st.success("プロフィールを保存しました！")
+
         # ── プロフィール写真アップロード ──
         uploaded_photo = st.file_uploader("プロフィール写真（任意・2MBまで）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
         if uploaded_photo and uploaded_photo.size > 2 * 1024 * 1024:
