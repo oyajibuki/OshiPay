@@ -1,17 +1,19 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OshiPay - 使い方と機能のご紹介</title>
+    <title>OshiPay - Features & How It Works</title>
+    <meta name="description" content="Learn how to set up your OshiPay QR code and start receiving support from fans worldwide in minutes.">
+    <link rel="icon" href="https://oyajibuki.github.io/OshiPay/favicon.png?v=2" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body {
             background-color: #0a0a0f;
             color: #f0f0f5;
-            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
         }
         .gradient-text {
             background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316);
@@ -29,15 +31,6 @@
             border-color: rgba(139, 92, 246, 0.4);
             transform: translateY(-2px);
         }
-        .placeholder-box {
-            background: rgba(139, 92, 246, 0.1);
-            border: 2px dashed rgba(139, 92, 246, 0.3);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 200px;
-        }
         .number-badge {
             background: #8b5cf6;
             color: white;
@@ -49,6 +42,7 @@
             justify-content: center;
             font-weight: 900;
             font-size: 18px;
+            flex-shrink: 0;
             box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
         }
         .nav-button {
@@ -74,22 +68,28 @@
 
     <!-- Header -->
     <header class="py-8 px-4 text-center">
+        <div class="flex justify-center mb-6">
+            <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <i data-lucide="flame" class="text-orange-500 w-7 h-7"></i>
+                <span class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-purple-500">OshiPay</span>
+            </a>
+        </div>
         <div class="max-w-4xl mx-auto">
             <h1 class="text-4xl md:text-5xl font-black mb-4 gradient-text">APP GUIDE</h1>
-            <p class="text-gray-400 text-lg">OshiPayの機能と使い方を詳しくご紹介します</p>
+            <p class="text-gray-400 text-lg">Everything you need to know about OshiPay — for creators and fans alike.</p>
         </div>
     </header>
 
-    <!-- Navigation Selector -->
+    <!-- Tab Navigation -->
     <div class="sticky top-4 z-50 flex justify-center gap-4 mb-12 px-4">
         <button onclick="switchTab('creator')" id="tab-creator" class="nav-button active shadow-lg">
-            <i data-lucide="mic-2" class="inline-block w-5 h-5 mr-2"></i>クリエイター向け
+            <i data-lucide="mic-2" class="inline-block w-5 h-5 mr-2"></i>For Creators
         </button>
         <button onclick="switchTab('supporter')" id="tab-supporter" class="nav-button bg-gray-800 text-gray-400 hover:text-white">
-            <i data-lucide="heart" class="inline-block w-5 h-5 mr-2"></i>応援者（ファン）向け
+            <i data-lucide="heart" class="inline-block w-5 h-5 mr-2"></i>For Fans
         </button>
-        <a href="en/how-it-works.html" class="nav-button bg-gray-800 text-gray-400 hover:text-white flex items-center gap-1">
-            🇬🇧 EN
+        <a href="../how-it-works.html" class="nav-button bg-gray-800 text-gray-400 hover:text-white flex items-center gap-1">
+            🇯🇵 JA
         </a>
     </div>
 
@@ -98,10 +98,10 @@
 
         <!-- Creator Section -->
         <section id="content-creator" class="space-y-16">
-            
+
             <div class="text-center mb-10">
-                <h2 class="text-3xl font-bold mb-4">クリエイター登録・運用の全手順</h2>
-                <p class="text-gray-400">安心・安全な仕組みで、収益化までの道のりを詳しく解説します。</p>
+                <h2 class="text-3xl font-bold mb-4">Full setup guide for creators</h2>
+                <p class="text-gray-400">Start receiving support from fans worldwide in just a few minutes.</p>
             </div>
 
             <!-- Step 1 -->
@@ -109,102 +109,102 @@
                 <div class="space-y-4">
                     <div class="flex items-center gap-3">
                         <span class="number-badge">1</span>
-                        <h3 class="text-2xl font-bold">QRコード発行画面で「新規作成」</h3>
+                        <h3 class="text-2xl font-bold">Tap "Create New" on the QR screen</h3>
                     </div>
                     <p class="text-gray-400 leading-relaxed">
-                        ログイン画面で「新規作成」タブを選択。管理用のパスワードを入力し、<span class="text-purple-400 font-bold">「利用規約に同意して...」</span>のチェックを入れます。
+                        On the login screen, select the <span class="text-purple-400 font-bold">"Create New"</span> tab. Enter a password for your account and check the box to agree to the Terms of Service.
                     </p>
                 </div>
                 <div class="rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
-                    <img src="assets/Step1.png" alt="新規作成画面" class="w-full">
+                    <img src="../assets/Step1.png" alt="Create new screen" class="w-full">
                 </div>
             </div>
 
             <!-- Step 2 -->
             <div class="grid md:grid-cols-2 gap-8 items-center border-b border-gray-800 pb-12">
                 <div class="order-2 md:order-1 rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
-                    <img src="assets/Step2.png" alt="Stripe連携ボタン" class="w-full">
+                    <img src="../assets/Step2.png" alt="Stripe connect button" class="w-full">
                 </div>
                 <div class="order-1 md:order-2 space-y-4">
                     <div class="flex items-center gap-3">
                         <span class="number-badge">2</span>
-                        <h3 class="text-2xl font-bold">Stripe連携ボタンをクリック</h3>
+                        <h3 class="text-2xl font-bold">Click "Connect Stripe Account"</h3>
                     </div>
                     <p class="text-gray-400 leading-relaxed">
-                        <span class="text-orange-400 font-bold">「Stripeアカウントを連携する」</span>をクリック。その後「Stripeの登録画面へ進む」を選択してください。
+                        Click <span class="text-orange-400 font-bold">"Connect your Stripe account"</span>, then select "Proceed to Stripe registration" to get started.
                     </p>
                 </div>
             </div>
 
-            <!-- Stripe Section (Step 3-6) -->
+            <!-- Stripe Section (Steps 3–6) -->
             <div class="bg-purple-900/10 border border-purple-500/20 rounded-3xl p-8 md:p-12 space-y-12">
                 <div class="text-center max-w-2xl mx-auto">
-                    <h3 class="text-2xl font-bold mb-4 gradient-text">Stripe社（決済システム）での登録</h3>
-                    <p class="text-sm text-gray-400">世界的決済プラットフォームの安全な画面で手続きを行います。</p>
+                    <h3 class="text-2xl font-bold mb-4 gradient-text">Setting up your Stripe account</h3>
+                    <p class="text-sm text-gray-400">Stripe is the global payment standard trusted by Amazon, Google, and millions of businesses worldwide.</p>
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-12">
-                    <!-- Step 3 content (DOM: 1st, PC: col1-row1) -->
+                    <!-- Step 3 -->
                     <div class="space-y-4 flex flex-col justify-between md:order-1">
                         <div class="space-y-4">
                             <div class="flex items-center gap-3">
                                 <span class="number-badge text-sm">3</span>
-                                <h4 class="text-xl font-bold">メールアドレスの入力</h4>
+                                <h4 class="text-xl font-bold">Enter your email address</h4>
                             </div>
-                            <p class="text-gray-400">連絡用のメールアドレスを入力して続行します。ここから認証が開始されます。</p>
+                            <p class="text-gray-400">Enter your contact email and continue. This starts the verification process.</p>
                         </div>
-                        <img src="assets/Step3.png" alt="メール入力" class="rounded-xl border border-white/10 w-full shadow-lg">
+                        <img src="../assets/Step3.png" alt="Email entry" class="rounded-xl border border-white/10 w-full shadow-lg">
                     </div>
 
-                    <!-- Step 4 content (DOM: 2nd → mobile順序: 3→4. PC: col1-row2) -->
+                    <!-- Step 4 -->
                     <div class="space-y-4 flex flex-col md:order-3">
                         <div class="space-y-2 mb-2">
                             <div class="flex items-center gap-3">
                                 <span class="number-badge text-sm">4</span>
-                                <h4 class="text-xl font-bold">認証の実施</h4>
+                                <h4 class="text-xl font-bold">Complete verification</h4>
                             </div>
-                            <p class="text-gray-400 text-sm">メールおよびスマートフォン（SMS）に届く確認コードを入力して認証を完了させます。</p>
+                            <p class="text-gray-400 text-sm">Enter the confirmation code sent to your email and phone (SMS) to complete identity verification.</p>
                         </div>
                         <div class="flex-grow flex items-center">
-                            <img src="assets/Step5.png" alt="認証画面" class="rounded-xl border border-white/10 w-full h-full object-cover shadow-lg">
+                            <img src="../assets/Step5.png" alt="Verification screen" class="rounded-xl border border-white/10 w-full h-full object-cover shadow-lg">
                         </div>
                     </div>
 
-                    <!-- Step 5 content (DOM: 3rd → mobile順序: 3→4→5. PC: col2-row1) -->
+                    <!-- Step 5 -->
                     <div class="space-y-4 flex flex-col justify-between md:order-2">
                         <div class="space-y-4">
                             <div class="flex items-center gap-3">
                                 <span class="number-badge text-sm">5</span>
-                                <h4 class="text-xl font-bold">新規ビジネスの作成</h4>
+                                <h4 class="text-xl font-bold">Create a new business</h4>
                             </div>
-                            <p class="text-gray-400">「新規ビジネスを作成する」を選択し、活動情報を入力します。</p>
+                            <p class="text-gray-400">Select "Create a new business" and enter your activity information.</p>
                         </div>
-                        <img src="assets/Step6.png" alt="認証画面" class="rounded-xl border border-white/10 w-full shadow-lg">
+                        <img src="../assets/Step6.png" alt="New business screen" class="rounded-xl border border-white/10 w-full shadow-lg">
                     </div>
 
-                    <!-- Step 6 content (DOM: 4th, PC: col2-row2) -->
+                    <!-- Step 6 -->
                     <div class="space-y-4 flex flex-col md:order-4">
                         <div class="space-y-2 mb-2">
                             <div class="flex items-center gap-3">
                                 <span class="number-badge text-sm">6</span>
-                                <h4 class="text-xl font-bold">身分証のスキャンと口座入力</h4>
+                                <h4 class="text-xl font-bold">ID verification & bank account</h4>
                             </div>
-                            <p class="text-gray-400 font-bold text-xs text-red-400">※お金を受け取るための大切な情報です。正確に入力し、写真付き身分証をスキャンしてください。</p>
+                            <p class="text-gray-400 font-bold text-xs text-red-400">※ This is essential for receiving payments. Please enter accurate information and scan a valid photo ID.</p>
                         </div>
                         <div class="flex-grow flex flex-col justify-between space-y-4">
                             <div class="security-badge flex-grow flex flex-col justify-center">
                                 <i data-lucide="shield-alert" class="w-10 h-10 text-red-500 mx-auto mb-2"></i>
                                 <h5 class="text-lg font-black text-red-500 mb-1">IMPORTANT NOTICE</h5>
                                 <p class="text-white text-xs font-bold leading-relaxed mb-3">
-                                    個人情報（氏名・住所・口座等）は、Stripe社の厳格な規定に基づき管理されます。
+                                    Your personal information (name, address, bank details) is managed solely by Stripe under their strict global security standards.
                                 </p>
                                 <div class="bg-red-600 text-white text-base font-black py-2 px-3 rounded-xl shadow-lg">
-                                    OshiPay運営は、あなたの個人情報を<br>一切確認・取得することができません。
+                                    OshiPay never sees or stores<br>your personal information.
                                 </div>
                             </div>
                             <div class="text-center">
-                                <a href="https://stripe.com/jp" target="_blank" rel="noopener noreferrer" class="text-[10px] text-gray-500 hover:text-purple-400 transition-colors">
-                                    <i data-lucide="external-link" class="inline-block w-2.5 h-2.5 mr-1"></i>Stripe社のHPはこちら
+                                <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" class="text-[10px] text-gray-500 hover:text-purple-400 transition-colors">
+                                    <i data-lucide="external-link" class="inline-block w-2.5 h-2.5 mr-1"></i>Learn more about Stripe
                                 </a>
                             </div>
                         </div>
@@ -217,16 +217,16 @@
                 <div class="text-center space-y-4 max-w-2xl mx-auto">
                     <div class="flex justify-center items-center gap-3">
                         <span class="number-badge">7</span>
-                        <h3 class="text-2xl font-bold">ログインしてQRコードを生成</h3>
+                        <h3 class="text-2xl font-bold">Log in and generate your QR code</h3>
                     </div>
                     <p class="text-gray-400">
-                        手続き完了後、OshiPayに戻ります。パスワードでログインし、表示名とアイコンを選んで「QRコードを生成」！
+                        Once setup is complete, return to OshiPay. Log in with your password, choose your display name and icon, then tap "Generate QR Code"!
                     </p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <img src="assets/Step7_1.png" alt="ログイン画面" class="rounded-2xl border border-gray-800 shadow-md">
-                    <img src="assets/Step7_2.png" alt="設定画面" class="rounded-2xl border border-gray-800 shadow-md">
-                    <img src="assets/Step7_3.png" alt="QR生成画面" class="rounded-2xl border border-gray-800 shadow-md">
+                    <img src="../assets/Step7_1.png" alt="Login screen" class="rounded-2xl border border-gray-800 shadow-md">
+                    <img src="../assets/Step7_2.png" alt="Settings screen" class="rounded-2xl border border-gray-800 shadow-md">
+                    <img src="../assets/Step7_3.png" alt="QR generation screen" class="rounded-2xl border border-gray-800 shadow-md">
                 </div>
             </div>
 
@@ -235,29 +235,29 @@
                 <div class="space-y-4">
                     <div class="flex items-center gap-3">
                         <span class="number-badge">8</span>
-                        <h3 class="text-2xl font-bold">応援内容の確認と感謝の返信</h3>
+                        <h3 class="text-2xl font-bold">View your support & reply to fans</h3>
                     </div>
                     <p class="text-gray-400 leading-relaxed">
-                        「応援メッセージ・返信ダッシュボードを開く」を押すと、これまでに届いた応援情報が一覧で表示されます。
+                        Tap "Open Support Message Dashboard" to see a full list of all the support you've received — including messages from your fans.
                     </p>
                     <div class="bg-purple-900/20 border border-purple-500/30 p-4 rounded-xl">
-                        <p class="text-purple-300 font-bold mb-1">💡 運用のポイント</p>
-                        <p class="text-gray-300 text-sm">応援が届いたら、ぜひ感謝のメッセージを返信してください！ファンの喜びが次の応援に繋がります。</p>
+                        <p class="text-purple-300 font-bold mb-1">💡 Pro tip</p>
+                        <p class="text-gray-300 text-sm">When you receive support, reply with a thank-you message! Your fans' excitement becomes the fuel for even more support.</p>
                     </div>
                 </div>
                 <div class="rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
-                    <img src="assets/Step8.png" alt="返信ダッシュボード" class="w-full">
+                    <img src="../assets/Step8.png" alt="Reply dashboard" class="w-full">
                 </div>
             </div>
 
         </section>
 
-        <!-- Supporter Section (Hidden by default) -->
+        <!-- Supporter Section (hidden by default) -->
         <section id="content-supporter" class="hidden space-y-16">
-            
+
             <div class="text-center mb-10">
-                <h2 class="text-3xl font-bold mb-4">サポーター（ファン）の楽しみ方</h2>
-                <p class="text-gray-400">アプリ不要。ブラウザだけで「推し活」がもっと楽しくなります。</p>
+                <h2 class="text-3xl font-bold mb-4">How to support your favorite creator</h2>
+                <p class="text-gray-400">No app needed. Just your phone browser — and the love for your oshi.</p>
             </div>
 
             <!-- Step 9 -->
@@ -265,29 +265,29 @@
                 <div class="space-y-4">
                     <div class="flex items-center gap-3">
                         <span class="number-badge">9</span>
-                        <h3 class="text-2xl font-bold">QRスキャンで応援ページへ</h3>
+                        <h3 class="text-2xl font-bold">Scan the QR code to open the support page</h3>
                     </div>
                     <p class="text-gray-400 leading-relaxed">
-                        ライブ会場や配信のQRコードからアクセス。金額を選び、メッセージを添えて応援を送りましょう。
+                        Find your creator's QR code at a live event, on their social media, or their profile page. Scan it with your phone camera, choose an amount, add a message, and send your support!
                     </p>
                 </div>
                 <div class="rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
-                    <img src="assets/Step9.png" alt="応援入力" class="w-full">
+                    <img src="../assets/Step9.png" alt="Support input screen" class="w-full">
                 </div>
             </div>
 
             <!-- Step 10 -->
             <div class="grid md:grid-cols-2 gap-8 items-center border-b border-gray-800 pb-12">
                 <div class="order-2 md:order-1 rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
-                    <img src="assets/Step10.png" alt="応援成功" class="w-full">
+                    <img src="../assets/Step10.png" alt="Support success" class="w-full">
                 </div>
                 <div class="order-1 md:order-2 space-y-4">
                     <div class="flex items-center gap-3">
                         <span class="number-badge">10</span>
-                        <h3 class="text-2xl font-bold">世界に一つの「応援コイン」獲得</h3>
+                        <h3 class="text-2xl font-bold">Get your exclusive "Support Coin" 🪙</h3>
                     </div>
                     <p class="text-gray-400 leading-relaxed">
-                        応援完了後、あなたの名前が刻まれた「第〇〇号サポーター」の限定コイン画像が手に入ります。推しとの絆の証明です。
+                        After supporting, you'll receive a unique collectible coin image engraved with your name — "Supporter #___". A one-of-a-kind proof of your bond with your favorite creator.
                     </p>
                 </div>
             </div>
@@ -297,35 +297,47 @@
                 <div class="space-y-4">
                     <div class="flex items-center gap-3">
                         <span class="number-badge">11</span>
-                        <h3 class="text-2xl font-bold">ランキングで推しを支える</h3>
+                        <h3 class="text-2xl font-bold">Boost your creator on the ranking 🏆</h3>
                     </div>
                     <p class="text-gray-400 leading-relaxed">
-                        ランキングページで自分の貢献度を確認。ファンみんなで推しのランキングを盛り上げる「一体感」を楽しめます。
+                        Check the ranking page to see your contribution. The more fans support together, the higher your creator climbs — making "oshi" culture visible to the world.
                     </p>
                 </div>
                 <div class="rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
-                    <img src="assets/Step11.png" alt="ランキング" class="w-full">
+                    <img src="../assets/Step11.png" alt="Ranking page" class="w-full">
                 </div>
             </div>
 
         </section>
 
-        <!-- Common FAQ / Help Section -->
+        <!-- FAQ -->
         <hr class="border-gray-800 my-20">
 
         <section class="max-w-3xl mx-auto">
             <h2 class="text-3xl font-bold text-center mb-10">FAQ</h2>
             <div class="space-y-6">
                 <div class="card p-6">
-                    <h4 class="font-bold text-purple-400 mb-2">Q. 公式サイトのHPには何を書けばいい？</h4>
+                    <h4 class="font-bold text-purple-400 mb-2">Q. Can fans outside Japan send support?</h4>
                     <p class="text-gray-400 text-sm leading-relaxed">
-                        「どんな活動をしたいか」「応援を何に役立てるか」を伝えてください。目標がある応援は、ファンの熱量を高めます。
+                        Yes! That's one of OshiPay's biggest advantages. Since payments are powered by Stripe, fans from anywhere in the world — the US, Southeast Asia, Europe — can send support using their local cards or Apple/Google Pay.
                     </p>
                 </div>
                 <div class="card p-6">
-                    <h4 class="font-bold text-purple-400 mb-2">Q. Stripeの登録は安全ですか？</h4>
+                    <h4 class="font-bold text-purple-400 mb-2">Q. Is Stripe registration safe?</h4>
                     <p class="text-gray-400 text-sm leading-relaxed">
-                        StripeはAmazonやGoogleも利用する世界最高水準の決済インフラです。銀行レベルのセキュリティで保護されており、OshiPay運営側であっても中身を知ることはできません。
+                        Absolutely. Stripe is the global payment infrastructure trusted by Amazon, Google, Shopify, and millions of businesses worldwide. Your information is protected by bank-level security — and OshiPay never has access to your personal data.
+                    </p>
+                </div>
+                <div class="card p-6">
+                    <h4 class="font-bold text-purple-400 mb-2">Q. What should I write on my creator profile?</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        Share what you're working toward and how you'll use the support. A clear goal makes fans feel connected to your journey — and more motivated to cheer you on.
+                    </p>
+                </div>
+                <div class="card p-6">
+                    <h4 class="font-bold text-purple-400 mb-2">Q. What are the fees?</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        OshiPay takes 10% and Stripe takes 3.6%, for a total of 13.6%. That means creators receive <span class="text-white font-bold">86.4%</span> of every tip — delivered directly to their bank account.
                     </p>
                 </div>
             </div>
@@ -334,9 +346,14 @@
     </main>
 
     <footer class="mt-20 py-10 border-t border-gray-800 text-center text-gray-500 text-sm">
-        <p>© 2026 OshiPay - その感動、今すぐカタチに。</p>
-        <div class="mt-4 flex justify-center gap-4">
-            <a href="index.html" class="hover:text-purple-400">トップページに戻る</a>
+        <div class="flex justify-center items-center gap-2 mb-3">
+            <i data-lucide="flame" class="text-orange-500 w-5 h-5"></i>
+            <span class="text-base font-bold text-white">OshiPay</span>
+        </div>
+        <p>© 2026 OshiPay — That feeling, make it real.</p>
+        <div class="mt-4 flex justify-center gap-6">
+            <a href="index.html" class="hover:text-purple-400 transition-colors">← Back to Home</a>
+            <a href="https://oshipay.streamlit.app/?page=dashboard" class="hover:text-purple-400 transition-colors">Get Started →</a>
         </div>
     </footer>
 
@@ -354,7 +371,6 @@
                 creatorBtn.classList.remove('bg-gray-800', 'text-gray-400');
                 supporterBtn.classList.remove('active');
                 supporterBtn.classList.add('bg-gray-800', 'text-gray-400');
-                
                 creatorContent.classList.remove('hidden');
                 supporterContent.classList.add('hidden');
             } else {
@@ -362,7 +378,6 @@
                 supporterBtn.classList.remove('bg-gray-800', 'text-gray-400');
                 creatorBtn.classList.remove('active');
                 creatorBtn.classList.add('bg-gray-800', 'text-gray-400');
-
                 supporterContent.classList.remove('hidden');
                 creatorContent.classList.add('hidden');
             }
