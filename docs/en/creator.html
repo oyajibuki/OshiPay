@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OshiPay Creator</title>
+  <meta name="description" content="Support this creator on OshiPay">
+  <link rel="icon" href="https://oyajibuki.github.io/OshiPay/favicon.png?v=2" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; }
+    .glow { box-shadow: 0 0 40px rgba(168,85,247,0.35); }
+    @keyframes float {
+      0%,100% { transform: translateY(0) rotate(-2deg); }
+      50%     { transform: translateY(-10px) rotate(-2deg); }
+    }
+    .float { animation: float 3.5s ease-in-out infinite; }
+    @keyframes pulse-ring {
+      0%   { transform: scale(1);   opacity: .6; }
+      100% { transform: scale(1.5); opacity: 0;  }
+    }
+    .pulse-ring {
+      position:absolute; inset:0; border-radius:9999px;
+      background: rgba(168,85,247,.35);
+      animation: pulse-ring 2s ease-out infinite;
+    }
+  </style>
+</head>
+<body class="bg-[#0a0a0f] text-slate-200 min-h-screen">
+
+  <!-- BG glow -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-80 bg-purple-900/20 blur-3xl pointer-events-none"></div>
+  <div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-60 bg-orange-900/10 blur-3xl pointer-events-none"></div>
+
+  <!-- OshiPay nav -->
+  <div class="flex justify-between items-center px-5 pt-5 pb-2 relative z-10 max-w-sm mx-auto">
+    <a href="../index.html" class="flex items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+      <i data-lucide="flame" class="text-orange-500 w-5 h-5"></i>
+      <span class="text-sm font-bold text-slate-400">OshiPay</span>
+    </a>
+    <a href="https://oshipay.streamlit.app/?page=ranking" class="text-xs text-amber-400 font-bold flex items-center gap-1 hover:opacity-80 transition-opacity">
+      🏆 Rankings
+    </a>
+  </div>
+
+  <!-- Main -->
+  <main class="max-w-sm mx-auto px-5 pt-4 pb-24 relative z-10">
+
+    <!-- Profile -->
+    <div class="text-center mb-8">
+      <!-- Avatar -->
+      <div class="relative inline-flex items-center justify-center mb-5">
+        <div class="pulse-ring"></div>
+        <div class="relative w-28 h-28 rounded-full bg-gradient-to-br from-purple-500 to-orange-400 p-1 glow">
+          <!-- Photo (shown when photo param exists) -->
+          <img id="creator-photo"
+               class="w-full h-full rounded-full object-cover hidden"
+               alt="creator photo">
+          <!-- Fallback: flame logo (shown when no photo) -->
+          <div id="creator-fallback"
+               class="w-full h-full rounded-full bg-[#1a1a2e] flex items-center justify-center">
+            <i data-lucide="flame" class="text-orange-500 w-12 h-12"></i>
+          </div>
+        </div>
+        <!-- Rank badge -->
+        <div id="rank-badge" class="absolute -top-1 -right-1 bg-amber-400 text-black text-xs font-black px-2 py-0.5 rounded-full hidden"></div>
+      </div>
+
+      <h1 id="creator-name" class="text-2xl font-extrabold text-white mb-1"></h1>
+      <p id="creator-genre" class="text-sm text-purple-400 font-medium mb-3"></p>
+      <p id="creator-bio" class="text-sm text-slate-400 leading-relaxed max-w-xs mx-auto"></p>
+
+      <!-- SNS links -->
+      <div id="sns-links" class="flex justify-center gap-3 mt-4"></div>
+    </div>
+
+    <!-- Stats -->
+    <div id="stats-row" class="grid grid-cols-2 gap-3 mb-8 hidden">
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
+        <div id="stat-rank" class="text-xl font-black text-amber-400">—</div>
+        <div class="text-xs text-slate-500 mt-0.5">Ranking</div>
+      </div>
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
+        <div id="stat-supporters" class="text-xl font-black text-purple-400">—</div>
+        <div class="text-xs text-slate-500 mt-0.5">Supporters</div>
+      </div>
+    </div>
+
+    <!-- QR + Support button -->
+    <div class="bg-white/[0.04] border border-white/10 rounded-3xl p-6 mb-5 text-center">
+      <p class="text-xs text-slate-500 uppercase tracking-widest mb-4 font-bold">Scan to Support</p>
+      <div class="float inline-block mb-4">
+        <div class="bg-white p-4 rounded-2xl shadow-2xl inline-flex items-center justify-center relative">
+          <i data-lucide="qr-code" class="w-32 h-32 text-slate-900"></i>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="bg-white rounded-full p-1">
+              <i data-lucide="flame" class="w-6 h-6 text-orange-500"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500">No app needed · Works worldwide 🌍</p>
+    </div>
+
+    <!-- CTA button -->
+    <a id="support-btn" href="#"
+      class="block w-full py-4 bg-gradient-to-r from-purple-600 to-orange-500 rounded-full text-white font-bold text-center text-lg hover:opacity-90 transition-opacity mb-3">
+      💜 Support
+    </a>
+
+    <!-- Share button -->
+    <button onclick="shareOrCopy()"
+      class="w-full py-3 border border-white/10 rounded-full text-slate-400 text-sm font-medium hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+      <i data-lucide="share-2" class="w-4 h-4"></i>
+      Share this page
+    </button>
+
+    <!-- Message wall (static placeholder — will be dynamic in future) -->
+    <div id="message-wall" class="mt-8 hidden">
+      <h2 class="text-xs text-slate-500 uppercase tracking-widest font-bold mb-4">Recent Support 💬</h2>
+      <div id="message-list" class="space-y-3"></div>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    /* ---------- URL param helper ---------- */
+    const p = new URLSearchParams(location.search);
+    const get = key => p.get(key) || '';
+
+    const user    = get('user');
+    const acct    = get('acct') || user;
+    const rawName = decodeURIComponent(get('name')) || 'Creator';
+    const photo   = decodeURIComponent(get('photo'));   // image URL (optional)
+    const bio     = decodeURIComponent(get('bio'));
+    const genre   = decodeURIComponent(get('genre'));
+    const rank    = get('rank');
+    const supporters = get('supporters');
+    const xUrl    = decodeURIComponent(get('x'));
+    const instaUrl = decodeURIComponent(get('instagram'));
+    const tiktokUrl = decodeURIComponent(get('tiktok'));
+
+    /* ---------- Fill profile ---------- */
+    document.getElementById('creator-name').textContent = rawName;
+
+    // Avatar: photo → show photo, else show flame logo
+    if (photo) {
+      const img = document.getElementById('creator-photo');
+      img.src = photo;
+      img.classList.remove('hidden');
+      document.getElementById('creator-fallback').classList.add('hidden');
+    }
+    if (genre)  document.getElementById('creator-genre').textContent = genre;
+    if (bio)    document.getElementById('creator-bio').textContent   = bio.slice(0, 140);
+
+    // Page title
+    document.title = `${rawName} | OshiPay`;
+
+    // Rank badge
+    if (rank) {
+      const badge = document.getElementById('rank-badge');
+      badge.textContent = `🏆 #${rank}`;
+      badge.classList.remove('hidden');
+    }
+
+    // Stats
+    if (rank || supporters) {
+      document.getElementById('stats-row').classList.remove('hidden');
+      if (rank)       document.getElementById('stat-rank').textContent       = `#${rank}`;
+      if (supporters) document.getElementById('stat-supporters').textContent = supporters;
+    }
+
+    /* ---------- SNS links ---------- */
+    const snsContainer = document.getElementById('sns-links');
+    const snsItems = [
+      { url: xUrl,       label: '𝕏',         color: 'bg-black border border-white/20' },
+      { url: instaUrl,   label: '📸 Insta',   color: 'bg-gradient-to-r from-purple-500 to-pink-500' },
+      { url: tiktokUrl,  label: '🎵 TikTok',  color: 'bg-[#010101] border border-white/20' },
+    ];
+    snsItems.forEach(({ url, label, color }) => {
+      if (!url) return;
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.className = `${color} text-white text-xs font-bold px-4 py-1.5 rounded-full hover:opacity-80 transition-opacity`;
+      a.textContent = label;
+      snsContainer.appendChild(a);
+    });
+
+    /* ---------- Support URL ---------- */
+    const supportUrl = `https://oshipay.streamlit.app/?page=support&user=${encodeURIComponent(user)}&acct=${encodeURIComponent(acct)}&name=${encodeURIComponent(rawName)}`;
+    document.getElementById('support-btn').href = supportUrl;
+    document.getElementById('support-btn').textContent = `💜 Support ${rawName.split('｜')[0].split('|')[0].trim()}`;
+
+    /* ---------- Share ---------- */
+    function shareOrCopy() {
+      if (navigator.share) {
+        navigator.share({ title: `Support ${rawName} on OshiPay`, url: location.href });
+      } else {
+        navigator.clipboard.writeText(location.href).then(() => {
+          alert('Link copied!');
+        });
+      }
+    }
+  </script>
+</body>
+</html>
