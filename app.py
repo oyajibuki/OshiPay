@@ -1598,8 +1598,16 @@ else: # Dashboard
         genre = st.text_input("ジャンル", value=_cr_data.get("genre", ""), key=f"genre_{acct_id}")
         slug  = st.text_input("スラッグ（マイクロページURL用）", value=_cr_data.get("slug", ""), key=f"slug_{acct_id}", help="例: asagiri → creator.html?id=asagiri")
         if st.button("プロフィールを保存", key=f"save_profile_{acct_id}"):
-            get_db().table("creators").update({"bio": bio, "genre": genre, "slug": slug}).eq("acct_id", acct_id).execute()
-            st.success("プロフィールを保存しました！")
+            if slug:
+                dup = get_db().table("creators").select("acct_id").eq("slug", slug).neq("acct_id", acct_id).execute()
+                if dup.data:
+                    st.error(f"「{slug}」はすでに使われています。別のスラッグを入力してください。")
+                else:
+                    get_db().table("creators").update({"bio": bio, "genre": genre, "slug": slug}).eq("acct_id", acct_id).execute()
+                    st.success("プロフィールを保存しました！")
+            else:
+                get_db().table("creators").update({"bio": bio, "genre": genre, "slug": None}).eq("acct_id", acct_id).execute()
+                st.success("プロフィールを保存しました！")
 
         # ── プロフィール写真アップロード ──
         uploaded_photo = st.file_uploader("プロフィール写真（任意・2MBまで）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
