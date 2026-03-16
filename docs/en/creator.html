@@ -8,6 +8,7 @@
   <link rel="icon" href="https://oyajibuki.github.io/OshiPay/favicon.png?v=2" type="image/png">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: 'Helvetica Neue', Arial, sans-serif; }
     .glow { box-shadow: 0 0 40px rgba(168,85,247,0.35); }
@@ -79,7 +80,7 @@
     <div id="stats-row" class="grid grid-cols-2 gap-3 mb-8 hidden">
       <div class="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
         <div id="stat-rank" class="text-xl font-black text-amber-400">—</div>
-        <div class="text-xs text-slate-500 mt-0.5">Ranking</div>
+        <div class="text-xs text-slate-500 mt-0.5">Total ¥</div>
       </div>
       <div class="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
         <div id="stat-supporters" class="text-xl font-black text-purple-400">—</div>
@@ -127,85 +128,108 @@
   <script>
     lucide.createIcons();
 
-    /* ---------- URL param helper ---------- */
-    const p = new URLSearchParams(location.search);
-    const get = key => p.get(key) || '';
+    /* ---------- Supabase ---------- */
+    const { createClient } = supabase;
+    const db = createClient(
+      'https://zjygwjymbtskirycwptb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpqeWd3anltYnRza2lyeWN3cHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDQxMzksImV4cCI6MjA4ODM4MDEzOX0.U826zOvifFS2BHcs7OlMd6xHL1IXC6w5KZ7Kn7T-3wY'
+    );
 
-    const user    = get('user');
-    const acct    = get('acct') || user;
-    const rawName = decodeURIComponent(get('name')) || 'Creator';
-    const photo   = decodeURIComponent(get('photo'));   // image URL (optional)
-    const bio     = decodeURIComponent(get('bio'));
-    const genre   = decodeURIComponent(get('genre'));
-    const rank    = get('rank');
-    const supporters = get('supporters');
-    const xUrl    = decodeURIComponent(get('x'));
-    const instaUrl = decodeURIComponent(get('instagram'));
-    const tiktokUrl = decodeURIComponent(get('tiktok'));
+    /* ---------- Main ---------- */
+    async function loadCreator() {
+      const id = new URLSearchParams(location.search).get('id') || '';
+      if (!id) { showError('No creator ID specified.'); return; }
 
-    /* ---------- Fill profile ---------- */
-    document.getElementById('creator-name').textContent = rawName;
+      // slug または acct_id で検索
+      const { data: creator, error } = await db
+        .from('creators')
+        .select('*')
+        .or(`slug.eq.${id},acct_id.eq.${id}`)
+        .single();
 
-    // Avatar: photo → show photo, else show flame logo
-    if (photo) {
-      const img = document.getElementById('creator-photo');
-      img.src = photo;
-      img.classList.remove('hidden');
-      document.getElementById('creator-fallback').classList.add('hidden');
-    }
-    if (genre)  document.getElementById('creator-genre').textContent = genre;
-    if (bio)    document.getElementById('creator-bio').textContent   = bio.slice(0, 140);
+      if (error || !creator) { showError('Creator not found.'); return; }
 
-    // Page title
-    document.title = `${rawName} | OshiPay`;
+      renderProfile(creator);
 
-    // Rank badge
-    if (rank) {
-      const badge = document.getElementById('rank-badge');
-      badge.textContent = `🏆 #${rank}`;
-      badge.classList.remove('hidden');
-    }
+      // supports テーブルから合計金額・サポーター数を取得
+      const { data: supports } = await db
+        .from('supports')
+        .select('amount, supporter_id')
+        .eq('creator_acct', creator.acct_id);
 
-    // Stats
-    if (rank || supporters) {
-      document.getElementById('stats-row').classList.remove('hidden');
-      if (rank)       document.getElementById('stat-rank').textContent       = `#${rank}`;
-      if (supporters) document.getElementById('stat-supporters').textContent = supporters;
+      if (supports && supports.length > 0) {
+        const total = supports.reduce((s, r) => s + r.amount, 0);
+        const unique = new Set(supports.map(r => r.supporter_id).filter(Boolean)).size;
+        document.getElementById('stats-row').classList.remove('hidden');
+        document.getElementById('stat-rank').textContent = `¥${total.toLocaleString()}`;
+        document.getElementById('stat-supporters').textContent = unique || supports.length;
+      }
+
+      // 最近の応援メッセージ
+      const withMsg = (supports || []).filter(s => s.message).slice(-5).reverse();
+      if (withMsg.length > 0) renderMessages(withMsg);
     }
 
-    /* ---------- SNS links ---------- */
-    const snsContainer = document.getElementById('sns-links');
-    const snsItems = [
-      { url: xUrl,       label: '𝕏',         color: 'bg-black border border-white/20' },
-      { url: instaUrl,   label: '📸 Insta',   color: 'bg-gradient-to-r from-purple-500 to-pink-500' },
-      { url: tiktokUrl,  label: '🎵 TikTok',  color: 'bg-[#010101] border border-white/20' },
-    ];
-    snsItems.forEach(({ url, label, color }) => {
-      if (!url) return;
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      a.className = `${color} text-white text-xs font-bold px-4 py-1.5 rounded-full hover:opacity-80 transition-opacity`;
-      a.textContent = label;
-      snsContainer.appendChild(a);
-    });
+    function renderProfile(c) {
+      const name = c.name || c.acct_id;
+      document.getElementById('creator-name').textContent = name;
+      document.title = `${name} | OshiPay`;
 
-    /* ---------- Support URL ---------- */
-    const supportUrl = `https://oshipay.streamlit.app/?page=support&user=${encodeURIComponent(user)}&acct=${encodeURIComponent(acct)}&name=${encodeURIComponent(rawName)}`;
-    document.getElementById('support-btn').href = supportUrl;
-    document.getElementById('support-btn').textContent = `💜 Support ${rawName.split('｜')[0].split('|')[0].trim()}`;
+      if (c.photo_url) {
+        const img = document.getElementById('creator-photo');
+        img.src = c.photo_url;
+        img.classList.remove('hidden');
+        document.getElementById('creator-fallback').classList.add('hidden');
+      }
+      if (c.genre) document.getElementById('creator-genre').textContent = c.genre;
+      if (c.bio)   document.getElementById('creator-bio').textContent   = c.bio.slice(0, 140);
 
-    /* ---------- Share ---------- */
+      // SNS
+      const snsContainer = document.getElementById('sns-links');
+      [
+        { url: c.x_url,           label: '𝕏',        color: 'bg-black border border-white/20' },
+        { url: c.instagram_url,   label: '📸 Insta',  color: 'bg-gradient-to-r from-purple-500 to-pink-500' },
+        { url: c.tiktok_url,      label: '🎵 TikTok', color: 'bg-[#010101] border border-white/20' },
+      ].forEach(({ url, label, color }) => {
+        if (!url) return;
+        const a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.className = `${color} text-white text-xs font-bold px-4 py-1.5 rounded-full hover:opacity-80 transition-opacity`;
+        a.textContent = label;
+        snsContainer.appendChild(a);
+      });
+
+      // Support ボタン
+      const supportUrl = `https://oshipay.streamlit.app/?page=support&user=${encodeURIComponent(c.acct_id)}&acct=${encodeURIComponent(c.acct_id)}&name=${encodeURIComponent(name)}`;
+      const btn = document.getElementById('support-btn');
+      btn.href = supportUrl;
+      btn.textContent = `💜 Support ${name.split('｜')[0].split('|')[0].trim()}`;
+    }
+
+    function renderMessages(messages) {
+      document.getElementById('message-wall').classList.remove('hidden');
+      const list = document.getElementById('message-list');
+      messages.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-slate-300';
+        div.textContent = `💬 ${m.message}`;
+        list.appendChild(div);
+      });
+    }
+
+    function showError(msg) {
+      document.getElementById('creator-name').textContent = msg;
+    }
+
     function shareOrCopy() {
       if (navigator.share) {
-        navigator.share({ title: `Support ${rawName} on OshiPay`, url: location.href });
+        navigator.share({ title: document.title, url: location.href });
       } else {
-        navigator.clipboard.writeText(location.href).then(() => {
-          alert('Link copied!');
-        });
+        navigator.clipboard.writeText(location.href).then(() => alert('Link copied!'));
       }
     }
+
+    loadCreator();
   </script>
 </body>
 </html>
