@@ -93,8 +93,14 @@
     <div class="bg-white/[0.04] border border-white/10 rounded-3xl p-6 mb-5 text-center">
       <p class="text-xs text-slate-500 uppercase tracking-widest mb-4 font-bold">Scan to Support</p>
       <div class="float inline-block mb-4">
-        <div class="bg-white p-3 rounded-2xl shadow-2xl inline-block">
+        <div class="bg-white p-3 rounded-2xl shadow-2xl inline-block relative">
           <div id="qr-container"></div>
+          <!-- OshiPay flame overlay -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="bg-[#2d2d2d] rounded-xl p-1.5 shadow-lg">
+              <img src="https://oyajibuki.github.io/OshiPay/favicon.png?v=2" class="w-7 h-7" alt="">
+            </div>
+          </div>
         </div>
       </div>
       <p class="text-xs text-slate-500">No app needed · Works worldwide 🌍</p>

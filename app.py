@@ -1586,8 +1586,29 @@ else: # Dashboard
         _def_icon = st.session_state.get(f"creator_icon_{acct_id}", _icon_list[0])
         _def_icon_idx = _icon_list.index(_def_icon) if _def_icon in _icon_list else 0
         name = st.text_input("表示名", value=_def_name)
-        icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx)
-        
+
+        # ── プロフィール写真アップロード ──
+        uploaded_photo = st.file_uploader("プロフィール写真（任意）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
+        if uploaded_photo:
+            try:
+                img = Image.open(uploaded_photo).convert("RGB")
+                img.thumbnail((200, 200), Image.LANCZOS)
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=85)
+                buf.seek(0)
+                img_bytes = buf.read()
+                file_path = f"creators/{acct_id}.jpg"
+                get_db().storage.from_("creator-photos").upload(
+                    file_path, img_bytes,
+                    {"content-type": "image/jpeg", "upsert": "true"}
+                )
+                photo_url = get_db().storage.from_("creator-photos").get_public_url(file_path)
+                get_db().table("creators").update({"photo_url": photo_url}).eq("acct_id", acct_id).execute()
+                st.success("写真を保存しました！")
+                st.image(img, width=100)
+            except Exception as e:
+                st.error(f"写真の保存に失敗しました: {e}")
+
         col1, col2 = st.columns([2, 1])
         if col1.button("✨ QRコードを生成"):
             support_url = f"{BASE_URL}?page=support&user={uuid.uuid4()}&name={urllib.parse.quote(name)}&icon={icon}&acct={acct_id}"
