@@ -1586,9 +1586,13 @@ else: # Dashboard
         _def_icon = st.session_state.get(f"creator_icon_{acct_id}", _icon_list[0])
         _def_icon_idx = _icon_list.index(_def_icon) if _def_icon in _icon_list else 0
         name = st.text_input("表示名", value=_def_name)
+        icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx, key=f"icon_{acct_id}")
 
         # ── プロフィール写真アップロード ──
-        uploaded_photo = st.file_uploader("プロフィール写真（任意）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
+        uploaded_photo = st.file_uploader("プロフィール写真（任意・2MBまで）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
+        if uploaded_photo and uploaded_photo.size > 2 * 1024 * 1024:
+            st.error("2MB以下の画像をアップロードしてください。")
+            uploaded_photo = None
         if uploaded_photo:
             try:
                 img = Image.open(uploaded_photo).convert("RGB")
