@@ -9,7 +9,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <style>
     body { font-family: 'Helvetica Neue', Arial, sans-serif; }
     .glow { box-shadow: 0 0 40px rgba(168,85,247,0.35); }
@@ -209,11 +209,12 @@
       btn.href = supportUrl;
       btn.textContent = `💜 Support ${name.split('｜')[0].split('|')[0].trim()}`;
 
-      // QR: クライアントサイドで生成（外部API不要）
-      new QRCode(document.getElementById('qr-container'), {
-        text: c.qr_url || supportUrl,
-        width: 160, height: 160,
-        correctLevel: QRCode.CorrectLevel.H
+      // QR: canvasで生成
+      const canvas = document.createElement('canvas');
+      document.getElementById('qr-container').appendChild(canvas);
+      QRCode.toCanvas(canvas, c.qr_url || supportUrl, {
+        width: 160, margin: 1, errorCorrectionLevel: 'H',
+        color: { dark: '#000000', light: '#ffffff' }
       });
     }
 
