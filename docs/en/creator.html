@@ -232,7 +232,8 @@
       });
 
       // Support button & QR
-      const supportUrl = `${BASE_APP}/?page=support&user=${encodeURIComponent(c.acct_id)}&acct=${encodeURIComponent(c.acct_id)}&name=${encodeURIComponent(name)}&icon=%F0%9F%94%A5`;
+      const creatorId = c.slug || c.acct_id;
+      const supportUrl = `${BASE_APP}/?page=support&creator=${encodeURIComponent(creatorId)}`;
       const btn = document.getElementById('support-btn');
       btn.href = supportUrl;
       btn.textContent = `💜 Support ${name.split('｜')[0].split('|')[0].trim()}`;

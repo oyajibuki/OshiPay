@@ -1167,10 +1167,39 @@ support_user = params.get("user", "")
 connect_acct = params.get("acct", "")
 support_name = params.get("name", "")
 support_icon = params.get("icon", "🎤")
+support_photo = ""
+
+# 新URL形式: ?page=support&creator={slug or acct_id}
+_creator_param = params.get("creator", "")
+if _creator_param and not support_user:
+    try:
+        _cr_resp = get_db().table("creators").select(
+            "acct_id,display_name,name,photo_url"
+        ).or_(f"slug.eq.{_creator_param},acct_id.eq.{_creator_param}").maybe_single().execute()
+        if _cr_resp.data:
+            _cr = _cr_resp.data
+            support_user  = _cr.get("acct_id", _creator_param)
+            connect_acct  = _cr.get("acct_id", _creator_param)
+            support_name  = _cr.get("display_name") or _cr.get("name") or _creator_param
+            support_photo = _cr.get("photo_url") or ""
+    except Exception:
+        pass
+elif support_user:
+    # 旧URL形式でもDBからphoto_urlを取得
+    try:
+        _cr_resp2 = get_db().table("creators").select("photo_url").or_(
+            f"slug.eq.{support_user},acct_id.eq.{support_user}"
+        ).maybe_single().execute()
+        support_photo = (_cr_resp2.data or {}).get("photo_url") or ""
+    except Exception:
+        pass
 
 if page == "support" and support_user:
     st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="support-avatar">{support_icon}</div>', unsafe_allow_html=True)
+    if support_photo:
+        st.markdown(f'<div style="width:72px;height:72px;border-radius:50%;margin:0 auto 14px;box-shadow:0 0 30px rgba(139,92,246,0.25);overflow:hidden;border:2px solid rgba(139,92,246,0.3);"><img src="{support_photo}" style="width:100%;height:100%;object-fit:cover;"></div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="support-avatar">{support_icon}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-name">{support_name or "Creator"}</div><div class="support-label">を応援しよう</div>', unsafe_allow_html=True)
     if "amt" not in st.session_state: st.session_state.amt = 100
     
@@ -1694,7 +1723,7 @@ else: # Dashboard
                 st.success("プロフィールを保存しました！")
                 _saved_slug = slug.lower() if slug else acct_id
                 _ms_preview_url = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_saved_slug}"
-                st.markdown(f'<div style="margin-top:8px;"><a href="{_ms_preview_url}" target="_blank" rel="noopener" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;font-weight:700;font-size:14px;padding:10px 20px;border-radius:9999px;text-decoration:none;">🌐 マイクロサイトを確認する →</a></div>', unsafe_allow_html=True)
+                st.link_button("🌐 マイクロサイトを確認する", _ms_preview_url, use_container_width=True)
 
         # ── プロフィール写真アップロード ──
         uploaded_photo = st.file_uploader("プロフィール写真（任意・2MBまで）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
@@ -1722,8 +1751,9 @@ else: # Dashboard
                 st.error(f"写真の保存に失敗しました: {e}")
 
         col1, col2 = st.columns([2, 1])
-        if col1.button("✨ QRコードを生成"):
-            support_url = f"{BASE_URL}?page=support&user={uuid.uuid4()}&name={urllib.parse.quote(name)}&icon={icon}&acct={acct_id}"
+        if col1.button("✨ QRコードを生成", use_container_width=True):
+            _final_id = slug.lower() if slug else acct_id
+            support_url = f"{BASE_URL}?page=support&creator={_final_id}"
             st.session_state.qr_url = support_url
             st.session_state.qr_just_generated = True
             st.session_state[f"creator_name_{acct_id}"] = name
