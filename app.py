@@ -1606,18 +1606,37 @@ else: # Dashboard
 
         # ── プロフィールテキスト ──
         try:
-            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name").eq("acct_id", acct_id).maybe_single().execute()
+            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name,sns_links").eq("acct_id", acct_id).maybe_single().execute()
             _cr_data = _cr.data or {}
         except Exception:
             _cr_data = {}
+
+        # SNSリンクの既存値を取得
+        _sns_raw = _cr_data.get("sns_links") or {}
+        if isinstance(_sns_raw, str):
+            try:
+                _sns_raw = json.loads(_sns_raw)
+            except Exception:
+                _sns_raw = {}
 
         # 現在の写真を表示
         _current_photo = _cr_data.get("photo_url", "")
         if _current_photo:
             st.image(_current_photo, width=80, caption="現在のプロフィール写真")
-        bio   = st.text_area("自己紹介（bio）", value=_cr_data.get("bio", ""), max_chars=200, key=f"bio_{acct_id}")
-        genre = st.text_input("ジャンル", value=_cr_data.get("genre", ""), key=f"genre_{acct_id}")
-        slug  = st.text_input("スラッグ（マイクロページURL用）", value=_cr_data.get("slug", ""), key=f"slug_{acct_id}", help="例: asagiri → creator.html?id=asagiri")
+
+        bio  = st.text_area("自己紹介（bio）", value=_cr_data.get("bio", ""), max_chars=500, key=f"bio_{acct_id}",
+                            help="最大500文字。電話番号・メール・LINE IDは入力不可")
+        st.caption(f"{len(_cr_data.get('bio', ''))}/500文字")
+        slug = st.text_input("ユーザーID（マイクロページURL用）", value=_cr_data.get("slug", ""), key=f"slug_{acct_id}",
+                             help="例: asagiri → oshipay.com/asagiri（3〜20文字・英数字・ハイフンのみ）")
+
+        st.markdown("**🔗 SNSリンク**（X・Instagram・YouTube・TikTok・noteのみ）")
+        _sns_x    = st.text_input("X（旧Twitter）",  value=_sns_raw.get("x", ""),         placeholder="https://x.com/username",           key=f"sns_x_{acct_id}")
+        _sns_ig   = st.text_input("Instagram",        value=_sns_raw.get("instagram", ""), placeholder="https://instagram.com/username",    key=f"sns_ig_{acct_id}")
+        _sns_yt   = st.text_input("YouTube",          value=_sns_raw.get("youtube", ""),   placeholder="https://youtube.com/@username",     key=f"sns_yt_{acct_id}")
+        _sns_tt   = st.text_input("TikTok",           value=_sns_raw.get("tiktok", ""),    placeholder="https://tiktok.com/@username",      key=f"sns_tt_{acct_id}")
+        _sns_note = st.text_input("note",             value=_sns_raw.get("note", ""),      placeholder="https://note.com/username",         key=f"sns_note_{acct_id}")
+
         if st.button("プロフィールを保存", key=f"save_profile_{acct_id}"):
             _save_errors = []
             # bio バリデーション
@@ -1633,11 +1652,24 @@ else: # Dashboard
                     dup = get_db().table("creators").select("acct_id").eq("slug", slug).neq("acct_id", acct_id).execute()
                     if dup.data or check_slug_locked(get_db(), slug):
                         _save_errors.append(f"「{slug}」はすでに使われています。別のスラッグを入力してください。")
+            # SNSリンク バリデーション
+            for _label, _url in [("X", _sns_x), ("Instagram", _sns_ig), ("YouTube", _sns_yt), ("TikTok", _sns_tt), ("note", _sns_note)]:
+                _ok, _err = validate_sns_url(_url)
+                if not _ok:
+                    _save_errors.append(f"{_label}: {_err}")
             if _save_errors:
                 for _e in _save_errors:
                     st.error(f"⚠️ {_e}")
             else:
-                get_db().table("creators").update({"bio": bio, "genre": genre, "slug": slug or None}).eq("acct_id", acct_id).execute()
+                _sns_save = {k: v.strip() for k, v in {
+                    "x": _sns_x, "instagram": _sns_ig,
+                    "youtube": _sns_yt, "tiktok": _sns_tt, "note": _sns_note
+                }.items() if v.strip()}
+                get_db().table("creators").update({
+                    "bio":       bio,
+                    "slug":      slug.lower() if slug else None,
+                    "sns_links": json.dumps(_sns_save, ensure_ascii=False),
+                }).eq("acct_id", acct_id).execute()
                 st.success("プロフィールを保存しました！")
 
         # ── プロフィール写真アップロード ──
