@@ -7,7 +7,7 @@ import datetime
 import json
 from governance import (
     validate_password, validate_username, validate_bio, validate_sns_url,
-    check_slug_locked,
+    normalize_sns_url, check_slug_locked,
 )
 
 import streamlit as st
@@ -1630,12 +1630,14 @@ else: # Dashboard
         slug = st.text_input("ユーザーID（マイクロページURL用）", value=_cr_data.get("slug", ""), key=f"slug_{acct_id}",
                              help="例: asagiri → oshipay.com/asagiri（3〜20文字・英数字・ハイフンのみ）")
 
-        st.markdown("**🔗 SNSリンク**（X・Instagram・YouTube・TikTok・noteのみ）")
-        _sns_x    = st.text_input("X（旧Twitter）",  value=_sns_raw.get("x", ""),         placeholder="https://x.com/username",           key=f"sns_x_{acct_id}")
-        _sns_ig   = st.text_input("Instagram",        value=_sns_raw.get("instagram", ""), placeholder="https://instagram.com/username",    key=f"sns_ig_{acct_id}")
-        _sns_yt   = st.text_input("YouTube",          value=_sns_raw.get("youtube", ""),   placeholder="https://youtube.com/@username",     key=f"sns_yt_{acct_id}")
-        _sns_tt   = st.text_input("TikTok",           value=_sns_raw.get("tiktok", ""),    placeholder="https://tiktok.com/@username",      key=f"sns_tt_{acct_id}")
-        _sns_note = st.text_input("note",             value=_sns_raw.get("note", ""),      placeholder="https://note.com/username",         key=f"sns_note_{acct_id}")
+        st.markdown("**🔗 SNSリンク**（X・Instagram・YouTube・TikTok・note・Facebook・LINE）")
+        _sns_x    = st.text_input("X（旧Twitter）",  value=_sns_raw.get("x", ""),         placeholder="https://x.com/username",              key=f"sns_x_{acct_id}")
+        _sns_ig   = st.text_input("Instagram",        value=_sns_raw.get("instagram", ""), placeholder="https://instagram.com/username",       key=f"sns_ig_{acct_id}")
+        _sns_yt   = st.text_input("YouTube",          value=_sns_raw.get("youtube", ""),   placeholder="https://youtube.com/@username",        key=f"sns_yt_{acct_id}")
+        _sns_tt   = st.text_input("TikTok",           value=_sns_raw.get("tiktok", ""),    placeholder="https://tiktok.com/@username",         key=f"sns_tt_{acct_id}")
+        _sns_note = st.text_input("note",             value=_sns_raw.get("note", ""),      placeholder="https://note.com/username",            key=f"sns_note_{acct_id}")
+        _sns_fb   = st.text_input("Facebook",         value=_sns_raw.get("facebook", ""),  placeholder="https://facebook.com/username",        key=f"sns_fb_{acct_id}")
+        _sns_line = st.text_input("LINE（公式アカウント）", value=_sns_raw.get("line", ""), placeholder="https://line.me/R/ti/p/@username",  key=f"sns_line_{acct_id}")
 
         if st.button("プロフィールを保存", key=f"save_profile_{acct_id}"):
             _save_errors = []
@@ -1652,19 +1654,23 @@ else: # Dashboard
                     dup = get_db().table("creators").select("acct_id").eq("slug", slug).neq("acct_id", acct_id).execute()
                     if dup.data or check_slug_locked(get_db(), slug):
                         _save_errors.append(f"「{slug}」はすでに使われています。別のスラッグを入力してください。")
-            # SNSリンク バリデーション
-            for _label, _url in [("X", _sns_x), ("Instagram", _sns_ig), ("YouTube", _sns_yt), ("TikTok", _sns_tt), ("note", _sns_note)]:
+            # SNSリンク バリデーション（https:// 欠落を自動補完）
+            _sns_inputs = {
+                "x": _sns_x, "instagram": _sns_ig, "youtube": _sns_yt,
+                "tiktok": _sns_tt, "note": _sns_note, "facebook": _sns_fb, "line": _sns_line,
+            }
+            _sns_normalized = {k: normalize_sns_url(v) for k, v in _sns_inputs.items()}
+            _label_map = {"x": "X", "instagram": "Instagram", "youtube": "YouTube",
+                          "tiktok": "TikTok", "note": "note", "facebook": "Facebook", "line": "LINE"}
+            for _key, _url in _sns_normalized.items():
                 _ok, _err = validate_sns_url(_url)
                 if not _ok:
-                    _save_errors.append(f"{_label}: {_err}")
+                    _save_errors.append(f"{_label_map[_key]}: {_err}")
             if _save_errors:
                 for _e in _save_errors:
                     st.error(f"⚠️ {_e}")
             else:
-                _sns_save = {k: v.strip() for k, v in {
-                    "x": _sns_x, "instagram": _sns_ig,
-                    "youtube": _sns_yt, "tiktok": _sns_tt, "note": _sns_note
-                }.items() if v.strip()}
+                _sns_save = {k: v for k, v in _sns_normalized.items() if v}
                 get_db().table("creators").update({
                     "bio":       bio,
                     "slug":      slug.lower() if slug else None,

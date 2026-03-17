@@ -41,6 +41,8 @@ _ALLOWED_SNS_PATTERNS = [
     re.compile(r'^https?://(www\.)?youtube\.com/(channel/[\w-]+|@[\w.]+|c/[\w.]+)/?$', re.IGNORECASE),
     re.compile(r'^https?://(www\.)?tiktok\.com/@[\w.]{1,50}/?$', re.IGNORECASE),
     re.compile(r'^https?://note\.com/[\w.]{1,50}/?$', re.IGNORECASE),
+    re.compile(r'^https?://(www\.)?facebook\.com/[\w.\-]{1,100}/?$', re.IGNORECASE),
+    re.compile(r'^https?://line\.me/[\w/.\-]{1,100}$', re.IGNORECASE),
 ]
 
 
@@ -132,14 +134,24 @@ def validate_bio(bio: str) -> tuple[bool, str]:
     return True, ""
 
 
+def normalize_sns_url(url: str) -> str:
+    """https:// が欠けていれば補完する"""
+    if not url:
+        return ""
+    url = url.strip()
+    if url and not url.startswith("http://") and not url.startswith("https://"):
+        url = "https://" + url
+    return url
+
+
 def validate_sns_url(url: str) -> tuple[bool, str]:
     """
-    SNSリンクバリデーション（X/Instagram/YouTube/TikTok/note のみ許可）
-    空文字列は許可（任意入力）
+    SNSリンクバリデーション（X/Instagram/YouTube/TikTok/note/Facebook/LINE のみ許可）
+    空文字列は許可（任意入力）。https:// の欠落は自動補完して検証。
     """
     if not url or not url.strip():
         return True, ""
-    url = url.strip()
+    url = normalize_sns_url(url)
     # 短縮URL禁止
     if _SHORT_URL_PATTERNS.search(url):
         return False, "短縮URLは使用できません。"
@@ -147,7 +159,7 @@ def validate_sns_url(url: str) -> tuple[bool, str]:
     for pattern in _ALLOWED_SNS_PATTERNS:
         if pattern.match(url):
             return True, ""
-    return False, "このURLは使用できません。X・Instagram・YouTube・TikTok・noteのURLのみ登録できます。"
+    return False, "このURLは使用できません。X・Instagram・YouTube・TikTok・note・Facebook・LINEのURLのみ登録できます。"
 
 
 def validate_image_file(file_obj, max_mb: float = 2.0) -> tuple[bool, str]:
