@@ -41,9 +41,14 @@
       <i data-lucide="flame" class="text-orange-500 w-5 h-5"></i>
       <span class="text-sm font-bold text-slate-400">OshiPay</span>
     </a>
-    <a href="https://oshipay2jp.streamlit.app/?page=ranking" class="text-xs text-amber-400 font-bold flex items-center gap-1 hover:opacity-80 transition-opacity">
-      🏆 Rankings
-    </a>
+    <div class="flex items-center gap-3">
+      <a id="edit-btn" href="https://oshipay2jp.streamlit.app/?page=dashboard" class="hidden text-xs text-slate-400 border border-white/10 rounded-full px-3 py-1 hover:bg-white/10 transition-colors">
+        ✏️ Edit
+      </a>
+      <a href="https://oshipay2jp.streamlit.app/?page=ranking" class="text-xs text-amber-400 font-bold flex items-center gap-1 hover:opacity-80 transition-opacity">
+        🏆 Rankings
+      </a>
+    </div>
   </div>
 
   <!-- Main -->
@@ -135,6 +140,9 @@
 
     const BASE_APP = 'https://oshipay2jp.streamlit.app';
 
+    // Show edit button if this creator is logged in
+    const savedAcct = localStorage.getItem('oshipay_acct') || '';
+
     async function loadCreator() {
       const id = new URLSearchParams(location.search).get('id') || '';
       if (!id) { showError('No creator ID specified.'); return; }
@@ -175,6 +183,13 @@
       // Language switch link
       const slug = c.slug || c.acct_id;
       document.getElementById('ja-link').href = `../creator.html?id=${slug}`;
+
+      // Show edit button if this creator is logged in
+      if (savedAcct && savedAcct === c.acct_id) {
+        const editBtn = document.getElementById('edit-btn');
+        editBtn.href = `${BASE_APP}/?page=dashboard&acct=${c.acct_id}`;
+        editBtn.classList.remove('hidden');
+      }
 
       // Photo
       if (c.photo_url) {

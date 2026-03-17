@@ -767,6 +767,30 @@ if page == "reply_view":
                 st.error("パスワードが違います。")
         st.stop()
 
+    # ── マイクロサイトへのリンク ──
+    try:
+        _cr_for_rv = get_db().table("creators").select("slug").eq("acct_id", rv_acct).maybe_single().execute()
+        _rv_slug = (_cr_for_rv.data or {}).get("slug") or rv_acct
+    except Exception:
+        _rv_slug = rv_acct
+    _microsite_url = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_rv_slug}"
+    st.markdown(f"""
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <a href="{_microsite_url}" target="_blank"
+           style="display:inline-flex;align-items:center;gap:6px;background:rgba(139,92,246,0.12);
+                  border:1px solid rgba(139,92,246,0.35);color:#c4b5fd;font-weight:700;
+                  font-size:13px;padding:9px 18px;border-radius:9999px;text-decoration:none;">
+           🌐 マイクロサイトを見る
+        </a>
+        <a href="{BASE_URL}?page=dashboard&acct={rv_acct}" target="_top"
+           style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);
+                  border:1px solid rgba(255,255,255,0.12);color:rgba(240,240,245,0.7);font-weight:700;
+                  font-size:13px;padding:9px 18px;border-radius:9999px;text-decoration:none;">
+           ✏️ プロフィール編集
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
     supports = get_supports_for_creator(rv_acct)
 
     if not supports:
@@ -1034,7 +1058,7 @@ if page == "ranking":
 
         for i, creator in enumerate(ranked):
             medal = rank_medals[i] if i < 3 else f"{i + 1}位"
-            creator_url = f"{BASE_URL}?page=support&user={creator['acct']}&acct={creator['acct']}&name={urllib.parse.quote(creator['name'])}&icon=%F0%9F%94%A5"
+            creator_url = f"https://oyajibuki.github.io/OshiPay/creator.html?id={creator['acct']}"
             top3 = sorted(creator["supports"], key=lambda x: x["amount"], reverse=True)[:3]
 
             sup_rows_html = ""
@@ -1677,6 +1701,8 @@ else: # Dashboard
                     "sns_links": json.dumps(_sns_save, ensure_ascii=False),
                 }).eq("acct_id", acct_id).execute()
                 st.success("プロフィールを保存しました！")
+                _reply_url = f"{BASE_URL}?page=reply_view&acct={acct_id}"
+                st.markdown(f'<div style="margin-top:8px;"><a href="{_reply_url}" target="_top" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;font-weight:700;font-size:14px;padding:10px 20px;border-radius:9999px;text-decoration:none;">💌 返信ダッシュボードを開く →</a></div>', unsafe_allow_html=True)
 
         # ── プロフィール写真アップロード ──
         uploaded_photo = st.file_uploader("プロフィール写真（任意・2MBまで）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
