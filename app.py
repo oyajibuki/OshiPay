@@ -410,7 +410,8 @@ st.markdown("""
 .support-name { font-size: 22px; font-weight: 800; text-align: center; color: #f0f0f5; }
 .support-label { font-size: 13px; color: rgba(240,240,245,0.6); text-align: center; margin-bottom: 20px; }
 .selected-amount-display { text-align: center; font-size: 36px; font-weight: 900; background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 10px 0; }
-.stButton > button { width: 100%; background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316) !important; color: white !important; border: none !important; border-radius: 9999px !important; padding: 16px !important; font-weight: 700 !important; }
+.stButton > button:not([kind="secondary"]) { width: 100%; background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316) !important; color: white !important; border: none !important; border-radius: 9999px !important; padding: 16px !important; font-weight: 700 !important; }
+.stButton > button[kind="secondary"] { background: transparent !important; border: 1px solid rgba(250,250,250,0.25) !important; color: rgba(250,250,250,0.85) !important; border-radius: 0.5rem !important; padding: 0.45rem 1rem !important; }
 .oshi-footer { text-align: center; margin-top: 24px; font-size: 11px; color: rgba(240,240,245,0.35); }
 .oshi-footer a { color: #8b5cf6; text-decoration: none; }
 .legal-links a { font-size: 10px; color: rgba(240,240,245,0.3); text-decoration: none; margin: 0 5px; }
