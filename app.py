@@ -775,8 +775,8 @@ if page == "reply_view":
         _rv_slug = rv_acct
     _microsite_url = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_rv_slug}"
     _rv_col1, _rv_col2 = st.columns(2)
-    _rv_col1.link_button("🌐 マイクロサイトを見る", _microsite_url, use_container_width=True)
-    if _rv_col2.button("✏️ プロフィール編集", use_container_width=True):
+    _rv_col1.link_button("🌐 マイクロサイトを見る", _microsite_url, use_container_width=True, type="secondary")
+    if _rv_col2.button("✏️ プロフィール編集", use_container_width=True, type="secondary"):
         st.session_state["creator_auth"] = rv_acct
         st.query_params["page"] = "dashboard"
         st.query_params["acct"] = rv_acct
