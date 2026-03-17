@@ -775,37 +775,13 @@ if page == "reply_view":
     except Exception:
         _rv_slug = rv_acct
     _microsite_url = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_rv_slug}"
-    # ── ボタン2つを同じスタイルで横並び ──
-    st.markdown("""<style>
-    .rv-btn a, .rv-btn button {
-        display:flex!important;align-items:center!important;justify-content:center!important;
-        width:100%!important;padding:0.45rem 1rem!important;
-        background:transparent!important;
-        border:1px solid rgba(250,250,250,0.25)!important;
-        border-radius:0.5rem!important;
-        color:rgba(250,250,250,0.85)!important;
-        font-size:0.875rem!important;font-weight:600!important;
-        text-decoration:none!important;box-shadow:none!important;cursor:pointer!important;
-    }
-    .rv-btn a:hover, .rv-btn button:hover {
-        border-color:rgba(250,250,250,0.5)!important;
-        background:rgba(255,255,255,0.05)!important;
-    }
-    </style>""", unsafe_allow_html=True)
-    _rv_col1, _rv_col2 = st.columns(2)
-    with _rv_col1:
-        st.markdown(
-            f'<div class="rv-btn"><a href="{_microsite_url}" target="_blank">🌐 マイクロサイトを見る</a></div>',
-            unsafe_allow_html=True
-        )
-    with _rv_col2:
-        st.markdown('<div class="rv-btn">', unsafe_allow_html=True)
-        if st.button("✏️ プロフィール編集", use_container_width=True, type="secondary"):
-            st.session_state["creator_auth"] = rv_acct
-            st.query_params["page"] = "dashboard"
-            st.query_params["acct"] = rv_acct
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    _rv_col1, _rv_col2 = st.columns(2, vertical_alignment="top")
+    _rv_col1.link_button("🌐 マイクロサイトを見る", _microsite_url, use_container_width=True, type="secondary")
+    if _rv_col2.button("✏️ プロフィール編集", use_container_width=True, type="secondary"):
+        st.session_state["creator_auth"] = rv_acct
+        st.query_params["page"] = "dashboard"
+        st.query_params["acct"] = rv_acct
+        st.rerun()
 
     supports = get_supports_for_creator(rv_acct)
 
