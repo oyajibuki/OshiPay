@@ -1665,14 +1665,14 @@ else: # Dashboard
                 _sns_raw = {}
 
         # 現在の写真を表示
-        _current_photo = _cr_data.get("photo_url", "")
+        _current_photo = _cr_data.get("photo_url") or ""
         if _current_photo:
             st.image(_current_photo, width=80, caption="現在のプロフィール写真")
 
-        bio  = st.text_area("自己紹介（bio）", value=_cr_data.get("bio", ""), max_chars=500, key=f"bio_{acct_id}",
+        bio  = st.text_area("自己紹介（bio）", value=_cr_data.get("bio") or "", max_chars=500, key=f"bio_{acct_id}",
                             help="最大500文字。電話番号・メール・LINE IDは入力不可")
-        st.caption(f"{len(_cr_data.get('bio', ''))}/500文字")
-        slug = st.text_input("ユーザーID（マイクロページURL用）", value=_cr_data.get("slug", ""), key=f"slug_{acct_id}",
+        st.caption(f"{len(_cr_data.get('bio') or '')}/500文字")
+        slug = st.text_input("ユーザーID（マイクロページURL用）", value=_cr_data.get("slug") or "", key=f"slug_{acct_id}",
                              help="例: asagiri → oshipay.com/asagiri（3〜20文字・英数字・ハイフンのみ）")
 
         st.markdown("**🔗 SNSリンク**（X・Instagram・YouTube・TikTok・note・Facebook・LINE）")
