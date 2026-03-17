@@ -1606,10 +1606,15 @@ else: # Dashboard
 
         # ── プロフィールテキスト ──
         try:
-            _cr = get_db().table("creators").select("bio,genre,slug").eq("acct_id", acct_id).maybe_single().execute()
+            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name").eq("acct_id", acct_id).maybe_single().execute()
             _cr_data = _cr.data or {}
         except Exception:
             _cr_data = {}
+
+        # 現在の写真を表示
+        _current_photo = _cr_data.get("photo_url", "")
+        if _current_photo:
+            st.image(_current_photo, width=80, caption="現在のプロフィール写真")
         bio   = st.text_area("自己紹介（bio）", value=_cr_data.get("bio", ""), max_chars=200, key=f"bio_{acct_id}")
         genre = st.text_input("ジャンル", value=_cr_data.get("genre", ""), key=f"genre_{acct_id}")
         slug  = st.text_input("スラッグ（マイクロページURL用）", value=_cr_data.get("slug", ""), key=f"slug_{acct_id}", help="例: asagiri → creator.html?id=asagiri")
