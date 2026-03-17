@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>OshiPay — ピッチ資料</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -127,6 +127,40 @@
     .ok { color: #22c55e; font-weight: 700; }
     .ng { color: #ef4444; }
     .tri { color: #f59e0b; }
+
+    /* ===== iPhone横画面（landscape）対応 ===== */
+    @media screen and (orientation: landscape) and (max-height: 500px) {
+      .slide {
+        padding: 10px 24px 56px !important;
+        justify-content: flex-start !important;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      h1 { font-size: clamp(1.4rem, 3.5vw, 2rem) !important; }
+      h2 { font-size: clamp(1.1rem, 2.5vw, 1.65rem) !important; }
+      .label { margin-bottom: 5px; font-size: 9px; }
+      p.body { font-size: 0.82rem; line-height: 1.45; }
+      .cards { margin-top: 8px !important; gap: 8px; }
+      .card { padding: 10px 12px; min-width: 130px; max-width: 180px; }
+      .card .icon { font-size: 1.3rem; margin-bottom: 4px; }
+      .card p { font-size: 0.78rem; line-height: 1.35; }
+      .card .card-title { margin-bottom: 3px; }
+      .flow { margin-top: 8px !important; gap: 5px; }
+      .flow-step { padding: 6px 9px; font-size: 0.74rem; }
+      .flow-arrow { font-size: 1rem; }
+      .bignum-row { margin-top: 8px !important; gap: 24px; }
+      .bignum { font-size: clamp(1.8rem, 4.5vw, 3rem) !important; }
+      .bignum-label { font-size: 0.7rem; margin-top: 4px; }
+      .steps { margin-top: 8px !important; gap: 6px; }
+      .step { padding: 8px 12px; max-width: 150px; }
+      .step-num { width: 24px; height: 24px; font-size: 0.7rem; margin-bottom: 6px; }
+      .step p { font-size: 0.76rem; }
+      .pill { font-size: 0.68rem; padding: 3px 10px; margin: 2px; }
+      nav.controls { bottom: 8px; gap: 10px; }
+      .nav-btn { padding: 7px 16px; font-size: 0.78rem; }
+      #s1 .tagline { font-size: 0.9rem; margin-top: 10px; }
+      #s1 .date { margin-top: 16px; }
+    }
   </style>
 </head>
 <body>
