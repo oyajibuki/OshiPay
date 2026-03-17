@@ -4,6 +4,11 @@ import base64
 import uuid
 import random
 import datetime
+import json
+from governance import (
+    validate_password, validate_username, validate_bio, validate_sns_url,
+    check_slug_locked,
+)
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -442,7 +447,7 @@ if page == "lp":
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }</style>", unsafe_allow_html=True)
 elif IS_LEGAL_PAGE:
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 800px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
-elif page in ["reply_view", "ranking"]:
+elif page in ["reply_view", "ranking", "profile"]:
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 700px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
 else:
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 460px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
@@ -1446,12 +1451,23 @@ else: # Dashboard
         
         with tab_new:
             st.info("新しく応援受け取りを開始するには、管理用パスワードを作成してください。")
+            st.caption("🔐 パスワード条件: 8文字以上・英字＋数字必須・同じ文字の3連続禁止（例: Oshi1234）")
             new_pass = st.text_input("管理用パスワードを作成", type="password", key="new_pass")
+
+            _pass_ok = False
+            if new_pass:
+                _pass_ok, _pass_err = validate_password(new_pass)
+                if not _pass_ok:
+                    st.error(f"⚠️ {_pass_err}")
+                else:
+                    st.success("✅ パスワードOK")
 
             # 明示的なボタンによる発行の意思確認
             if st.checkbox("利用規約に同意して、新規にQRコードを発行して応援を受け取りますか？"):
                 if not new_pass:
                     st.warning("パスワードを入力してください。")
+                elif not _pass_ok:
+                    st.warning("パスワードの条件を満たしてください。")
                 elif "onboarding_url" not in st.session_state:
                     if st.button("🔗 Stripeアカウントを連携する"):
                         with st.spinner("Stripeと連携する準備をしています... (数秒かかります)"):
@@ -1598,15 +1614,25 @@ else: # Dashboard
         genre = st.text_input("ジャンル", value=_cr_data.get("genre", ""), key=f"genre_{acct_id}")
         slug  = st.text_input("スラッグ（マイクロページURL用）", value=_cr_data.get("slug", ""), key=f"slug_{acct_id}", help="例: asagiri → creator.html?id=asagiri")
         if st.button("プロフィールを保存", key=f"save_profile_{acct_id}"):
+            _save_errors = []
+            # bio バリデーション
+            _bio_ok, _bio_err = validate_bio(bio)
+            if not _bio_ok:
+                _save_errors.append(_bio_err)
+            # slug バリデーション
             if slug:
-                dup = get_db().table("creators").select("acct_id").eq("slug", slug).neq("acct_id", acct_id).execute()
-                if dup.data:
-                    st.error(f"「{slug}」はすでに使われています。別のスラッグを入力してください。")
+                _slug_ok, _slug_err = validate_username(slug)
+                if not _slug_ok:
+                    _save_errors.append(_slug_err)
                 else:
-                    get_db().table("creators").update({"bio": bio, "genre": genre, "slug": slug}).eq("acct_id", acct_id).execute()
-                    st.success("プロフィールを保存しました！")
+                    dup = get_db().table("creators").select("acct_id").eq("slug", slug).neq("acct_id", acct_id).execute()
+                    if dup.data or check_slug_locked(get_db(), slug):
+                        _save_errors.append(f"「{slug}」はすでに使われています。別のスラッグを入力してください。")
+            if _save_errors:
+                for _e in _save_errors:
+                    st.error(f"⚠️ {_e}")
             else:
-                get_db().table("creators").update({"bio": bio, "genre": genre, "slug": None}).eq("acct_id", acct_id).execute()
+                get_db().table("creators").update({"bio": bio, "genre": genre, "slug": slug or None}).eq("acct_id", acct_id).execute()
                 st.success("プロフィールを保存しました！")
 
         # ── プロフィール写真アップロード ──
