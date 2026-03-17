@@ -41,8 +41,8 @@ _ALLOWED_SNS_PATTERNS = [
     re.compile(r'^https?://(www\.)?youtube\.com/(channel/[\w-]+|@[\w.]+|c/[\w.]+)/?$', re.IGNORECASE),
     re.compile(r'^https?://(www\.)?tiktok\.com/@[\w.]{1,50}/?$', re.IGNORECASE),
     re.compile(r'^https?://note\.com/[\w.]{1,50}/?$', re.IGNORECASE),
-    re.compile(r'^https?://(www\.)?facebook\.com/[\w.\-]{1,100}/?$', re.IGNORECASE),
-    re.compile(r'^https?://line\.me/[\w/.\-]{1,100}$', re.IGNORECASE),
+    re.compile(r'^https?://(www\.)?facebook\.com/[\w.\-/?=&%]{1,200}$', re.IGNORECASE),
+    re.compile(r'^https?://(line\.me|lin\.ee)/[\w/.\-]{1,100}$', re.IGNORECASE),
 ]
 
 
