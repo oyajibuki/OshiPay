@@ -1042,6 +1042,18 @@ if page == "ranking":
 
         ranked = sorted(creator_map.values(), key=lambda x: x["total"], reverse=True)
 
+        # creatorsテーブルから display_name / slug を一括取得して上書き
+        try:
+            _acct_ids = [c["acct"] for c in ranked]
+            _cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug").in_("acct_id", _acct_ids).execute()
+            _cr_name_map = {r["acct_id"]: r for r in (_cr_rows.data or [])}
+            for c in ranked:
+                _cr = _cr_name_map.get(c["acct"], {})
+                _dn = _cr.get("display_name") or _cr.get("name") or _cr.get("slug") or c["name"]
+                c["name"] = _dn
+        except Exception:
+            pass
+
         # サポーター名マップを一括取得
         all_sup_ids = list({s["supporter_id"] for c in ranked for s in c["supports"] if s.get("supporter_id")})
         sup_name_map = get_supporters_map(all_sup_ids)

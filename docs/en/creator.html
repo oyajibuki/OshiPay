@@ -176,7 +176,7 @@
     }
 
     function renderProfile(c) {
-      const name = c.display_name || c.name || c.acct_id;
+      const name = c.display_name || c.name || c.slug || c.acct_id;
       document.getElementById('creator-name').textContent = name;
       document.title = `${name} | OshiPay`;
 
