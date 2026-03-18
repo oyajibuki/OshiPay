@@ -1209,8 +1209,14 @@ if _creator_param and not support_user:
             connect_acct  = _cr.get("acct_id", _creator_param)
             support_name  = _cr.get("display_name") or _cr.get("name") or _creator_param
             support_photo = _cr.get("photo_url") or ""
+        else:
+            # DBにデータなし → creator_paramをそのままフォールバック
+            support_user = _creator_param
+            connect_acct = _creator_param
     except Exception:
-        pass
+        # DBクエリ失敗（RLS等）→ creator_paramをそのままフォールバック
+        support_user = _creator_param
+        connect_acct = _creator_param
 elif support_user:
     # 旧URL形式でもDBからphoto_urlを取得
     try:
