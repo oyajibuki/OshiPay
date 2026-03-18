@@ -1045,12 +1045,13 @@ if page == "ranking":
         # creatorsテーブルから display_name / slug を一括取得して上書き
         try:
             _acct_ids = [c["acct"] for c in ranked]
-            _cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug").in_("acct_id", _acct_ids).execute()
+            _cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url").in_("acct_id", _acct_ids).execute()
             _cr_name_map = {r["acct_id"]: r for r in (_cr_rows.data or [])}
             for c in ranked:
                 _cr = _cr_name_map.get(c["acct"], {})
                 _dn = _cr.get("display_name") or _cr.get("name") or _cr.get("slug") or c["name"]
                 c["name"] = _dn
+                c["photo_url"] = _cr.get("photo_url") or ""
         except Exception:
             pass
 
@@ -1087,10 +1088,23 @@ if page == "ranking":
                 )
                 sup_rows_html += row_div
 
+            _photo_url = creator.get("photo_url", "")
+            if _photo_url:
+                _avatar_html = (
+                    f'<img src="{_photo_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;'
+                    f'border:2px solid rgba(255,255,255,0.15);flex-shrink:0;" />'
+                )
+            else:
+                _avatar_html = (
+                    f'<div style="width:40px;height:40px;border-radius:50%;background:rgba(139,92,246,0.2);'
+                    f'border:2px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;'
+                    f'font-size:18px;flex-shrink:0;">🎤</div>'
+                )
             card_html = (
                 f'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:16px 20px;margin-bottom:12px;cursor:pointer;" onclick="window.open(\'{creator_url}\', \'_blank\')">'
                 f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
-                f'<span style="font-size:26px;min-width:32px;">{medal}</span>'
+                f'<span style="font-size:22px;min-width:28px;text-align:center;">{medal}</span>'
+                f'{_avatar_html}'
                 f'<a href="{creator_url}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{creator["name"]}</a>'
                 f'<span style="font-size:11px;color:rgba(240,240,245,0.4);">{total_label}</span>'
                 f'<span style="font-size:18px;font-weight:900;color:#f97316;">{creator["total"]:,}</span>'
@@ -1648,8 +1662,20 @@ else: # Dashboard
         """, unsafe_allow_html=True)
         
         _icon_list = list(ICON_OPTIONS.keys())
+
+        # ── プロフィールテキスト（先に取得してdisplay_nameをデフォルト値に使う）──
+        try:
+            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name,sns_links").eq("acct_id", acct_id).maybe_single().execute()
+            _cr_data = _cr.data or {}
+        except Exception:
+            _cr_data = {}
+
         _def_name = st.session_state.get(f"creator_name_{acct_id}", "")
         if not _def_name:
+            # 1) creatorsテーブルのdisplay_nameを優先
+            _def_name = _cr_data.get("display_name") or ""
+        if not _def_name:
+            # 2) supports履歴から取得（フォールバック）
             try:
                 last_s = get_db().table("supports").select("creator_name").eq("creator_acct", acct_id).order("created_at", desc=True).limit(1).execute()
                 if last_s.data:
@@ -1660,13 +1686,6 @@ else: # Dashboard
         _def_icon_idx = _icon_list.index(_def_icon) if _def_icon in _icon_list else 0
         name = st.text_input("表示名", value=_def_name)
         icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx, key=f"icon_{acct_id}")
-
-        # ── プロフィールテキスト ──
-        try:
-            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name,sns_links").eq("acct_id", acct_id).maybe_single().execute()
-            _cr_data = _cr.data or {}
-        except Exception:
-            _cr_data = {}
 
         # SNSリンクの既存値を取得
         _sns_raw = _cr_data.get("sns_links") or {}
@@ -1729,9 +1748,10 @@ else: # Dashboard
             else:
                 _sns_save = {k: v for k, v in _sns_normalized.items() if v}
                 get_db().table("creators").update({
-                    "bio":       bio,
-                    "slug":      slug.lower() if slug else None,
-                    "sns_links": json.dumps(_sns_save, ensure_ascii=False),
+                    "bio":          bio,
+                    "slug":         slug.lower() if slug else None,
+                    "sns_links":    json.dumps(_sns_save, ensure_ascii=False),
+                    "display_name": name or None,
                 }).eq("acct_id", acct_id).execute()
                 st.success("プロフィールを保存しました！")
                 _saved_slug = slug.lower() if slug else acct_id
