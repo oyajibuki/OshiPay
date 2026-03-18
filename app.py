@@ -43,7 +43,7 @@ ICON_OPTIONS = {
     "✂️": "美容師・理容師", "🎮": "ゲーマー・配信者", "📚": "講師・先生",
     "💻": "エンジニア・クリエイター", "🎭": "役者・パフォーマー", "🔥": "その他",
 }
-BASE_URL = os.environ.get("APP_URL", "https://oshipay2.streamlit.app")
+BASE_URL = os.environ.get("APP_URL", "https://oshipay.streamlit.app").rstrip('/') + '/'
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ヘルパー関数
