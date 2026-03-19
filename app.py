@@ -1975,13 +1975,14 @@ else: # Dashboard
         # ── QRコード発行ボタン（保存後のみ表示）──
         _profile_ready = st.session_state.get(f"profile_saved_{acct_id}") or _cr_data.get("profile_done")
         if _profile_ready:
-            if st.button("✨ QRコードを生成", use_container_width=True):
-                _final_id = slug.lower() if slug else acct_id
-                support_url = f"{BASE_URL}?page=support&creator={_final_id}"
-                st.session_state.qr_url = support_url
-                st.session_state.qr_just_generated = True
-                st.session_state[f"creator_name_{acct_id}"] = name
-                st.session_state[f"creator_icon_{acct_id}"] = icon
+            with st.expander("✨ QRコードを発行する"):
+                if st.button("QRコードを生成", use_container_width=True):
+                    _final_id = slug.lower() if slug else acct_id
+                    support_url = f"{BASE_URL}?page=support&creator={_final_id}"
+                    st.session_state.qr_url = support_url
+                    st.session_state.qr_just_generated = True
+                    st.session_state[f"creator_name_{acct_id}"] = name
+                    st.session_state[f"creator_icon_{acct_id}"] = icon
         else:
             st.info("💾 プロフィールを保存すると、QRコードを発行できます。")
 
