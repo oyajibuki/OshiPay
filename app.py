@@ -813,7 +813,7 @@ if page == "reply_view":
         _rv_slug = rv_acct
     _microsite_url = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_rv_slug}"
     _rv_col1, _rv_col2 = st.columns(2, vertical_alignment="top")
-    _rv_col1.link_button("🌐 マイクロサイトを見る", _microsite_url, use_container_width=True, type="secondary")
+    _rv_col1.link_button("🌐 プロフィールを見る", _microsite_url, use_container_width=True, type="secondary")
     if _rv_col2.button("✏️ プロフィール編集", use_container_width=True, type="secondary"):
         st.session_state["creator_auth"] = rv_acct
         st.query_params["page"] = "dashboard"
@@ -1896,7 +1896,7 @@ else: # Dashboard
                 st.success("プロフィールを保存しました！")
                 _saved_slug = slug.lower() if slug else acct_id
                 _ms_preview_url = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_saved_slug}"
-                st.link_button("🌐 マイクロサイトを確認する", _ms_preview_url, use_container_width=True)
+                st.link_button("🌐 プロフィールを確認する", _ms_preview_url, use_container_width=True)
 
         # ── プロフィール写真アップロード ──
         uploaded_photo = st.file_uploader("プロフィール写真（任意・自動圧縮されます）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
