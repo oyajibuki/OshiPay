@@ -1667,7 +1667,7 @@ else: # Dashboard
                 elif not _pass_ok:
                     st.warning("パスワードの条件を満たしてください。")
                 elif "onboarding_url" not in st.session_state:
-                    if st.button("🔗 Stripeアカウントを連携する"):
+                    if st.button("✨ QRコードを発行する"):
                         with st.spinner("Stripeと連携する準備をしています... (数秒かかります)"):
                             try:
                                 # アカウント作成（ウェブサイトURLなどを事前注入）
@@ -1687,14 +1687,14 @@ else: # Dashboard
                     st.markdown(f"""
                     <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 20px; text-align: center;">
                         <div style="font-size: 24px; margin-bottom: 12px;">🌟</div>
-                        <div style="color: #f0f0f5; font-weight: 700; font-size: 16px; margin-bottom: 8px;">ステップ 1/2: Stripeで本人確認</div>
+                        <div style="color: #f0f0f5; font-weight: 700; font-size: 16px; margin-bottom: 8px;">ステップ 1/2：本人確認・口座登録</div>
                         <div style="font-size: 13px; color: rgba(240,240,245,0.7); margin-bottom: 20px;">
                             下のボタンを押して、Stripeの画面で「本人確認」と「銀行口座」の設定を完了させてください。<br>
                             完了すると自動的にここに戻ってきます。
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-                    st.link_button("👉 Stripeの登録画面へ進む", st.session_state.onboarding_url, type="primary")
+                    st.link_button("👉 本人確認・口座設定へ進む（約3分）", st.session_state.onboarding_url, type="primary")
                     # 念のための自動リダイレクトJSも併用
                     components.html(f'<script>window.top.location.href = "{st.session_state.onboarding_url}";</script>', height=0)
                     if st.button("❌ キャンセルしてやり直す"):
