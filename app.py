@@ -622,7 +622,7 @@ if page == "success":
         )
         st.markdown(
             f'<div style="text-align:center;margin-bottom:16px;">'
-            f'<a href="{BASE_URL}?page=supporter_dashboard" target="_top" '
+            f'<a href="{BASE_URL}?page=supporter_dashboard&sid={s_sup_id}" target="_top" '
             f'style="display:inline-block;font-size:13px;font-weight:700;color:#c4b5fd;'
             f'text-decoration:none;background:rgba(139,92,246,0.15);'
             f'border:1px solid rgba(139,92,246,0.4);border-radius:12px;padding:10px 20px;">'
@@ -1422,6 +1422,9 @@ elif page == "supporter_dashboard":
     st.markdown('<div class="section-title">サポーター・ダッシュボード</div>', unsafe_allow_html=True)
     
     if "supporter_auth" not in st.session_state:
+        _prefill_sid = params.get("sid", "")
+        if _prefill_sid and "r_sid" not in st.session_state:
+            st.session_state["r_sid"] = _prefill_sid
         st.info("過去の応援を一つにまとめた、公開ポートフォリオを作成できます。")
         tab_login, tab_register, tab_forgot = st.tabs(["🔑 ログイン", "✨ 新規登録", "🔓 パスワードを忘れた"])
 
