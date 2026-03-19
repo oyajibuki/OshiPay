@@ -47,6 +47,7 @@ ICON_OPTIONS = {
     "🐱": "猫", "🐶": "犬", "🔥": "その他",
 }
 BASE_URL = os.environ.get("APP_URL", "https://oshipay.streamlit.app").rstrip('/') + '/'
+LP_URL   = "https://oyajibuki.github.io/OshiPay/"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ヘルパー関数
@@ -1180,7 +1181,7 @@ if page == "ranking":
         f'</div>'
     )
     st.markdown(footer_html, unsafe_allow_html=True)
-    st.link_button("応援する →", BASE_URL, use_container_width=True)
+    st.link_button("応援する →", LP_URL, use_container_width=True)
     st.stop()
 
 # ── コインプレビュー（開発用）──
@@ -1278,7 +1279,7 @@ elif support_user:
 if page == "support" and _creator_param and not support_user:
     st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.error("クリエイターが見つかりませんでした。URLを確認してください。")
-    st.link_button("🏠 トップへ戻る", BASE_URL, use_container_width=True)
+    st.link_button("🏠 トップへ戻る", LP_URL, use_container_width=True)
     st.stop()
 
 if page == "support" and support_user:
