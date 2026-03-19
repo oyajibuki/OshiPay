@@ -146,6 +146,20 @@ def send_welcome_email(to_email: str, display_name: str, supporter_id: str) -> t
         return True, "送信成功"
     except Exception as e: return False, str(e)
 
+def send_acct_id_email(to_email: str, acct_id: str) -> tuple[bool, str]:
+    try:
+        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
+        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
+        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
+        subject = "【OshiPay】クリエイターIDのご確認"
+        body = f"OshiPayをご利用いただきありがとうございます。\n\nダッシュボードへのログインに必要なIDをお送りします。\n\n🔑 クリエイターID: {acct_id}\n\nこのIDは大切に保管してください。\n\nダッシュボードURL:\n{BASE_URL}?page=dashboard&acct={acct_id}\n\n--\nOshiPay\n{BASE_URL}"
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
+        return True, "送信成功"
+    except Exception as e: return False, str(e)
+
 def check_account_status(account_id):
     try:
         account = stripe.Account.retrieve(account_id)
@@ -1647,7 +1661,15 @@ else: # Dashboard
     st.markdown('<div class="section-title">QRコードを発行</div>', unsafe_allow_html=True)
     # アカウントIDの特定
     acct_id = connect_acct or params.get("acct")
-    
+    # ④(5) slug lookup（acct_で始まらない場合はslugとして検索）
+    if acct_id and not acct_id.startswith("acct_"):
+        try:
+            _slug_res = get_db().table("creators").select("acct_id").eq("slug", acct_id).maybe_single().execute()
+            if _slug_res.data:
+                acct_id = _slug_res.data["acct_id"]
+        except Exception:
+            pass
+
     if not acct_id:
         if not params.get("fresh"):
             # ① localStorage からアカウントIDを自動復元
@@ -1667,9 +1689,16 @@ else: # Dashboard
         tab_new, tab_recover, tab_forgot_c = st.tabs(["✨ 新規作成", "🔑 既存アカウントの復元", "🔓 パスワードを忘れた"])
         
         with tab_new:
-            st.info("新しく応援受け取りを開始するには、管理用パスワードを作成してください。")
+            # ② 「1回だけ・一生使えるQR」訴求
+            st.markdown("""
+            <div style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);border-radius:12px;padding:14px 16px;margin-bottom:12px;text-align:center;">
+                <div style="font-size:15px;font-weight:700;color:#c4b5fd;">✨ 1回の設定で一生使えるQRコード</div>
+                <div style="font-size:11px;color:rgba(240,240,245,0.6);margin-top:4px;">SNSに貼るだけ。ファンから直接応援を受け取れます。</div>
+            </div>
+            """, unsafe_allow_html=True)
             st.caption("🔐 パスワード条件: 8文字以上・英字＋数字必須・同じ文字の3連続禁止（例: Oshi1234）")
-            new_pass = st.text_input("管理用パスワードを作成", type="password", key="new_pass")
+            new_pass  = st.text_input("管理用パスワードを作成", type="password", key="new_pass")
+            new_email = st.text_input("メールアドレス（任意・IDをメールで受け取れます）", key="new_email", placeholder="example@gmail.com")
 
             _pass_ok = False
             if new_pass:
@@ -1695,6 +1724,9 @@ else: # Dashboard
                                 if not _reg_ok:
                                     st.error(f"DB登録エラー: {_reg_err}")
                                     st.stop()
+                                # ④(4) acct_idのみメール送信（パスワードは送らない）
+                                if new_email:
+                                    send_acct_id_email(new_email, acct_id)
                                 st.session_state["creator_auth"] = acct_id
                                 # 登録用リンクを取得して保存
                                 st.session_state.onboarding_url = create_account_link(acct_id)
@@ -1822,7 +1854,7 @@ else: # Dashboard
 
         # ── プロフィールテキスト（先に取得してdisplay_nameをデフォルト値に使う）──
         try:
-            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name,sns_links").eq("acct_id", acct_id).maybe_single().execute()
+            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name,sns_links,profile_done").eq("acct_id", acct_id).maybe_single().execute()
             _cr_data = _cr.data or {}
         except Exception:
             _cr_data = {}
@@ -1841,38 +1873,60 @@ else: # Dashboard
                 pass
         _def_icon = st.session_state.get(f"creator_icon_{acct_id}", _icon_list[0])
         _def_icon_idx = _icon_list.index(_def_icon) if _def_icon in _icon_list else 0
+
+        # ── フィールド順: 表示名→アイコン→写真→自己紹介→SNS→ユーザID→保存→QR ──
         name = st.text_input("表示名", value=_def_name)
         icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx, key=f"icon_{acct_id}")
 
-        # SNSリンクの既存値を取得
+        # ── プロフィール写真 ──
+        _current_photo = _cr_data.get("photo_url") or ""
+        if _current_photo:
+            st.image(_current_photo, width=80, caption="現在のプロフィール写真")
+        uploaded_photo = st.file_uploader("📷 プロフィール写真を選ぶ（任意・自動圧縮）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
+        if uploaded_photo:
+            try:
+                img = Image.open(uploaded_photo).convert("RGB")
+                img.thumbnail((200, 200), Image.LANCZOS)
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=85)
+                buf.seek(0)
+                img_bytes = buf.read()
+                file_path = f"creators/{acct_id}.jpg"
+                get_db().storage.from_("creator-photos").upload(
+                    file_path, img_bytes,
+                    {"content-type": "image/jpeg", "upsert": "true"}
+                )
+                photo_url = get_db().storage.from_("creator-photos").get_public_url(file_path)
+                get_db().table("creators").update({"photo_url": photo_url}).eq("acct_id", acct_id).execute()
+                st.success("写真を保存しました！")
+                st.image(img, width=100)
+            except Exception as e:
+                st.error(f"写真の保存に失敗しました: {e}")
+
+        bio = st.text_area("自己紹介（bio）", value=_cr_data.get("bio") or "", max_chars=500, key=f"bio_{acct_id}",
+                           help="最大500文字。電話番号・メール・LINE IDは入力不可")
+        st.caption(f"{len(_cr_data.get('bio') or '')}/500文字")
+
+        # ── SNSリンク（折りたたみ）──
         _sns_raw = _cr_data.get("sns_links") or {}
         if isinstance(_sns_raw, str):
             try:
                 _sns_raw = json.loads(_sns_raw)
             except Exception:
                 _sns_raw = {}
+        with st.expander("🔗 SNSリンクを設定する（任意）"):
+            _sns_x    = st.text_input("X（旧Twitter）",       value=_sns_raw.get("x", ""),         placeholder="https://x.com/username",           key=f"sns_x_{acct_id}")
+            _sns_ig   = st.text_input("Instagram",             value=_sns_raw.get("instagram", ""), placeholder="https://instagram.com/username",    key=f"sns_ig_{acct_id}")
+            _sns_yt   = st.text_input("YouTube",               value=_sns_raw.get("youtube", ""),   placeholder="https://youtube.com/@username",     key=f"sns_yt_{acct_id}")
+            _sns_tt   = st.text_input("TikTok",                value=_sns_raw.get("tiktok", ""),    placeholder="https://tiktok.com/@username",      key=f"sns_tt_{acct_id}")
+            _sns_note = st.text_input("note",                  value=_sns_raw.get("note", ""),      placeholder="https://note.com/username",         key=f"sns_note_{acct_id}")
+            _sns_fb   = st.text_input("Facebook",              value=_sns_raw.get("facebook", ""),  placeholder="https://facebook.com/username",     key=f"sns_fb_{acct_id}")
+            _sns_line = st.text_input("LINE（公式アカウント）", value=_sns_raw.get("line", ""),      placeholder="https://line.me/R/ti/p/@username",  key=f"sns_line_{acct_id}")
 
-        # 現在の写真を表示
-        _current_photo = _cr_data.get("photo_url") or ""
-        if _current_photo:
-            st.image(_current_photo, width=80, caption="現在のプロフィール写真")
-
-        bio  = st.text_area("自己紹介（bio）", value=_cr_data.get("bio") or "", max_chars=500, key=f"bio_{acct_id}",
-                            help="最大500文字。電話番号・メール・LINE IDは入力不可")
-        st.caption(f"{len(_cr_data.get('bio') or '')}/500文字")
-        slug = st.text_input("ユーザーID（マイクロページURL用）", value=_cr_data.get("slug") or "", key=f"slug_{acct_id}",
+        slug = st.text_input("ユーザーID（プロフィールURL用）", value=_cr_data.get("slug") or "", key=f"slug_{acct_id}",
                              help="例: asagiri → oshipay.com/asagiri（3〜20文字・英数字・ハイフンのみ）")
 
-        st.markdown("**🔗 SNSリンク**（X・Instagram・YouTube・TikTok・note・Facebook・LINE）")
-        _sns_x    = st.text_input("X（旧Twitter）",  value=_sns_raw.get("x", ""),         placeholder="https://x.com/username",              key=f"sns_x_{acct_id}")
-        _sns_ig   = st.text_input("Instagram",        value=_sns_raw.get("instagram", ""), placeholder="https://instagram.com/username",       key=f"sns_ig_{acct_id}")
-        _sns_yt   = st.text_input("YouTube",          value=_sns_raw.get("youtube", ""),   placeholder="https://youtube.com/@username",        key=f"sns_yt_{acct_id}")
-        _sns_tt   = st.text_input("TikTok",           value=_sns_raw.get("tiktok", ""),    placeholder="https://tiktok.com/@username",         key=f"sns_tt_{acct_id}")
-        _sns_note = st.text_input("note",             value=_sns_raw.get("note", ""),      placeholder="https://note.com/username",            key=f"sns_note_{acct_id}")
-        _sns_fb   = st.text_input("Facebook",         value=_sns_raw.get("facebook", ""),  placeholder="https://facebook.com/username",        key=f"sns_fb_{acct_id}")
-        _sns_line = st.text_input("LINE（公式アカウント）", value=_sns_raw.get("line", ""), placeholder="https://line.me/R/ti/p/@username",  key=f"sns_line_{acct_id}")
-
-        if st.button("プロフィールを保存", key=f"save_profile_{acct_id}"):
+        if st.button("💾 プロフィールを保存", type="primary", key=f"save_profile_{acct_id}"):
             _save_errors = []
             # bio バリデーション
             _bio_ok, _bio_err = validate_bio(bio)
@@ -1887,7 +1941,7 @@ else: # Dashboard
                     dup = get_db().table("creators").select("acct_id").eq("slug", slug).neq("acct_id", acct_id).execute()
                     if dup.data or check_slug_locked(get_db(), slug):
                         _save_errors.append(f"「{slug}」はすでに使われています。別のスラッグを入力してください。")
-            # SNSリンク バリデーション（https:// 欠落を自動補完）
+            # SNSリンク バリデーション
             _sns_inputs = {
                 "x": _sns_x, "instagram": _sns_ig, "youtube": _sns_yt,
                 "tiktok": _sns_tt, "note": _sns_note, "facebook": _sns_fb, "line": _sns_line,
@@ -1909,42 +1963,26 @@ else: # Dashboard
                     "slug":         slug.lower() if slug else None,
                     "sns_links":    json.dumps(_sns_save, ensure_ascii=False),
                     "display_name": name or None,
+                    "profile_done": True,
                 }).eq("acct_id", acct_id).execute()
                 st.success("プロフィールを保存しました！")
+                st.session_state[f"profile_saved_{acct_id}"] = True
                 _saved_slug = slug.lower() if slug else acct_id
                 _ms_preview_url = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_saved_slug}"
                 st.link_button("🌐 プロフィールを確認する", _ms_preview_url, use_container_width=True)
 
-        # ── プロフィール写真アップロード ──
-        uploaded_photo = st.file_uploader("プロフィール写真（任意・自動圧縮されます）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
-        if uploaded_photo:
-            try:
-                img = Image.open(uploaded_photo).convert("RGB")
-                img.thumbnail((200, 200), Image.LANCZOS)
-                buf = io.BytesIO()
-                img.save(buf, format="JPEG", quality=85)
-                buf.seek(0)
-                img_bytes = buf.read()
-                file_path = f"creators/{acct_id}.jpg"
-                get_db().storage.from_("creator-photos").upload(
-                    file_path, img_bytes,
-                    {"content-type": "image/jpeg", "upsert": "true"}
-                )
-                photo_url = get_db().storage.from_("creator-photos").get_public_url(file_path)
-                get_db().table("creators").update({"photo_url": photo_url}).eq("acct_id", acct_id).execute()
-                st.success("写真を保存しました！")
-                st.image(img, width=100)
-            except Exception as e:
-                st.error(f"写真の保存に失敗しました: {e}")
-
-        col1, col2 = st.columns([2, 1])
-        if col1.button("✨ QRコードを生成", use_container_width=True):
-            _final_id = slug.lower() if slug else acct_id
-            support_url = f"{BASE_URL}?page=support&creator={_final_id}"
-            st.session_state.qr_url = support_url
-            st.session_state.qr_just_generated = True
-            st.session_state[f"creator_name_{acct_id}"] = name
-            st.session_state[f"creator_icon_{acct_id}"] = icon
+        # ── QRコード発行ボタン（保存後のみ表示）──
+        _profile_ready = st.session_state.get(f"profile_saved_{acct_id}") or _cr_data.get("profile_done")
+        if _profile_ready:
+            if st.button("✨ QRコードを生成", use_container_width=True):
+                _final_id = slug.lower() if slug else acct_id
+                support_url = f"{BASE_URL}?page=support&creator={_final_id}"
+                st.session_state.qr_url = support_url
+                st.session_state.qr_just_generated = True
+                st.session_state[f"creator_name_{acct_id}"] = name
+                st.session_state[f"creator_icon_{acct_id}"] = icon
+        else:
+            st.info("💾 プロフィールを保存すると、QRコードを発行できます。")
 
         # 返信ダッシュボードへのリンク
         if st.button("💌 応援メッセージ・返信ダッシュボードを開く", use_container_width=True):
@@ -1972,7 +2010,7 @@ else: # Dashboard
                     st.warning("全ての項目を入力してください。")
 
         # 連携解除ボタン
-        if col2.button("🚫 連携解除"):
+        if st.button("🚫 連携解除", type="secondary", key="disconnect_btn"):
             st.components.v1.html("""
             <script>
             localStorage.removeItem('oshipay_acct');
