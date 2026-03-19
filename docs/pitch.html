@@ -88,6 +88,10 @@
     .bignum-item { text-align: center; }
     .bignum-label { font-size: 0.85rem; color: #64748b; margin-top: 8px; }
 
+    /* TRACTION TABLE */
+    .traction-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; color: #94a3b8; }
+    .traction-row:last-child { border-bottom: none; }
+
     /* STEPS */
     .steps { display: flex; gap: 16px; margin-top: 32px; flex-wrap: wrap; justify-content: center; }
     .step { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px 24px; max-width: 180px; text-align: center; }
@@ -178,65 +182,147 @@
     <div class="logo">🔥 <span>OshiPay</span></div>
     <div class="label">Product Pitch — 2026.03</div>
     <h1>日本発、<br><span class="gradient-text">推し経済圏をつくる</span><br>マイクロ投げ銭プラットフォーム</h1>
-    <p class="tagline">クリエイターと世界中のファンをQR一枚でつなぐ</p>
+    <p class="tagline">スタンプは無料・1分で始められる・応援は誰でも・18歳からでもOK</p>
     <div class="date">CONFIDENTIAL</div>
   </section>
 
   <!-- ==========================================
-       SLIDE 2 — 課題
+       SLIDE 2 — 原体験
+  ========================================== -->
+  <section class="slide" id="s1story" style="text-align:center">
+    <div class="label">Origin Story</div>
+    <h2>「応援したいのに、<br><span class="gradient-text">できない」</span><br>という違和感</h2>
+    <p class="body" style="text-align:center;margin-top:20px">
+      私は48歳です。推し活は正直、若者中心で少し距離を感じています。<br>
+      でも、<strong style="color:#e2e8f0">誰かを応援したい気持ちはずっとある。</strong><br><br>
+      寒い中で働く工事現場の方、一生懸命接客するカフェの店員さん。<br>
+      <span style="color:#f97316;font-weight:700">ただ、気軽に応援を届ける手段がない。</span>
+    </p>
+    <div class="cards" style="margin-top:28px">
+      <div class="card">
+        <div class="icon">👷</div>
+        <div class="card-title">現場の方</div>
+        <p>炎天下・極寒でも黙々と働く姿を応援したい</p>
+      </div>
+      <div class="card">
+        <div class="icon">☕</div>
+        <div class="card-title">カフェの店員</div>
+        <p>笑顔で接客してくれた人に「ありがとう」を形にしたい</p>
+      </div>
+      <div class="card">
+        <div class="icon">🎸</div>
+        <div class="card-title">路上アーティスト</div>
+        <p>感動した瞬間にすぐ応援できる手段がない</p>
+      </div>
+    </div>
+    <p style="margin-top:24px;font-size:1.05rem;font-weight:700;color:#a78bfa">
+      👉 この「応援できない」をなくすために作ったのが OshiPay です
+    </p>
+  </section>
+
+  <!-- ==========================================
+       SLIDE 3 — 課題
   ========================================== -->
   <section class="slide" id="s2">
-    <div class="label">Problem</div>
-    <h2>日本クリエイターへの<br><span class="gradient-text">「さりげない応援」が難しい</span></h2>
-    <div class="cards">
-      <div class="card">
-        <div class="icon">💸</div>
-        <div class="card-title">既存サービスは重い</div>
-        <p>Patreon・超スパは月額/高額。100円応援するのに登録が複雑すぎる。</p>
+    <div class="label">Problem — 市場の歪み</div>
+    <h2>応援市場は<span class="gradient-text">2つに分断</span>されている<br>——その間に誰もいない</h2>
+    <div class="cards" style="margin-top:28px">
+      <div class="card" style="border-color:rgba(168,85,247,0.3)">
+        <div class="icon">📱</div>
+        <div class="card-title">SNS（拡散が目的）</div>
+        <p>いいね・シェアは簡単。でも<strong style="color:#e2e8f0">お金は動かない。</strong>感謝が形にならない。</p>
       </div>
-      <div class="card">
-        <div class="icon">🌏</div>
-        <div class="card-title">海外ファンが払えない</div>
-        <p>海外オタクは推しを応援したいが、日本の決済手段に対応できていない。</p>
+      <div class="card" style="border-color:rgba(249,115,22,0.3)">
+        <div class="icon">🎪</div>
+        <div class="card-title">ファンコミュニティ（閉じた関係）</div>
+        <p>Patreon・超スパは月額・高額・登録が複雑。<strong style="color:#e2e8f0">気軽な応援に最適化されていない。</strong></p>
       </div>
+      <div class="card" style="border-color:rgba(239,68,68,0.3)">
+        <div class="icon">❓</div>
+        <div class="card-title">その間の「気軽な応援」</div>
+        <p><strong style="color:#f97316">ここに誰もいない。</strong>スタンプひとつ、100円ひとつ——それができるサービスがない。</p>
+      </div>
+    </div>
+    <p style="margin-top:24px;font-size:0.95rem;color:#64748b;text-align:center">
+      👉 「構造の問題」です。サービスが悪いのではなく、<strong style="color:#94a3b8">そもそも設計されていない</strong>
+    </p>
+  </section>
+
+  <!-- ==========================================
+       SLIDE 4 — 未開拓市場
+  ========================================== -->
+  <section class="slide" id="s2b" style="text-align:center">
+    <div class="label">Untapped Market</div>
+    <h2>「応援したい人」は<br><span class="gradient-text">どこにでもいる</span><br>——でも届いていない</h2>
+    <div class="bignum-row" style="margin-top:36px">
+      <div class="bignum-item">
+        <div class="bignum gradient-text">1,000億円</div>
+        <div class="bignum-label">🇯🇵 日本 推し活・投げ銭市場（2024年推計）</div>
+      </div>
+    </div>
+    <div class="cards" style="margin-top:32px">
       <div class="card">
-        <div class="icon">📵</div>
-        <div class="card-title">リアルイベントは現金のみ</div>
-        <p>ライブ・路上・即売会でのキャッシュレス投げ銭手段がない。</p>
+        <div class="icon">💜</div>
+        <div class="card-title">応援したい人 ✅ いる</div>
+        <p>感謝・共感・推し文化——応援したい人は確実にいる</p>
+      </div>
+      <div class="card" style="border-color:rgba(239,68,68,0.3)">
+        <div class="icon">🚧</div>
+        <div class="card-title">応援できていない ❌</div>
+        <p>手段が複雑・口座登録・月額設定——全部ハードルが高すぎる</p>
+      </div>
+      <div class="card" style="border-color:rgba(249,115,22,0.4);background:rgba(249,115,22,0.06)">
+        <div class="icon">💡</div>
+        <div class="card-title" style="color:#f97316">これが未開拓市場</div>
+        <p style="color:#e2e8f0">ここをとれれば<strong style="color:#f97316">ビジネスになる</strong></p>
       </div>
     </div>
   </section>
 
   <!-- ==========================================
-       SLIDE 3 — ソリューション
+       SLIDE 5 — ソリューション
   ========================================== -->
   <section class="slide" id="s3">
     <div class="label">Solution</div>
-    <h2><span class="gradient-text">QRコード1枚</span>で<br>世界中から投げ銭できる</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <p>クリエイターが<br>QRコードを<br>表示・掲示</p>
+    <h2><span class="gradient-text">無料で遊んで</span>、<br>欲が出たら<span class="gradient-text">稼ぐ設計</span></h2>
+    <div class="flow" style="margin-top:28px">
+      <div class="flow-step" style="border-color:rgba(34,197,94,0.4);background:rgba(34,197,94,0.08)">
+        <span style="font-size:0.7rem;color:#22c55e;font-weight:700">① 無料</span><br>
+        メール登録<br>→ QR発行
       </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <p>ファンがスキャンして<br>100円〜好きな金額を<br>Stripeで送金</p>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <span style="font-size:0.7rem;color:#a78bfa;font-weight:700">② 体験</span><br>
+        スタンプ応援<br>ランキング参加
       </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <p>クリエイターに<br>即時入金<br>（手数料10%のみ）</p>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <span style="font-size:0.7rem;color:#f59e0b;font-weight:700">③ 欲が出る</span><br>
+        「他の人<br>稼いでる…」
       </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <p>ファンに<br>「推し証明バッジ」<br>が付与される</p>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step" style="border-color:rgba(249,115,22,0.4);background:rgba(249,115,22,0.08)">
+        <span style="font-size:0.7rem;color:#f97316;font-weight:700">④ 任意</span><br>
+        Stripe設定<br>→ 収益化
       </div>
     </div>
-    <div style="margin-top:24px">
+    <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:600px">
+      <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:12px 16px">
+        <div style="font-size:0.72rem;font-weight:700;color:#22c55e;margin-bottom:6px">🆓 誰でもできること</div>
+        <div style="font-size:0.85rem;color:#94a3b8;line-height:1.7">✅ 応援ページ作成<br>✅ QRコード発行<br>✅ スタンプ応援（🔥👏💜⭐）<br>✅ ランキング参加<br>✅ <strong style="color:#e2e8f0">18歳以下もOK</strong></div>
+      </div>
+      <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.25);border-radius:10px;padding:12px 16px">
+        <div style="font-size:0.72rem;font-weight:700;color:#f97316;margin-bottom:6px">💰 収益化したい人だけ</div>
+        <div style="font-size:0.85rem;color:#94a3b8;line-height:1.7">🔒 Stripe口座設定（3分）<br>🔒 投げ銭受け取り<br>🔒 応援額ランキング上位<br>🔒 コメント機能<br>&nbsp;</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px">
       <span class="pill">VTuber</span>
       <span class="pill">地下アイドル</span>
-      <span class="pill">コスプレイヤー</span>
-      <span class="pill">同人作家</span>
       <span class="pill">路上ミュージシャン</span>
+      <span class="pill">カフェの店員</span>
+      <span class="pill">現場の職人</span>
+      <span class="pill">子供・学生</span>
     </div>
   </section>
 
@@ -442,89 +528,58 @@
   </section>
 
   <!-- ==========================================
-       SLIDE 7 — ロードマップ（線表）
+       SLIDE 8 — 実績・壁の発見・新設計
   ========================================== -->
-  <section class="slide" id="s7timeline" style="justify-content:flex-start;padding-top:52px">
+  <section class="slide" id="s7traction" style="justify-content:flex-start;padding-top:52px">
     <div style="width:100%;max-width:820px;margin:0 auto">
-      <div class="label">Roadmap</div>
-      <h2 style="font-size:clamp(1.4rem,2.8vw,2.2rem);margin-bottom:28px">ローンチから<span class="gradient-text">1年でユーザー1,000名</span>へ</h2>
+      <div class="label">Traction &amp; Insight</div>
+      <h2 style="font-size:clamp(1.4rem,2.8vw,2.2rem);margin-bottom:20px">
+        テストで<span class="gradient-text">壁を発見</span>し、<span class="gradient-text">突破策</span>を見つけた
+      </h2>
 
-      <!-- ヘッダー -->
-      <div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:4px;margin-bottom:8px">
-        <div></div>
-        <div style="font-size:0.72rem;color:#64748b;text-align:center;font-weight:600">3月</div>
-        <div style="font-size:0.72rem;color:#f97316;text-align:center;font-weight:700">4月 ★</div>
-        <div style="font-size:0.72rem;color:#64748b;text-align:center;font-weight:600">6月</div>
-        <div style="font-size:0.72rem;color:#64748b;text-align:center;font-weight:600">9月</div>
-        <div style="font-size:0.72rem;color:#64748b;text-align:center;font-weight:600">27/3</div>
-        <div style="font-size:0.72rem;color:#64748b;text-align:center;font-weight:600">28年</div>
-        <div style="font-size:0.72rem;color:#f97316;text-align:center;font-weight:700">29年→</div>
-      </div>
-
-      <!-- ローンチ -->
-      <div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:4px;margin-bottom:8px;align-items:center">
-        <div style="font-size:0.8rem;color:#e2e8f0;font-weight:600;padding-right:8px">🚀 ローンチ<br><span style="font-size:0.7rem;color:#64748b;font-weight:400">公開・機能追加</span></div>
-        <div style="background:linear-gradient(90deg,#a855f7,#7c3aed);border-radius:6px;height:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(168,85,247,0.4)">
-          <span style="font-size:0.7rem;color:white;font-weight:700">3/3 ✅ 完了</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- テスト結果 -->
+        <div style="background:rgba(168,85,247,0.07);border:1px solid rgba(168,85,247,0.25);border-radius:12px;padding:16px">
+          <div style="font-size:0.72rem;font-weight:700;color:#a78bfa;letter-spacing:0.1em;margin-bottom:10px">📊 テスト結果（3/3 ローンチ〜）</div>
+          <div class="traction-row"><span>🚀 ローンチ（3/3）</span><span style="color:#22c55e;font-weight:700">✅ 完了</span></div>
+          <div class="traction-row"><span>嫁・義姉（身内2名）</span><span style="color:#22c55e;font-weight:700">✅ 登録済み</span></div>
+          <div class="traction-row"><span>知人 5名に依頼</span><span style="color:#ef4444;font-weight:700">❌ 全員却下</span></div>
+          <div class="traction-row"><span>SNS DM 200名予定</span><span style="color:#ef4444;font-weight:700">❌ 反応なし</span></div>
         </div>
-        <div></div><div></div><div></div><div></div><div></div><div></div>
-      </div>
-
-      <!-- 200名DM -->
-      <div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:4px;margin-bottom:8px;align-items:center">
-        <div style="font-size:0.8rem;color:#e2e8f0;font-weight:600;padding-right:8px">📣 200名DM<br><span style="font-size:0.7rem;color:#64748b;font-weight:400">協力会社+自社</span></div>
-        <div style="background:rgba(168,85,247,0.2);border:1.5px solid rgba(168,85,247,0.5);border-radius:6px;height:28px;display:flex;align-items:center;justify-content:center">
-          <span style="font-size:0.68rem;color:#c4b5fd">3/18〜31</span>
+        <!-- 却下理由 -->
+        <div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:16px">
+          <div style="font-size:0.72rem;font-weight:700;color:#f87171;letter-spacing:0.1em;margin-bottom:10px">❓ 却下された理由（共通）</div>
+          <div class="traction-row" style="font-size:0.9rem;color:#fca5a5">"銀行口座の登録が怖い"</div>
+          <div class="traction-row" style="font-size:0.9rem;color:#fca5a5">"何をするサービスか理解できない"</div>
+          <div class="traction-row" style="font-size:0.9rem;color:#fca5a5">"いきなりStripeは嫌だ"</div>
+          <div style="margin-top:8px;font-size:0.8rem;color:#64748b">＝ Stripe必須が最大のブロッカー</div>
         </div>
-        <div style="background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.3);border-radius:6px;height:28px"></div>
-        <div></div><div></div><div></div><div></div><div></div>
       </div>
 
-      <!-- 海外展開 -->
-      <div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:4px;margin-bottom:8px;align-items:center">
-        <div style="font-size:0.8rem;color:#f97316;font-weight:700;padding-right:8px">🌏 海外展開<br><span style="font-size:0.7rem;color:#64748b;font-weight:400">機能追加・英語LP</span></div>
-        <div></div>
-        <div style="background:linear-gradient(90deg,#f97316,#ea580c);border-radius:6px;height:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(249,115,22,0.4)">
-          <span style="font-size:0.7rem;color:white;font-weight:700">4月 ショート</span>
+      <!-- 発見と解決策 -->
+      <div style="background:linear-gradient(135deg,rgba(249,115,22,0.1),rgba(168,85,247,0.1));border:1px solid rgba(249,115,22,0.35);border-radius:12px;padding:16px 20px">
+        <div style="font-size:0.72rem;font-weight:700;color:#f97316;letter-spacing:0.1em;margin-bottom:10px">💡 壁の特定 → 突破策</div>
+        <div style="font-size:1rem;font-weight:800;color:#e2e8f0;margin-bottom:14px">
+          「登録のハードルを下げれば、一気に広がる」
         </div>
-        <div></div><div></div><div></div><div></div><div></div>
-      </div>
-
-      <!-- テストマーケター100名 -->
-      <div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:4px;margin-bottom:8px;align-items:center">
-        <div style="font-size:0.8rem;color:#e2e8f0;font-weight:600;padding-right:8px">📊 テスト<br><span style="font-size:0.7rem;color:#64748b;font-weight:400">マーケター100名FB</span></div>
-        <div></div><div></div>
-        <div style="background:rgba(168,85,247,0.2);border:1.5px solid rgba(168,85,247,0.5);border-radius:6px;height:28px;display:flex;align-items:center;justify-content:center">
-          <span style="font-size:0.68rem;color:#c4b5fd">6末まで</span>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px;background:rgba(239,68,68,0.08);border-radius:8px;padding:10px 14px">
+            <div style="font-size:0.7rem;color:#ef4444;font-weight:700;margin-bottom:4px">❌ 旧設計（壁あり）</div>
+            <div style="font-size:0.82rem;color:#94a3b8">登録 → Stripe必須 → 口座登録 → QR発行</div>
+          </div>
+          <div style="font-size:1.4rem;color:#f97316;font-weight:900">→</div>
+          <div style="flex:1;min-width:200px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px">
+            <div style="font-size:0.7rem;color:#22c55e;font-weight:700;margin-bottom:4px">✅ 新設計（壁なし）</div>
+            <div style="font-size:0.82rem;color:#e2e8f0">メール登録のみ → 即QR発行 → 収益化は任意</div>
+          </div>
         </div>
-        <div></div><div></div><div></div><div></div>
       </div>
 
-      <!-- 機能改善・300名 -->
-      <div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:4px;margin-bottom:8px;align-items:center">
-        <div style="font-size:0.8rem;color:#e2e8f0;font-weight:600;padding-right:8px">⚙️ 機能改善<br><span style="font-size:0.7rem;color:#64748b;font-weight:400">300名・海外相互発信</span></div>
-        <div></div><div></div><div></div>
-        <div style="background:rgba(168,85,247,0.2);border:1.5px solid rgba(168,85,247,0.5);border-radius:6px;height:28px;display:flex;align-items:center;justify-content:center">
-          <span style="font-size:0.68rem;color:#c4b5fd">9月</span>
-        </div>
-        <div></div><div></div><div></div>
-      </div>
-
-      <!-- 1000名・世界展開 -->
-      <div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:4px;margin-bottom:14px;align-items:center">
-        <div style="font-size:0.8rem;color:#e2e8f0;font-weight:600;padding-right:8px">🌐 世界展開<br><span style="font-size:0.7rem;color:#64748b;font-weight:400">1,000名・サーバ強化</span></div>
-        <div></div><div></div><div></div><div></div>
-        <div style="background:rgba(168,85,247,0.2);border:1.5px solid rgba(168,85,247,0.5);border-radius:6px;height:28px"></div>
-        <div style="background:rgba(168,85,247,0.28);border:1.5px solid rgba(168,85,247,0.6);border-radius:6px;height:28px"></div>
-        <div style="background:linear-gradient(90deg,rgba(249,115,22,0.3),rgba(168,85,247,0.4));border:1.5px solid rgba(249,115,22,0.5);border-radius:6px;height:28px"></div>
-      </div>
-
-      <!-- リスクヘッジ -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #1e293b;padding-top:12px;align-items:center">
-        <span class="pill" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.35);color:#86efac">✅ Stripe審査済み</span>
-        <span class="pill" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.35);color:#86efac">✅ 資金移動業登録不要</span>
-        <span class="pill" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.35);color:#86efac">✅ チャージバックリスク最小設計</span>
-        <span class="pill" style="background:rgba(251,191,36,0.08);border-color:rgba(251,191,36,0.3);color:#fcd34d">📋 公認ユーザー上限100万円設計検討中</span>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="pill" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.35);color:#86efac">✅ 18歳以下も参加可能</span>
+        <span class="pill" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.35);color:#86efac">✅ Stripe登録は収益化したい人だけ</span>
+        <span class="pill" style="background:rgba(168,85,247,0.1);border-color:rgba(168,85,247,0.35);color:#c4b5fd">🎯 息子・娘にも登録してもらえる</span>
+        <span class="pill" style="background:rgba(168,85,247,0.1);border-color:rgba(168,85,247,0.35);color:#c4b5fd">✅ Stripe審査済み・資金移動業不要</span>
       </div>
     </div>
   </section>
@@ -681,37 +736,71 @@
   <!-- ==========================================
        SLIDE 9 — CTA（一緒にやりたい）
   ========================================== -->
+  <!-- ==========================================
+       SLIDE 10 — ビジョン
+  ========================================== -->
+  <section class="slide" id="s9vision" style="text-align:center">
+    <div class="label">Vision</div>
+    <h2 style="font-size:clamp(1.8rem,3.5vw,3rem)">このサービスは<br><span class="gradient-text">「応援インフラ」</span>です</h2>
+    <p class="body" style="text-align:center;margin-top:20px;max-width:600px">
+      単なる投げ銭ではない。<br>
+      <strong style="color:#e2e8f0">あらゆる人が、あらゆる場所で、応援される世界</strong>をつくる。
+    </p>
+    <div class="cards" style="margin-top:28px">
+      <div class="card">
+        <div class="icon">🎨</div>
+        <div class="card-title">クリエイター</div>
+        <p>VTuber・アイドル・同人作家——世界中のファンから応援される</p>
+      </div>
+      <div class="card">
+        <div class="icon">👷</div>
+        <div class="card-title">一般労働者</div>
+        <p>現場の職人・店員・保育士——頑張りが直接評価される</p>
+      </div>
+      <div class="card">
+        <div class="icon">🏪</div>
+        <div class="card-title">ローカルビジネス</div>
+        <p>地域のお店・個人事業主——地元から応援される仕組み</p>
+      </div>
+    </div>
+    <div style="margin-top:24px;padding:16px 28px;background:linear-gradient(135deg,rgba(249,115,22,0.1),rgba(168,85,247,0.1));border:1px solid rgba(249,115,22,0.25);border-radius:14px;display:inline-block">
+      <div style="font-size:0.9rem;font-weight:800;color:#e2e8f0">「無料で遊んでいたら、稼ぎたくなった」</div>
+      <div style="font-size:0.78rem;color:#64748b;margin-top:4px">この設計が、日本の応援文化を経済に変える</div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       SLIDE 11 — お願い・CTA
+  ========================================== -->
   <section class="slide" id="s9cta" style="text-align:center">
     <div class="label">Let's Build Together</div>
     <h2 style="font-size:clamp(1.8rem,3.5vw,3rem)">この波に、<br><span class="gradient-text">一緒に乗りませんか。</span></h2>
-    <p class="body" style="text-align:center;margin-top:20px;max-width:560px">
-      OshiPayはローンチしたばかり。<br>
-      一緒に作り、一緒に広げてくれる<strong style="color:#e2e8f0">仲間</strong>を探しています。<br>
-      ビジネスの話は後でいい——まず<strong style="color:#f97316">率直な感想</strong>を聞かせてください。
+    <p class="body" style="text-align:center;margin-top:16px;max-width:560px">
+      ローンチしたばかり。壁も発見した。突破策も見えた。<br>
+      今が<strong style="color:#f97316">いちばん早く乗れるタイミング</strong>です。
     </p>
 
-    <!-- 3つのアクション -->
-    <div class="cards" style="margin-top:28px">
+    <div class="cards" style="margin-top:24px">
       <div class="card" style="max-width:190px;border-color:rgba(168,85,247,0.3)">
         <div class="icon">💬</div>
-        <div class="card-title">今日</div>
-        <p>面白い・課題・改善点など<br>率直な感想を聞かせてほしい</p>
+        <div class="card-title">今日お願いしたいこと</div>
+        <p>率直な感想を<br>聞かせてください<br>（良いも悪いも）</p>
       </div>
       <div class="card" style="max-width:190px;border-color:rgba(249,115,22,0.3)">
         <div class="icon">🤝</div>
         <div class="card-title">一緒にできること</div>
-        <p>クリエイター紹介<br>技術アドバイス<br>ユーザー獲得<br>何でもOK</p>
+        <p>テストユーザー<br>クリエイター紹介<br>事業アドバイス<br>何でもOK</p>
       </div>
-      <div class="card" style="max-width:190px;border-color:rgba(168,85,247,0.3)">
+      <div class="card" style="max-width:190px;border-color:rgba(34,197,94,0.3)">
         <div class="icon">🚀</div>
-        <div class="card-title">目指す未来</div>
-        <p>日本のクリエイターが<br>世界中から応援される<br>経済圏をつくる</p>
+        <div class="card-title">まず触ってみて</div>
+        <p>無料で登録できます<br>1分でQRコード<br>発行できます</p>
       </div>
     </div>
 
-    <div style="margin-top:32px;padding:18px 32px;background:linear-gradient(135deg,rgba(249,115,22,0.1),rgba(168,85,247,0.1));border:1px solid rgba(249,115,22,0.2);border-radius:16px;display:inline-block">
+    <div style="margin-top:24px;padding:18px 32px;background:linear-gradient(135deg,rgba(249,115,22,0.1),rgba(168,85,247,0.1));border:1px solid rgba(249,115,22,0.2);border-radius:16px;display:inline-block">
       <div style="font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:6px">🔥 oshipay.streamlit.app</div>
-      <div style="font-size:0.78rem;color:#64748b">今日から触れます。ぜひ試してみてください。</div>
+      <div style="font-size:0.78rem;color:#64748b">今日から無料で触れます。ぜひ試してみてください。</div>
     </div>
   </section>
 
@@ -721,7 +810,7 @@
 <nav class="controls">
   <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)" disabled>← 戻る</button>
   <div class="dots" id="dots"></div>
-  <span class="slide-counter" id="counter">1 / 9</span>
+  <span class="slide-counter" id="counter">1 / 11</span>
   <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">次へ →</button>
 </nav>
 
