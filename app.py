@@ -306,7 +306,7 @@ from supabase import create_client, Client
 
 REPLY_EMOJIS = ["👍", "❤️", "🙏", "🎉", "😊", "🔥", "✨", "🌟"]
 
-@st.cache_resource
+@st.cache_resource(ttl=0)
 def get_db() -> Client:
     """Supabaseクライアントをシングルトンで返す"""
     return create_client(
@@ -357,11 +357,12 @@ def verify_creator(acct_id: str, password: str) -> bool:
         return resp.data[0]["password_hash"] == hash_password(password)
     except Exception: return False
 
-def register_creator(acct_id: str, password: str) -> bool:
+def register_creator(acct_id: str, password: str) -> tuple[bool, str]:
     try:
         get_db().table("creators").insert({"acct_id": acct_id, "password_hash": hash_password(password)}).execute()
-        return True
-    except Exception: return False
+        return True, ""
+    except Exception as e:
+        return False, str(e)
 
 def set_reply(support_id: str, emoji: str, text: str) -> bool:
     """クリエイターの返信を保存"""
@@ -1591,7 +1592,10 @@ else: # Dashboard
                             try:
                                 # アカウント作成（ウェブサイトURLなどを事前注入）
                                 acct_id = create_connect_account()
-                                register_creator(acct_id, new_pass)
+                                _reg_ok, _reg_err = register_creator(acct_id, new_pass)
+                                if not _reg_ok:
+                                    st.error(f"DB登録エラー: {_reg_err}")
+                                    st.stop()
                                 st.session_state["creator_auth"] = acct_id
                                 # 登録用リンクを取得して保存
                                 st.session_state.onboarding_url = create_account_link(acct_id)
