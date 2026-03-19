@@ -483,6 +483,10 @@ document.addEventListener('click', function(e) {
 params = st.query_params
 page = params.get("page", "lp")
 
+# 404.html経由のリダイレクト（?user=...）に対応
+if params.get("user") and page == "lp":
+    page = "support"
+
 # LocalStorage保存用の簡易JS
 def save_account_id_js(acct_id):
     if acct_id:
@@ -1978,7 +1982,7 @@ else: # Dashboard
             with st.expander("✨ QRコードを発行する"):
                 if st.button("QRコードを生成", use_container_width=True):
                     _final_id = slug.lower() if slug else acct_id
-                    support_url = f"{BASE_URL}?page=support&creator={_final_id}"
+                    support_url = f"https://oshipay.me/u/{_final_id}"
                     st.session_state.qr_url = support_url
                     st.session_state.qr_just_generated = True
                     st.session_state[f"creator_name_{acct_id}"] = name
