@@ -1158,13 +1158,13 @@ if page == "ranking":
 
     # フッター（OshiPay宣伝）
     footer_html = (
-        f'<div style="margin-top:40px;padding:20px 24px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:16px;text-align:center;">'
+        f'<div style="margin-top:40px;padding:20px 24px 12px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:16px;text-align:center;">'
         f'<div style="font-size:20px;font-weight:900;color:#f97316;margin-bottom:6px;">OshiPayで推しを応援しよう</div>'
         f'<div style="font-size:12px;color:rgba(240,240,245,0.55);margin-bottom:12px;">あなたの応援がランキングに刻まれます</div>'
-        f'<a href="{BASE_URL}" target="_top" style="font-size:12px;color:#f97316;background:rgba(249,115,22,0.15);padding:6px 14px;border-radius:8px;text-decoration:none;">応援する →</a>'
         f'</div>'
     )
     st.markdown(footer_html, unsafe_allow_html=True)
+    st.link_button("応援する →", BASE_URL, use_container_width=True)
     st.stop()
 
 # ── コインプレビュー（開発用）──
