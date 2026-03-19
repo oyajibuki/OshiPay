@@ -1244,11 +1244,10 @@ if _creator_param and not support_user:
             support_name  = _cr.get("display_name") or _cr.get("name") or _creator_param
             support_photo = _cr.get("photo_url") or ""
         else:
-            # DBにデータなし → creator_paramをそのままフォールバック
-            support_user = _creator_param
-            connect_acct = _creator_param
+            # DBにデータなし → クリエイター不在フラグ
+            support_user = None
     except Exception:
-        # DBクエリ失敗（RLS等）→ creator_paramをそのままフォールバック
+        # DBクエリ失敗（一時的なエラー）→ フォールバック
         support_user = _creator_param
         connect_acct = _creator_param
 elif support_user:
@@ -1260,6 +1259,12 @@ elif support_user:
         support_photo = (_cr_resp2.data or {}).get("photo_url") or ""
     except Exception:
         pass
+
+if page == "support" and _creator_param and not support_user:
+    st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
+    st.error("クリエイターが見つかりませんでした。URLを確認してください。")
+    st.link_button("🏠 トップへ戻る", BASE_URL, use_container_width=True)
+    st.stop()
 
 if page == "support" and support_user:
     st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
