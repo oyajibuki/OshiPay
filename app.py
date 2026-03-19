@@ -47,7 +47,8 @@ ICON_OPTIONS = {
     "🐱": "猫", "🐶": "犬", "🔥": "その他",
 }
 BASE_URL = os.environ.get("APP_URL", "https://oshipay.streamlit.app").rstrip('/') + '/'
-LP_URL   = "https://oyajibuki.github.io/OshiPay/"
+LP_URL   = "https://oshipay.me/"
+QR_BASE  = "https://oshipay.me"   # QRコードのベースURL（カスタムドメイン）
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ヘルパー関数
@@ -1182,10 +1183,18 @@ if page == "ranking":
     tab_monthly, tab_alltime = st.tabs([f"📅 月間 ({month_label})", "🌟 全期間"])
 
     with tab_monthly:
-        render_ranking(get_monthly_ranking(), "月間合計")
+        try:
+            render_ranking(get_monthly_ranking(), "月間合計")
+        except Exception:
+            st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
+            st.stop()
 
     with tab_alltime:
-        render_ranking(get_all_time_ranking(), "全期間合計")
+        try:
+            render_ranking(get_all_time_ranking(), "全期間合計")
+        except Exception:
+            st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
+            st.stop()
 
     # フッター（OshiPay宣伝）
     footer_html = (
@@ -1828,7 +1837,11 @@ else: # Dashboard
             st.warning("このダッシュボードを開くにはパスワードが必要です。")
             auth_pass = st.text_input("パスワードを入力", type="password", key="auth_pass")
             if st.button("ロックを解除", type="primary"):
-                resp = get_db().table("creators").select("*").eq("acct_id", acct_id).execute()
+                try:
+                    resp = get_db().table("creators").select("*").eq("acct_id", acct_id).execute()
+                except Exception:
+                    st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
+                    st.stop()
                 if not resp.data:
                     # 既存ユーザーだが未パスワード設定の場合はここで初回設定扱いにする
                     register_creator(acct_id, auth_pass)
@@ -1978,7 +1991,7 @@ else: # Dashboard
             with st.expander("✨ QRコードを発行する"):
                 if st.button("QRコードを生成", use_container_width=True):
                     _final_id = slug.lower() if slug else acct_id
-                    support_url = f"{BASE_URL}?page=support&creator={_final_id}"
+                    support_url = f"{QR_BASE}/u/{_final_id}"
                     st.session_state.qr_url = support_url
                     st.session_state.qr_just_generated = True
                     st.session_state[f"creator_name_{acct_id}"] = name

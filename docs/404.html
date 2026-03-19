@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>OshiPay - 転送中です...</title>
+  <script>
+    const path = window.location.pathname;
+    if (path.startsWith('/u/')) {
+      const username = path.replace('/u/', '').replace(/\/$/, '');
+      window.location.href = "https://oshipay.streamlit.app/?page=support&creator=" + encodeURIComponent(username);
+    } else {
+      window.location.href = "https://oshipay.me/";
+    }
+  </script>
+</head>
+<body>
+  <p style="font-family:sans-serif;text-align:center;margin-top:40px;color:#666;">
+    応援ページへ移動しています...
+  </p>
+</body>
+</html>
