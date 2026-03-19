@@ -1842,14 +1842,6 @@ else: # Dashboard
             st.markdown(f'<div style="text-align:center;margin-top:12px;"><a href="{BASE_URL}?page=dashboard&fresh=1" target="_top" style="font-size:11px;color:rgba(240,240,245,0.35);text-decoration:underline;">🔄 別のアカウントを使う / 新規作成</a></div>', unsafe_allow_html=True)
             st.stop()
 
-        st.markdown(f"""
-        <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-            <div style="color: #8b5cf6; font-weight: 700; font-size: 14px; margin-bottom: 4px;">✅ Stripe連携済み</div>
-            <div style="font-size: 12px; color: rgba(240,240,245,0.6); margin-bottom: 12px;">ID: <code>{acct_id}</code></div>
-            <div style="font-size: 11px; color: #f97316; font-weight: 700; margin-bottom: 8px;">ブラウザを閉じるとログアウトされます。必ずこのページをブックマークして保存してください！</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
         _icon_list = list(ICON_OPTIONS.keys())
 
         # ── プロフィールテキスト（先に取得してdisplay_nameをデフォルト値に使う）──
@@ -1874,14 +1866,20 @@ else: # Dashboard
         _def_icon = st.session_state.get(f"creator_icon_{acct_id}", _icon_list[0])
         _def_icon_idx = _icon_list.index(_def_icon) if _def_icon in _icon_list else 0
 
-        # ── フィールド順: 表示名→アイコン→写真→自己紹介→SNS→ユーザID→保存→QR ──
-        name = st.text_input("表示名", value=_def_name)
-        icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx, key=f"icon_{acct_id}")
-
-        # ── プロフィール写真 ──
+        # ── プロフィール写真（一番上・丸枠センター）──
         _current_photo = _cr_data.get("photo_url") or ""
         if _current_photo:
-            st.image(_current_photo, width=80, caption="現在のプロフィール写真")
+            st.markdown(f"""
+            <div style="display:flex;justify-content:center;margin-bottom:16px;">
+                <img src="{_current_photo}" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(139,92,246,0.5);">
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="display:flex;justify-content:center;margin-bottom:16px;">
+                <div style="width:96px;height:96px;border-radius:50%;background:rgba(139,92,246,0.15);border:3px dashed rgba(139,92,246,0.4);display:flex;align-items:center;justify-content:center;font-size:32px;">👤</div>
+            </div>
+            """, unsafe_allow_html=True)
         uploaded_photo = st.file_uploader("📷 プロフィール写真を選ぶ（任意・自動圧縮）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
         if uploaded_photo:
             try:
