@@ -1901,6 +1901,9 @@ else: # Dashboard
             except Exception as e:
                 st.error(f"写真の保存に失敗しました: {e}")
 
+        name = st.text_input("表示名", value=_def_name)
+        icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx, key=f"icon_{acct_id}")
+
         bio = st.text_area("自己紹介（bio）", value=_cr_data.get("bio") or "", max_chars=500, key=f"bio_{acct_id}",
                            help="最大500文字。電話番号・メール・LINE IDは入力不可")
         st.caption(f"{len(_cr_data.get('bio') or '')}/500文字")
