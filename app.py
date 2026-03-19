@@ -1889,10 +1889,7 @@ else: # Dashboard
                 st.link_button("🌐 マイクロサイトを確認する", _ms_preview_url, use_container_width=True)
 
         # ── プロフィール写真アップロード ──
-        uploaded_photo = st.file_uploader("プロフィール写真（任意・2MBまで）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
-        if uploaded_photo and uploaded_photo.size > 2 * 1024 * 1024:
-            st.error("2MB以下の画像をアップロードしてください。")
-            uploaded_photo = None
+        uploaded_photo = st.file_uploader("プロフィール写真（任意・自動圧縮されます）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
         if uploaded_photo:
             try:
                 img = Image.open(uploaded_photo).convert("RGB")
