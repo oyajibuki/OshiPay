@@ -43,7 +43,8 @@ ICON_OPTIONS = {
     "🎤": "歌手・MC", "🎸": "ギター・バンド", "🎹": "ピアノ・キーボード",
     "🎨": "アーティスト・絵描き", "📷": "カメラマン・写真家", "☕": "カフェ・バリスタ",
     "✂️": "美容師・理容師", "🎮": "ゲーマー・配信者", "📚": "講師・先生",
-    "💻": "エンジニア・クリエイター", "🎭": "役者・パフォーマー", "🔥": "その他",
+    "💻": "エンジニア・クリエイター", "🎭": "役者・パフォーマー",
+    "🐱": "猫", "🐶": "犬", "🔥": "その他",
 }
 BASE_URL = os.environ.get("APP_URL", "https://oshipay.streamlit.app").rstrip('/') + '/'
 
@@ -447,6 +448,7 @@ st.markdown("""
 .selected-amount-display { text-align: center; font-size: 36px; font-weight: 900; background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 10px 0; }
 .stButton > button:not([kind="secondary"]) { width: 100%; background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316) !important; color: white !important; border: none !important; border-radius: 9999px !important; padding: 16px !important; font-weight: 700 !important; }
 .stButton > button[kind="secondary"] { background: transparent !important; border: 1px solid rgba(250,250,250,0.25) !important; color: rgba(250,250,250,0.85) !important; border-radius: 0.5rem !important; padding: 0.45rem 1rem !important; }
+[data-baseweb="popover"] { top: auto !important; bottom: auto !important; transform-origin: top center !important; }
 .oshi-footer { text-align: center; margin-top: 24px; font-size: 11px; color: rgba(240,240,245,0.35); }
 .oshi-footer a { color: #8b5cf6; text-decoration: none; }
 .legal-links a { font-size: 10px; color: rgba(240,240,245,0.3); text-decoration: none; margin: 0 5px; }
