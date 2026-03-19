@@ -1514,12 +1514,72 @@ elif page == "supporter_dashboard":
     </div>
     """, unsafe_allow_html=True)
     
+    # ── 年輪コイン ──────────────────────────────────────
+    st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="header" style="font-size:16px;">🪙 あなたの応援コイン</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:16px;">応援するたびに、コインに刻印が刻まれていきます。</div>', unsafe_allow_html=True)
+
+    def _coin_level(total):
+        if total >= 100000: return "🌈", "レインボー"
+        elif total >= 30000: return "💎", "ダイヤモンド"
+        elif total >= 10000: return "🥇", "ゴールド"
+        elif total >= 3000:  return "🥈", "シルバー"
+        else:                return "🪙", "ブロンズ"
+
+    try:
+        _my_supports = get_db().table("supports").select(
+            "creator_acct,creator_name,amount,message,created_at,reply_emoji,reply_text"
+        ).eq("supporter_id", sup_user["supporter_id"]).order("created_at", desc=False).execute()
+
+        _coin_map = {}
+        for s in (_my_supports.data or []):
+            acct = s["creator_acct"]
+            if acct not in _coin_map:
+                _coin_map[acct] = {"name": s["creator_name"], "total": 0, "count": 0, "records": []}
+            _coin_map[acct]["total"] += s["amount"]
+            _coin_map[acct]["count"] += 1
+            _coin_map[acct]["records"].append(s)
+
+        if _coin_map:
+            # クリエイター情報を上書き
+            _cr_info = get_db().table("creators").select("acct_id,display_name,name,photo_url,slug").in_(
+                "acct_id", list(_coin_map.keys())
+            ).execute()
+            for r in (_cr_info.data or []):
+                if r["acct_id"] in _coin_map:
+                    _coin_map[r["acct_id"]]["display_name"] = r.get("display_name") or r.get("name") or r["acct_id"]
+                    _coin_map[r["acct_id"]]["photo_url"]    = r.get("photo_url") or ""
+                    _coin_map[r["acct_id"]]["slug"]         = r.get("slug") or r["acct_id"]
+
+            for acct, data in _coin_map.items():
+                coin_emoji, coin_name = _coin_level(data["total"])
+                creator_name = data.get("display_name", data["name"])
+                label = f"{coin_emoji} {creator_name}　｜　累計 ¥{data['total']:,}　｜　{data['count']}回応援　【{coin_name}】"
+                with st.expander(label):
+                    for i, rec in enumerate(data["records"]):
+                        replied = "✉️ 返信あり" if rec.get("reply_emoji") or rec.get("reply_text") else "📭 未返信"
+                        date_str = rec["created_at"][:10]
+                        st.markdown(
+                            f"**第{i+1}刻印** — {date_str}　｜　¥{rec['amount']:,}　｜　{replied}"
+                        )
+                        if rec.get("message"):
+                            st.caption(f"💬 メッセージ: {rec['message']}")
+                        if rec.get("reply_emoji") or rec.get("reply_text"):
+                            st.caption(f"↩️ 返信: {rec.get('reply_emoji','')} {rec.get('reply_text','')}")
+                        if i < len(data["records"]) - 1:
+                            st.markdown('<hr style="border:0;border-top:1px solid rgba(255,255,255,0.08);margin:8px 0;">', unsafe_allow_html=True)
+        else:
+            st.info("まだ応援コインがありません。応援するとここにコインが刻まれます🪙")
+    except Exception as e:
+        st.warning(f"コインの読み込みに失敗しました: {e}")
+
+    # ── シェア ──────────────────────────────────────────
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
     st.markdown('<div class="header" style="font-size:16px;">📊 応援実績をシェアする</div>', unsafe_allow_html=True)
     portfolio_url = f"{BASE_URL}?page=portfolio&id={sup_user['supporter_id']}"
     st.link_button("🌐 応援実績ページを見る（公開用）", portfolio_url, use_container_width=True)
     st.code(portfolio_url, language="text")
-    
+
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
     with st.expander("🔑 パスワードを変更する"):
         cp_curr = st.text_input("現在のパスワード", type="password", key="cp_curr")
