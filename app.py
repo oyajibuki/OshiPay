@@ -1554,14 +1554,34 @@ elif page == "supporter_dashboard":
             for acct, data in _coin_map.items():
                 coin_emoji, coin_name = _coin_level(data["total"])
                 creator_name = data.get("display_name", data["name"])
-                label = f"{coin_emoji} {creator_name}　｜　累計 ¥{data['total']:,}　｜　{data['count']}回応援　【{coin_name}】"
+                photo_url    = data.get("photo_url", "")
+                # ラベルは短く・1行に収まるよう
+                label = f"{coin_emoji} {creator_name}　{data['count']}回応援　｜　ランク: {coin_name}"
                 with st.expander(label):
+                    # アイコン + 累計を先頭に表示
+                    _ic1, _ic2 = st.columns([1, 5])
+                    with _ic1:
+                        if photo_url:
+                            st.markdown(
+                                f'<img src="{photo_url}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">',
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.markdown(
+                                f'<div style="width:48px;height:48px;border-radius:50%;background:rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:22px;">{coin_emoji}</div>',
+                                unsafe_allow_html=True
+                            )
+                    with _ic2:
+                        st.markdown(
+                            f'<div style="font-weight:700;font-size:15px;color:#f0f0f5;">{creator_name}</div>'
+                            f'<div style="font-size:12px;color:rgba(255,255,255,0.5);">累計 ¥{data["total"]:,}　｜　{coin_name}</div>',
+                            unsafe_allow_html=True
+                        )
+                    st.markdown('<hr style="border:0;border-top:1px solid rgba(255,255,255,0.08);margin:10px 0;">', unsafe_allow_html=True)
                     for i, rec in enumerate(data["records"]):
                         replied = "✉️ 返信あり" if rec.get("reply_emoji") or rec.get("reply_text") else "📭 未返信"
                         date_str = rec["created_at"][:10]
-                        st.markdown(
-                            f"**第{i+1}刻印** — {date_str}　｜　¥{rec['amount']:,}　｜　{replied}"
-                        )
+                        st.markdown(f"**第{i+1}刻印** — {date_str}　｜　¥{rec['amount']:,}　｜　{replied}")
                         if rec.get("message"):
                             st.caption(f"💬 メッセージ: {rec['message']}")
                         if rec.get("reply_emoji") or rec.get("reply_text"):
