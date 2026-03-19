@@ -1247,9 +1247,8 @@ if _creator_param and not support_user:
             # DBにデータなし → クリエイター不在フラグ
             support_user = None
     except Exception:
-        # DBクエリ失敗（一時的なエラー）→ フォールバック
-        support_user = _creator_param
-        connect_acct = _creator_param
+        # DBクエリ失敗 → クリエイター特定不可
+        support_user = None
 elif support_user:
     # 旧URL形式でもDBからphoto_urlを取得
     try:
