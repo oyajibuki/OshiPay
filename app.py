@@ -374,9 +374,12 @@ def verify_creator(acct_id: str, password: str) -> bool:
         return resp.data[0]["password_hash"] == hash_password(password)
     except Exception: return False
 
-def register_creator(acct_id: str, password: str) -> tuple[bool, str]:
+def register_creator(acct_id: str, password: str, email: str = "") -> tuple[bool, str]:
     try:
-        get_db().table("creators").insert({"acct_id": acct_id, "password_hash": hash_password(password)}).execute()
+        data = {"acct_id": acct_id, "password_hash": hash_password(password)}
+        if email:
+            data["email"] = email
+        get_db().table("creators").insert(data).execute()
         return True, ""
     except Exception as e:
         return False, str(e)
@@ -1698,16 +1701,16 @@ else: # Dashboard
         tab_new, tab_recover, tab_forgot_c = st.tabs(["✨ 新規作成", "🔑 既存アカウントの復元", "🔓 パスワードを忘れた"])
         
         with tab_new:
-            # ② 「1回だけ・一生使えるQR」訴求
+            # 「1回だけ・一生使えるQR」訴求
             st.markdown("""
             <div style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);border-radius:12px;padding:14px 16px;margin-bottom:12px;text-align:center;">
                 <div style="font-size:15px;font-weight:700;color:#c4b5fd;">✨ 1回の設定で一生使えるQRコード</div>
-                <div style="font-size:11px;color:rgba(240,240,245,0.6);margin-top:4px;">SNSに貼るだけ。ファンから直接応援を受け取れます。</div>
+                <div style="font-size:11px;color:rgba(240,240,245,0.6);margin-top:4px;">無料で始められます。収益化は後からでもOK！</div>
             </div>
             """, unsafe_allow_html=True)
+            new_email = st.text_input("メールアドレス（必須・ログインIDをメールで受け取れます）", key="new_email", placeholder="example@gmail.com")
             st.caption("🔐 パスワード条件: 8文字以上・英字＋数字必須・同じ文字の3連続禁止（例: Oshi1234）")
             new_pass  = st.text_input("管理用パスワードを作成", type="password", key="new_pass")
-            new_email = st.text_input("メールアドレス（任意・IDをメールで受け取れます）", key="new_email", placeholder="example@gmail.com")
 
             _pass_ok = False
             if new_pass:
@@ -1717,59 +1720,27 @@ else: # Dashboard
                 else:
                     st.success("✅ パスワードOK")
 
-            # 明示的なボタンによる発行の意思確認
-            if st.checkbox("利用規約に同意して、新規にQRコードを発行して応援を受け取りますか？"):
-                if not new_pass:
+            if st.checkbox("利用規約に同意して、応援ページを作成する"):
+                if not new_email:
+                    st.warning("メールアドレスを入力してください。")
+                elif not new_pass:
                     st.warning("パスワードを入力してください。")
                 elif not _pass_ok:
                     st.warning("パスワードの条件を満たしてください。")
-                elif "onboarding_url" not in st.session_state:
-                    if st.button("✨ QRコードを発行する"):
-                        with st.spinner("Stripeと連携する準備をしています... (数秒かかります)"):
+                else:
+                    if st.button("✨ 応援ページを作成する（無料）", type="primary"):
+                        with st.spinner("応援ページを作成しています..."):
                             try:
-                                # アカウント作成（ウェブサイトURLなどを事前注入）
-                                acct_id = create_connect_account()
-                                _reg_ok, _reg_err = register_creator(acct_id, new_pass)
+                                creator_id = "usr_" + uuid.uuid4().hex[:16]
+                                _reg_ok, _reg_err = register_creator(creator_id, new_pass, email=new_email)
                                 if not _reg_ok:
-                                    st.error(f"DB登録エラー: {_reg_err}")
+                                    st.error(f"登録エラー: {_reg_err}")
                                     st.stop()
-                                # ④(4) acct_idのみメール送信（パスワードは送らない）
-                                if new_email:
-                                    send_acct_id_email(new_email, acct_id)
-                                st.session_state["creator_auth"] = acct_id
-                                # 登録用リンクを取得して保存
-                                st.session_state.onboarding_url = create_account_link(acct_id)
+                                send_acct_id_email(new_email, creator_id)
+                                st.session_state["creator_auth"] = creator_id
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"連携エラー: {e}")
-                
-                if "onboarding_url" in st.session_state:
-                    st.markdown(f"""
-                    <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 20px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 12px;">🌟</div>
-                        <div style="color: #f0f0f5; font-weight: 700; font-size: 16px; margin-bottom: 8px;">ステップ 1/2：本人確認・口座登録</div>
-                        <div style="font-size: 13px; color: rgba(240,240,245,0.7); margin-bottom: 16px;">
-                            下のボタンを押して、受け取り口座の設定を完了させてください。<br>
-                            完了すると自動的にここに戻ってきます。
-                        </div>
-                        <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; text-align: left; font-size: 12px; color: rgba(240,240,245,0.6); margin-bottom: 8px;">
-                            📋 <strong style="color:rgba(240,240,245,0.85);">次の画面で入力するもの（約5分）</strong><br>
-                            　① お名前・生年月日<br>
-                            　② ご住所<br>
-                            　③ 振込先の銀行口座<br><br>
-                            🔒 <strong style="color:rgba(240,240,245,0.85);">入力した個人情報はOshiPayには共有されません。</strong><br>
-                            　決済サービス（Stripe）とあなたの間だけで管理されます。
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    st.link_button("👉 本人確認・口座設定へ進む（約3分）", st.session_state.onboarding_url, type="primary")
-                    # 念のための自動リダイレクトJSも併用
-                    components.html(f'<script>window.top.location.href = "{st.session_state.onboarding_url}";</script>', height=0)
-                    if st.button("❌ キャンセルしてやり直す"):
-                        del st.session_state.onboarding_url
-                        st.rerun()
-            else:
-                st.warning("発行・連携を進めるには上のチェックボックスをオンにしてください。")
+                                st.error(f"エラー: {e}")
 
         with tab_recover:
             # ── 既存アカウント復元フォーム ──
@@ -1780,15 +1751,15 @@ else: # Dashboard
                     🔑 既にアカウントをお持ちの方
                 </div>
                 <div style="font-size:12px;color:rgba(240,240,245,0.5);">
-                    以前に発行したURLに含まれる <code>acct_</code> から始まるIDを入力してください
+                    登録完了メールに記載の <code>usr_</code> または <code>acct_</code> から始まるIDを入力してください
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            recover_input = st.text_input("アカウントID", placeholder="acct_xxxxxxxxxxxxxxxxxx", label_visibility="collapsed")
+            recover_input = st.text_input("アカウントID", placeholder="usr_xxxxxxxxxxxxxxxx", label_visibility="collapsed")
             recover_pass = st.text_input("パスワード", type="password", placeholder="パスワードを入力")
             if st.button("✅ このアカウントで開く", use_container_width=True):
                 rid = recover_input.strip()
-                if rid.startswith("acct_") and len(rid) > 10 and recover_pass:
+                if rid and len(rid) > 5 and recover_pass:
                     resp = get_db().table("creators").select("*").eq("acct_id", rid).execute()
                     if not resp.data:
                         # まだパスワードが設定されていない既存アカウントへの対応
@@ -1808,27 +1779,43 @@ else: # Dashboard
                     st.error("アカウントIDとパスワードを正しく入力してください。")
 
         with tab_forgot_c:
-            st.markdown('<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px;">Stripe連携時のメールアドレスで本人確認し、仮パスワードを発行します。</div>', unsafe_allow_html=True)
-            fc_acct  = st.text_input("アカウントID", key="fc_acct", placeholder="acct_xxxxxxxxxxxxxxxxxx")
-            fc_email = st.text_input("Stripe登録メールアドレス", key="fc_email", placeholder="example@email.com")
+            st.markdown('<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px;">登録時のメールアドレスで本人確認し、仮パスワードを発行します。</div>', unsafe_allow_html=True)
+            fc_acct  = st.text_input("アカウントID（usr_ または acct_ で始まる）", key="fc_acct", placeholder="usr_xxxxxxxxxxxxxxxx")
+            fc_email = st.text_input("登録メールアドレス", key="fc_email", placeholder="example@email.com")
             if st.button("仮パスワードを発行", key="fc_btn", use_container_width=True):
                 if fc_acct and fc_email:
-                    try:
-                        acct_info = stripe.Account.retrieve(fc_acct)
-                        stripe_email = acct_info.get("email", "")
-                        if stripe_email.lower() == fc_email.strip().lower():
-                            temp_pass = uuid.uuid4().hex[:8]
-                            resp = get_db().table("creators").select("acct_id").eq("acct_id", fc_acct).execute()
-                            if resp.data:
-                                get_db().table("creators").update({"password_hash": hash_password(temp_pass)}).eq("acct_id", fc_acct).execute()
+                    if fc_acct.strip().startswith("usr_"):
+                        # 新方式: DBに保存したemailで照合
+                        try:
+                            resp = get_db().table("creators").select("acct_id,email").eq("acct_id", fc_acct.strip()).maybe_single().execute()
+                            db_email = (resp.data or {}).get("email", "")
+                            if db_email and db_email.lower() == fc_email.strip().lower():
+                                temp_pass = uuid.uuid4().hex[:8]
+                                get_db().table("creators").update({"password_hash": hash_password(temp_pass)}).eq("acct_id", fc_acct.strip()).execute()
+                                st.success("本人確認完了！ログイン後にパスワードを変更してください。")
+                                st.info(f"🔑 仮パスワード: `{temp_pass}`")
                             else:
-                                register_creator(fc_acct, temp_pass)
-                            st.success("本人確認完了！ログイン後にパスワードを変更してください。")
-                            st.info(f"🔑 仮パスワード: `{temp_pass}`")
-                        else:
-                            st.error("メールアドレスが一致しません。Stripe連携時のメールアドレスを入力してください。")
-                    except Exception:
-                        st.error("アカウントIDが見つかりません。")
+                                st.error("メールアドレスが一致しません。")
+                        except Exception:
+                            st.error("アカウントIDが見つかりません。")
+                    else:
+                        # 旧方式(acct_): Stripe APIで照合
+                        try:
+                            acct_info = stripe.Account.retrieve(fc_acct.strip())
+                            stripe_email = acct_info.get("email", "")
+                            if stripe_email.lower() == fc_email.strip().lower():
+                                temp_pass = uuid.uuid4().hex[:8]
+                                resp = get_db().table("creators").select("acct_id").eq("acct_id", fc_acct.strip()).execute()
+                                if resp.data:
+                                    get_db().table("creators").update({"password_hash": hash_password(temp_pass)}).eq("acct_id", fc_acct.strip()).execute()
+                                else:
+                                    register_creator(fc_acct.strip(), temp_pass)
+                                st.success("本人確認完了！ログイン後にパスワードを変更してください。")
+                                st.info(f"🔑 仮パスワード: `{temp_pass}`")
+                            else:
+                                st.error("メールアドレスが一致しません。")
+                        except Exception:
+                            st.error("アカウントIDが見つかりません。")
                 else:
                     st.warning("IDとメールアドレスを入力してください。")
     else:
