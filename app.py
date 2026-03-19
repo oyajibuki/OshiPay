@@ -16,6 +16,8 @@ import stripe
 import qrcode
 import urllib.parse
 import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
 from email.utils import formatdate
 from PIL import Image
@@ -105,6 +107,38 @@ def send_support_email(to_email, creator_name, amount, message):
         subject = f"{creator_name}さんに応援が届きました！ (OshiPay)"
         body = f"{creator_name}さん\n\nOshiPayを通じて応援が届きました！\n\n💰 応援金額: {amount:,}円\n💬 メッセージ:\n{message if message else '（なし）'}\n\n--\nOshiPay\n{BASE_URL}"
         msg = MIMEText(body); msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
+        return True, "送信成功"
+    except Exception as e: return False, str(e)
+
+def send_qr_email(to_email: str, acct_id: str, support_url: str, qr_bytes: bytes) -> tuple[bool, str]:
+    try:
+        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
+        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
+        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
+        subject = "【OshiPay】QRコード・応援URLをお送りします"
+        body = f"OshiPayをご利用いただきありがとうございます。\n\nQRコードと応援URLをお送りします。\nSNSやイベントでファンに共有してください！\n\n📎 応援URL:\n{support_url}\n\nQRコードは添付ファイルをご確認ください。\n\n--\nOshiPay\n{BASE_URL}"
+        msg = MIMEMultipart()
+        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        img_part = MIMEImage(qr_bytes, name=f"oshipay_qr_{acct_id}.png")
+        img_part.add_header("Content-Disposition", "attachment", filename=f"oshipay_qr_{acct_id}.png")
+        msg.attach(img_part)
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
+        return True, "送信成功"
+    except Exception as e: return False, str(e)
+
+def send_welcome_email(to_email: str, display_name: str, supporter_id: str) -> tuple[bool, str]:
+    try:
+        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
+        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
+        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
+        subject = "【OshiPay】ご登録ありがとうございます"
+        body = f"{display_name} さん\n\nOshiPayへのご登録ありがとうございます！\n\n🎫 サポーターID: {supporter_id}\n\nこのIDはログイン時に必要です。大切に保管してください。\n\nこれからも推し活をお楽しみください！\n\n--\nOshiPay\n{BASE_URL}"
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
         return True, "送信成功"
@@ -1419,6 +1453,7 @@ elif page == "supporter_dashboard":
                             }).eq("supporter_id", r_sid).execute()
                             st.success("登録完了！ログインしました。")
                             st.session_state["supporter_auth"] = {"supporter_id": r_sid, "display_name": r_name, "email": r_email}
+                            send_welcome_email(r_email, r_name, r_sid)
                             st.rerun()
                     else:
                         sup_check = get_db().table("supports").select("support_id").eq("supporter_id", r_sid).execute()
@@ -1434,6 +1469,7 @@ elif page == "supporter_dashboard":
                                 }).execute()
                                 st.success("登録完了！ログインしました。")
                                 st.session_state["supporter_auth"] = {"supporter_id": r_sid, "display_name": r_name, "email": r_email}
+                                send_welcome_email(r_email, r_name, r_sid)
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"登録エラー: {e}")
@@ -1857,5 +1893,18 @@ else: # Dashboard
                 mime="text/plain",
                 use_container_width=True,
             )
+            # ── メール送信 ──
+            st.markdown('<div style="margin-top:14px;font-size:0.82rem;color:rgba(255,255,255,0.6);">📧 QRと情報をメールで送信</div>', unsafe_allow_html=True)
+            _qr_ecol1, _qr_ecol2 = st.columns([3, 1])
+            _qr_email_to = _qr_ecol1.text_input("qr_email_label", placeholder="送信先メールアドレス", key="qr_send_email", label_visibility="collapsed")
+            if _qr_ecol2.button("送信", use_container_width=True, key="qr_email_send_btn"):
+                if _qr_email_to:
+                    _qr_ok, _qr_err = send_qr_email(_qr_email_to, acct_id, st.session_state.qr_url, qr_bytes)
+                    if _qr_ok:
+                        st.success("✅ QRコードをメールで送信しました！")
+                    else:
+                        st.error(f"送信失敗: {_qr_err}")
+                else:
+                    st.warning("メールアドレスを入力してください。")
     st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
