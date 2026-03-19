@@ -1073,11 +1073,24 @@ if page == "ranking":
         for s in supports:
             acct = s["creator_acct"]
             if acct not in creator_map:
-                creator_map[acct] = {"name": s["creator_name"], "acct": acct, "total": 0, "supports": []}
+                creator_map[acct] = {"name": s["creator_name"], "acct": acct, "total": 0, "count": 0, "first_at": s.get("created_at",""), "has_reply": False, "supports": []}
             creator_map[acct]["total"] += s["amount"]
+            creator_map[acct]["count"] += 1
+            if s.get("created_at","") < creator_map[acct]["first_at"] or not creator_map[acct]["first_at"]:
+                creator_map[acct]["first_at"] = s.get("created_at","")
+            if s.get("reply_emoji") or s.get("reply_text"):
+                creator_map[acct]["has_reply"] = True
             creator_map[acct]["supports"].append(s)
 
-        ranked = sorted(creator_map.values(), key=lambda x: x["total"], reverse=True)
+        ranked = sorted(
+            creator_map.values(),
+            key=lambda x: (
+                -x["total"],           # 1位: 応援額が多い順
+                x["first_at"],         # 2位A: 先に応援された順（昇順）
+                -x["count"],           # 3位C: 応援回数が多い順
+                not x["has_reply"],    # 4位B: 返信ありが上（False=0が先）
+            )
+        )
 
         # creatorsテーブルから display_name / slug を一括取得して上書き
         try:
