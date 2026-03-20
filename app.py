@@ -477,19 +477,17 @@ def get_stamp_weekly_ranking() -> list:
         return []
 
 def get_ranking_creators() -> list:
-    """bio・slug・display_name が全て設定されたクリエイター一覧を取得"""
+    """display_name が設定されたクリエイター一覧を取得（ランキング表示条件）"""
     try:
         resp = (
             get_db().table("creators")
             .select("acct_id,display_name,name,slug,bio,photo_url,stripe_acct_id")
-            .not_.is_("slug", "null")
-            .not_.is_("bio", "null")
             .not_.is_("display_name", "null")
             .execute()
         )
         return [
             r for r in (resp.data or [])
-            if r.get("slug") and r.get("bio") and r.get("display_name")
+            if r.get("display_name")
         ]
     except Exception:
         return []
