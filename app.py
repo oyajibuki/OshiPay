@@ -425,6 +425,17 @@ def get_all_time_ranking() -> list:
     resp = get_db().table("supports").select("*").execute()
     return resp.data or []
 
+def get_stamp_ranking() -> list:
+    """スタンプランキング: stamps テーブルを creator_acct ごとに集計して返す"""
+    try:
+        from collections import Counter
+        resp = get_db().table("stamps").select("creator_acct").execute()
+        rows = resp.data or []
+        counter = Counter(r["creator_acct"] for r in rows)
+        return [{"creator_acct": acct, "stamp_count": cnt} for acct, cnt in counter.most_common()]
+    except Exception:
+        return []
+
 def get_supporters_map(supporter_ids: list) -> dict:
     """supporter_id リストから {supporter_id: display_name} マップを返す"""
     if not supporter_ids:
@@ -486,6 +497,10 @@ document.addEventListener('click', function(e) {
 # ── ルーティング ──
 params = st.query_params
 page = params.get("page", "lp")
+
+# ── デバイスID（スタンプ重複防止用・セッションごとに生成）──
+if "device_id" not in st.session_state:
+    st.session_state["device_id"] = "dev_" + uuid.uuid4().hex[:20]
 
 # LocalStorage保存用の簡易JS
 def save_account_id_js(acct_id):
@@ -1111,18 +1126,28 @@ if page == "ranking":
             )
         )
 
-        # creatorsテーブルから display_name / slug を一括取得して上書き
+        # creatorsテーブルから display_name / slug / stripe_acct_id を一括取得して上書き
         try:
             _acct_ids = [c["acct"] for c in ranked]
-            _cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url").in_("acct_id", _acct_ids).execute()
+            _cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url,stripe_acct_id").in_("acct_id", _acct_ids).execute()
             _cr_name_map = {r["acct_id"]: r for r in (_cr_rows.data or [])}
             for c in ranked:
                 _cr = _cr_name_map.get(c["acct"], {})
                 _dn = _cr.get("display_name") or _cr.get("name") or _cr.get("slug") or c["name"]
                 c["name"] = _dn
                 c["photo_url"] = _cr.get("photo_url") or ""
+                c["has_stripe"] = bool(_cr.get("stripe_acct_id"))
         except Exception:
             pass
+
+        # Stripe未登録（受取口座なし）は応援額ランキングの最下位に固定
+        ranked = sorted(ranked, key=lambda x: (
+            not x.get("has_stripe", True),  # Stripe未登録は後ろ（True=1が後ろ）
+            -x["total"],
+            x["first_at"],
+            -x["count"],
+            not x["has_reply"],
+        ))
 
         # サポーター名マップを一括取得
         all_sup_ids = list({s["supporter_id"] for c in ranked for s in c["supports"] if s.get("supporter_id")})
@@ -1169,12 +1194,16 @@ if page == "ranking":
                     f'border:2px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;'
                     f'font-size:18px;flex-shrink:0;">🎤</div>'
                 )
+            _no_stripe_badge = (
+                '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(100,100,100,0.2);'
+                'color:rgba(240,240,245,0.4);border:1px solid rgba(255,255,255,0.1);margin-left:6px;white-space:nowrap;">受取口座未登録</span>'
+            ) if not creator.get("has_stripe", True) else ""
             card_html = (
                 f'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:16px 20px;margin-bottom:12px;cursor:pointer;" onclick="window.open(\'{creator_url}\', \'_blank\')">'
                 f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
                 f'<span style="font-size:22px;min-width:28px;text-align:center;">{medal}</span>'
                 f'{_avatar_html}'
-                f'<a href="{creator_url}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{creator["name"]}</a>'
+                f'<div style="flex:1;min-width:0;"><a href="{creator_url}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;">{creator["name"]}</a>{_no_stripe_badge}</div>'
                 f'<span style="font-size:11px;color:rgba(240,240,245,0.4);">{total_label}</span>'
                 f'<span style="font-size:18px;font-weight:900;color:#f97316;">{creator["total"]:,}</span>'
                 f'</div>'
@@ -1183,7 +1212,7 @@ if page == "ranking":
             )
             st.markdown(card_html, unsafe_allow_html=True)
 
-    tab_monthly, tab_alltime = st.tabs([f"📅 月間 ({month_label})", "🌟 全期間"])
+    tab_monthly, tab_alltime, tab_stamps = st.tabs([f"📅 月間 ({month_label})", "🌟 全期間", "💜 スタンプ"])
 
     with tab_monthly:
         try:
@@ -1195,6 +1224,45 @@ if page == "ranking":
     with tab_alltime:
         try:
             render_ranking(get_all_time_ranking(), "全期間合計")
+        except Exception:
+            st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
+            st.stop()
+
+    with tab_stamps:
+        try:
+            _stamp_data = get_stamp_ranking()
+            if not _stamp_data:
+                st.markdown('<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.35);font-size:14px;">まだスタンプデータがありません 🌱</div>', unsafe_allow_html=True)
+            else:
+                _s_acct_ids = [d["creator_acct"] for d in _stamp_data]
+                try:
+                    _s_cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url").in_("acct_id", _s_acct_ids).execute()
+                    _s_cr_map  = {r["acct_id"]: r for r in (_s_cr_rows.data or [])}
+                except Exception:
+                    _s_cr_map = {}
+                _s_medals = ["🥇", "🥈", "🥉"]
+                for _si, _sd in enumerate(_stamp_data):
+                    _sa    = _sd["creator_acct"]
+                    _scnt  = _sd["stamp_count"]
+                    _scr   = _s_cr_map.get(_sa, {})
+                    _sname = _scr.get("display_name") or _scr.get("name") or _scr.get("slug") or _sa
+                    _sphoto= _scr.get("photo_url") or ""
+                    _smedal= _s_medals[_si] if _si < 3 else f"{_si+1}位"
+                    _surl  = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_sa}"
+                    if _sphoto:
+                        _sav = f'<img src="{_sphoto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.15);flex-shrink:0;">'
+                    else:
+                        _sav = '<div style="width:40px;height:40px;border-radius:50%;background:rgba(139,92,246,0.2);border:2px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🎤</div>'
+                    st.markdown(
+                        f'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 18px;margin-bottom:10px;">'
+                        f'<div style="display:flex;align-items:center;gap:10px;">'
+                        f'<span style="font-size:22px;min-width:28px;text-align:center;">{_smedal}</span>'
+                        f'{_sav}'
+                        f'<a href="{_surl}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{_sname}</a>'
+                        f'<span style="font-size:18px;font-weight:900;color:#c4b5fd;">{_scnt} 💜</span>'
+                        f'</div></div>',
+                        unsafe_allow_html=True
+                    )
         except Exception:
             st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
             st.stop()
@@ -1315,6 +1383,45 @@ if page == "support" and support_user:
     else:
         st.markdown(f'<div class="support-avatar">{support_icon}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-name">{support_name or "Creator"}</div><div class="support-label">を応援しよう</div>', unsafe_allow_html=True)
+
+    # ── スタンプ応援（無料・1端末1回）──
+    _device_hash = st.session_state.get("device_id", "anon")
+    try:
+        _sr = get_db().table("stamps").select("stamp_type").eq("creator_acct", connect_acct).eq("device_hash", _device_hash).maybe_single().execute()
+        _already_stamped = bool(_sr.data)
+        _my_stamp_emoji  = (_sr.data or {}).get("stamp_type", "")
+    except Exception:
+        _already_stamped = False
+        _my_stamp_emoji  = ""
+    try:
+        _sc = get_db().table("stamps").select("id", count="exact").eq("creator_acct", connect_acct).execute()
+        _stamp_total = _sc.count or 0
+    except Exception:
+        _stamp_total = 0
+
+    st.markdown('<div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:14px;padding:14px 16px;margin-bottom:18px;">', unsafe_allow_html=True)
+    if _stamp_total > 0:
+        st.markdown(f'<div style="text-align:center;font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:8px;">💜 累計 {_stamp_total} 件の応援スタンプ</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div style="text-align:center;font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:8px;">💜 無料で応援スタンプを送ろう</div>', unsafe_allow_html=True)
+
+    if _already_stamped:
+        st.markdown(f'<div style="text-align:center;font-size:14px;color:#c4b5fd;font-weight:700;padding:6px 0;">✅ {_my_stamp_emoji} スタンプ送信済み！ありがとうございます</div>', unsafe_allow_html=True)
+    else:
+        _scols = st.columns(4)
+        for _si, _semoji in enumerate(["🔥", "👏", "💜", "⭐"]):
+            if _scols[_si].button(_semoji, key=f"stamp_btn_{_semoji}", use_container_width=True):
+                try:
+                    get_db().table("stamps").insert({
+                        "creator_acct": connect_acct,
+                        "stamp_type":   _semoji,
+                        "device_hash":  _device_hash,
+                    }).execute()
+                    st.rerun()
+                except Exception:
+                    st.info("すでにスタンプ済みです")
+    st.markdown('</div>', unsafe_allow_html=True)
+
     if "amt" not in st.session_state: st.session_state.amt = 100
     
     st.markdown('<div class="section-subtitle">応援する金額を選んで、メッセージを送ろう</div>', unsafe_allow_html=True)
@@ -1850,6 +1957,46 @@ else: # Dashboard
             _cr_data = _cr.data or {}
         except Exception:
             _cr_data = {}
+
+        # ── スタンプ数・推定換算・収益化ボタン ──
+        try:
+            _my_stamp_resp = get_db().table("stamps").select("id", count="exact").eq("creator_acct", acct_id).execute()
+            _my_stamp_count = _my_stamp_resp.count or 0
+        except Exception:
+            _my_stamp_count = 0
+        _est_yen    = _my_stamp_count * 100
+        _has_stripe = bool(_cr_data.get("stripe_acct_id"))
+
+        st.markdown(f"""
+        <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:16px 20px;margin-bottom:16px;text-align:center;">
+            <div style="font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:4px;">💜 あなたへの応援スタンプ</div>
+            <div style="font-size:28px;font-weight:900;color:#c4b5fd;">{_my_stamp_count} スタンプ</div>
+            <div style="font-size:13px;color:rgba(240,240,245,0.6);margin-top:4px;">
+                受け取り設定をすると 推定
+                <span style="color:#f97316;font-weight:700;">{_est_yen:,}円</span> が受け取れます
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if acct_id.startswith("usr_") and not _has_stripe:
+            if st.button("💰 受け取りを有効にする（収益化する）", type="primary", key="monetize_btn", use_container_width=True):
+                try:
+                    _cr_email = _cr_data.get("email") or ""
+                    _new_stripe_kwargs = {
+                        "type": "express", "country": "JP",
+                        "capabilities": {"card_payments": {"requested": True}, "transfers": {"requested": True}},
+                        "business_type": "individual",
+                        "business_profile": {"mcc": "7922", "product_description": "OshiPay - 投げ銭サービス", "url": BASE_URL},
+                    }
+                    if _cr_email:
+                        _new_stripe_kwargs["email"] = _cr_email
+                    _new_stripe_acct = stripe.Account.create(**_new_stripe_kwargs)
+                    get_db().table("creators").update({"stripe_acct_id": _new_stripe_acct.id}).eq("acct_id", acct_id).execute()
+                    _link_url = create_account_link(_new_stripe_acct.id)
+                    st.markdown(f'<script>window.top.location.href = "{_link_url}";</script>', unsafe_allow_html=True)
+                    st.link_button("Stripeで受け取り設定を完了する →", _link_url)
+                except Exception as _se:
+                    st.error(f"エラー: {_se}")
 
         _def_name = st.session_state.get(f"creator_name_{acct_id}", "")
         if not _def_name:
