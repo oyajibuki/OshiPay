@@ -46,7 +46,7 @@ ICON_OPTIONS = {
     "💻": "エンジニア・クリエイター", "🎭": "役者・パフォーマー",
     "🐱": "猫", "🐶": "犬", "🔥": "その他",
 }
-BASE_URL = os.environ.get("APP_URL", "https://oshipay.streamlit.app").rstrip('/') + '/'
+BASE_URL = os.environ.get("APP_URL", "https://oshipay.me").rstrip('/') + '/'
 LP_URL   = "https://oshipay.me/"
 QR_BASE  = "https://oshipay.me"   # QRコードのベースURL（カスタムドメイン）
 
@@ -2653,9 +2653,13 @@ else: # Dashboard
         else:
             st.info("💾 プロフィールを保存すると、QRコードを発行できます。")
 
-        # 返信ダッシュボードへのリンク
-        _reply_url = f"{BASE_URL}?page=reply_view&acct={acct_id}"
-        st.link_button("💌 応援メッセージ・返信ダッシュボードを開く", url=_reply_url, use_container_width=True)
+        # 返信ダッシュボードへのリンク（同一セッション内遷移でパスワード省略）
+        if st.button("💌 応援メッセージ・返信ダッシュボードを開く", use_container_width=True, key="reply_dash_btn"):
+            st.session_state["creator_auth"] = acct_id
+            st.session_state["reply_auth"]   = acct_id
+            st.query_params["page"] = "reply_view"
+            st.query_params["acct"] = acct_id
+            st.rerun()
 
         # パスワード変更
         with st.expander("🔑 パスワードを変更する"):
