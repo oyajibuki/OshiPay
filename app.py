@@ -25,7 +25,7 @@ from PIL import Image
 # ── ページ設定 ──
 st.set_page_config(
     page_title="OshiPay",
-    page_icon="https://oyajibuki.github.io/OshiPay/favicon.png?v=2",
+    page_icon="https://oyajibuki.github.io/OshiPay/favicon.png?v=4",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
@@ -427,13 +427,51 @@ def get_all_time_ranking() -> list:
     resp = get_db().table("supports").select("*").execute()
     return resp.data or []
 
+def get_weekly_ranking() -> list:
+    """週間ランキング用: 水曜00:00〜翌週火曜23:59 JST"""
+    jst = datetime.timezone(datetime.timedelta(hours=9))
+    now_jst = datetime.datetime.now(jst)
+    days_since_wed = (now_jst.weekday() - 2) % 7
+    week_start = (now_jst - datetime.timedelta(days=days_since_wed)).replace(hour=0, minute=0, second=0, microsecond=0)
+    week_end = week_start + datetime.timedelta(days=7) - datetime.timedelta(seconds=1)
+    ws_iso = week_start.astimezone(datetime.timezone.utc).isoformat()
+    we_iso = week_end.astimezone(datetime.timezone.utc).isoformat()
+    resp = get_db().table("supports").select("*").gte("created_at", ws_iso).lte("created_at", we_iso).execute()
+    return resp.data or []
+
 def get_stamp_ranking() -> list:
-    """スタンプランキング: stamps テーブルを creator_acct ごとに集計して返す"""
+    """スタンプランキング（全期間）"""
     try:
         from collections import Counter
         resp = get_db().table("stamps").select("creator_acct").execute()
-        rows = resp.data or []
-        counter = Counter(r["creator_acct"] for r in rows)
+        counter = Counter(r["creator_acct"] for r in (resp.data or []))
+        return [{"creator_acct": acct, "stamp_count": cnt} for acct, cnt in counter.most_common()]
+    except Exception:
+        return []
+
+def get_stamp_monthly_ranking() -> list:
+    """スタンプランキング（月間）"""
+    try:
+        from collections import Counter
+        now = datetime.datetime.now(datetime.timezone.utc)
+        start = datetime.datetime(now.year, now.month, 1, tzinfo=datetime.timezone.utc).isoformat()
+        resp = get_db().table("stamps").select("creator_acct").gte("created_at", start).execute()
+        counter = Counter(r["creator_acct"] for r in (resp.data or []))
+        return [{"creator_acct": acct, "stamp_count": cnt} for acct, cnt in counter.most_common()]
+    except Exception:
+        return []
+
+def get_stamp_weekly_ranking() -> list:
+    """スタンプランキング（週間: 水〜火）"""
+    try:
+        from collections import Counter
+        jst = datetime.timezone(datetime.timedelta(hours=9))
+        now_jst = datetime.datetime.now(jst)
+        days_since_wed = (now_jst.weekday() - 2) % 7
+        week_start = (now_jst - datetime.timedelta(days=days_since_wed)).replace(hour=0, minute=0, second=0, microsecond=0)
+        ws_iso = week_start.astimezone(datetime.timezone.utc).isoformat()
+        resp = get_db().table("stamps").select("creator_acct").gte("created_at", ws_iso).execute()
+        counter = Counter(r["creator_acct"] for r in (resp.data or []))
         return [{"creator_acct": acct, "stamp_count": cnt} for acct, cnt in counter.most_common()]
     except Exception:
         return []
@@ -518,9 +556,15 @@ document.addEventListener('click', function(e) {
 params = st.query_params
 page = params.get("page", "lp")
 
-# ── デバイスID（スタンプ重複防止用・セッションごとに生成）──
-if "device_id" not in st.session_state:
-    st.session_state["device_id"] = "dev_" + uuid.uuid4().hex[:20]
+# ── デバイスID（スタンプ重複防止用・URLパラメータで永続化）──
+# ブラウザリフレッシュ後も同じIDを維持するためにURLパラメータに保存する
+_qp_did = params.get("did", "")
+if _qp_did:
+    st.session_state["device_id"] = _qp_did
+elif "device_id" not in st.session_state:
+    _new_did = "dev_" + uuid.uuid4().hex[:20]
+    st.session_state["device_id"] = _new_did
+    st.query_params["did"] = _new_did
 
 # LocalStorage保存用の簡易JS
 def save_account_id_js(acct_id):
@@ -902,13 +946,13 @@ if page == "reply_view":
         st.markdown(f"""
         <div style="background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.3);border-radius:14px;padding:16px 20px;margin-bottom:16px;">
             <div style="font-size:13px;color:#4ade80;font-weight:700;margin-bottom:4px;">💰 送金待ち応援（{len(_rv_pending)}件 / 合計 {_rv_pending_total:,}円）</div>
-            <div style="font-size:11px;color:rgba(240,240,245,0.5);">ファンに連絡して入金確認後に確定します。24時間以内に振り込みない場合には強制キャンセルとなります。</div>
+            <div style="font-size:11px;color:rgba(240,240,245,0.5);">ファンに連絡して入金確認後に確定します。72時間以内に振り込みない場合には強制キャンセルとなります。</div>
         </div>
         """, unsafe_allow_html=True)
         for _rvp in _rv_pending:
             _rvp_msg = _rvp.get("message") or "（メッセージなし）"
             _rvp_contact = _rvp.get("contact_info") or "（連絡先なし）"
-            _rvp_date = (_rvp.get("created_at") or "")[:10]
+            _rvp_date = (_rvp.get("created_at") or "")[:16].replace("T", " ")
             _rvp_exp  = (_rvp.get("expires_at") or "")[:16].replace("T", " ")
             st.markdown(f"""
             <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(74,222,128,0.2);border-radius:14px;padding:16px;margin-bottom:10px;">
@@ -1147,10 +1191,17 @@ if page == "test":
 
     st.stop()
 
-# ── ランキング（月間 / 全期間）──
+# ── ランキング（週間 / 月間 / 全期間）──
 if page == "ranking":
     now = datetime.datetime.now(datetime.timezone.utc)
     month_label = f"{now.year}年{now.month}月"
+    # 週間ラベル計算（水曜00:00 JST 〜 翌火曜23:59 JST）
+    _jst = datetime.timezone(datetime.timedelta(hours=9))
+    _now_jst = datetime.datetime.now(_jst)
+    _days_since_wed = (_now_jst.weekday() - 2) % 7
+    _wk_start = (_now_jst - datetime.timedelta(days=_days_since_wed)).replace(hour=0, minute=0, second=0, microsecond=0)
+    _wk_end   = _wk_start + datetime.timedelta(days=6)
+    week_label = f"{_wk_start.month}/{_wk_start.day}(水)〜{_wk_end.month}/{_wk_end.day}(火)"
 
     st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🏆 応援ランキング</div>', unsafe_allow_html=True)
@@ -1275,13 +1326,22 @@ if page == "ranking":
             )
             st.markdown(card_html, unsafe_allow_html=True)
 
-    tab_monthly, tab_alltime, tab_stamps = st.tabs([f"📅 月間 ({month_label})", "🌟 全期間", "💜 スタンプ"])
+    tab_weekly, tab_monthly, tab_alltime, tab_stamps = st.tabs([
+        f"📆 週間 ({week_label})", f"📅 月間 ({month_label})", "🌟 全期間", "💜 スタンプ"
+    ])
 
     # プロフィール完成クリエイター一覧（全タブ共通）
     try:
         _base_creators = get_ranking_creators()
     except Exception:
         _base_creators = []
+
+    with tab_weekly:
+        try:
+            render_ranking(get_weekly_ranking(), "週間合計", base_creators=_base_creators)
+        except Exception:
+            st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
+            st.stop()
 
     with tab_monthly:
         try:
@@ -1297,41 +1357,49 @@ if page == "ranking":
             st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
             st.stop()
 
+    def _render_stamp_list(stamp_data):
+        """スタンプランキングリストを描画するヘルパー"""
+        if not stamp_data:
+            st.markdown('<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,0.35);font-size:14px;">まだスタンプデータがありません 🌱</div>', unsafe_allow_html=True)
+            return
+        _s_acct_ids = [d["creator_acct"] for d in stamp_data]
+        try:
+            _s_cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url").in_("acct_id", _s_acct_ids).execute()
+            _s_cr_map  = {r["acct_id"]: r for r in (_s_cr_rows.data or [])}
+        except Exception:
+            _s_cr_map = {}
+        _s_medals = ["🥇", "🥈", "🥉"]
+        for _si, _sd in enumerate(stamp_data):
+            _sa    = _sd["creator_acct"]
+            _scnt  = _sd["stamp_count"]
+            _scr   = _s_cr_map.get(_sa, {})
+            _sname = _scr.get("display_name") or _scr.get("name") or _scr.get("slug") or _sa
+            _sphoto= _scr.get("photo_url") or ""
+            _smedal= _s_medals[_si] if _si < 3 else f"{_si+1}位"
+            _surl  = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_sa}"
+            _sav = (f'<img src="{_sphoto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.15);flex-shrink:0;">'
+                    if _sphoto else
+                    '<div style="width:40px;height:40px;border-radius:50%;background:rgba(139,92,246,0.2);border:2px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🎤</div>')
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 18px;margin-bottom:10px;">'
+                f'<div style="display:flex;align-items:center;gap:10px;">'
+                f'<span style="font-size:22px;min-width:28px;text-align:center;">{_smedal}</span>'
+                f'{_sav}'
+                f'<a href="{_surl}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{_sname}</a>'
+                f'<span style="font-size:18px;font-weight:900;color:#c4b5fd;">{_scnt} 💜</span>'
+                f'</div></div>',
+                unsafe_allow_html=True
+            )
+
     with tab_stamps:
         try:
-            _stamp_data = get_stamp_ranking()
-            if not _stamp_data:
-                st.markdown('<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.35);font-size:14px;">まだスタンプデータがありません 🌱</div>', unsafe_allow_html=True)
-            else:
-                _s_acct_ids = [d["creator_acct"] for d in _stamp_data]
-                try:
-                    _s_cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url").in_("acct_id", _s_acct_ids).execute()
-                    _s_cr_map  = {r["acct_id"]: r for r in (_s_cr_rows.data or [])}
-                except Exception:
-                    _s_cr_map = {}
-                _s_medals = ["🥇", "🥈", "🥉"]
-                for _si, _sd in enumerate(_stamp_data):
-                    _sa    = _sd["creator_acct"]
-                    _scnt  = _sd["stamp_count"]
-                    _scr   = _s_cr_map.get(_sa, {})
-                    _sname = _scr.get("display_name") or _scr.get("name") or _scr.get("slug") or _sa
-                    _sphoto= _scr.get("photo_url") or ""
-                    _smedal= _s_medals[_si] if _si < 3 else f"{_si+1}位"
-                    _surl  = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_sa}"
-                    if _sphoto:
-                        _sav = f'<img src="{_sphoto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.15);flex-shrink:0;">'
-                    else:
-                        _sav = '<div style="width:40px;height:40px;border-radius:50%;background:rgba(139,92,246,0.2);border:2px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🎤</div>'
-                    st.markdown(
-                        f'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 18px;margin-bottom:10px;">'
-                        f'<div style="display:flex;align-items:center;gap:10px;">'
-                        f'<span style="font-size:22px;min-width:28px;text-align:center;">{_smedal}</span>'
-                        f'{_sav}'
-                        f'<a href="{_surl}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{_sname}</a>'
-                        f'<span style="font-size:18px;font-weight:900;color:#c4b5fd;">{_scnt} 💜</span>'
-                        f'</div></div>',
-                        unsafe_allow_html=True
-                    )
+            _st_week, _st_month, _st_all = st.tabs([f"📆 週間", f"📅 月間", "🌟 全期間"])
+            with _st_week:
+                _render_stamp_list(get_stamp_weekly_ranking())
+            with _st_month:
+                _render_stamp_list(get_stamp_monthly_ranking())
+            with _st_all:
+                _render_stamp_list(get_stamp_ranking())
         except Exception:
             st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
             st.stop()
@@ -2161,7 +2229,7 @@ else: # Dashboard
                 <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.35);border-radius:14px;padding:16px 20px;margin-bottom:16px;">
                     <div style="font-size:12px;color:#4ade80;font-weight:700;margin-bottom:8px;">💰 送金希望（口座登録済み・確認待ち）</div>
                     <div style="font-size:24px;font-weight:900;color:#f97316;margin-bottom:6px;">{_pending_total:,}円</div>
-                    <div style="font-size:11px;color:rgba(240,240,245,0.5);">ファンに連絡して入金確認後に確定します。24時間以内に振り込みない場合には強制キャンセルとなります。</div>
+                    <div style="font-size:11px;color:rgba(240,240,245,0.5);">ファンに連絡して入金確認後に確定します。72時間以内に振り込みない場合には強制キャンセルとなります。</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -2212,17 +2280,22 @@ else: # Dashboard
                     _new_stripe_acct = stripe.Account.create(**_new_stripe_kwargs)
                     get_db().table("creators").update({"stripe_acct_id": _new_stripe_acct.id}).eq("acct_id", acct_id).execute()
                     _link_url = create_account_link(_new_stripe_acct.id, creator_acct_id=acct_id)  # ① return_url を内部IDに修正
+                    # Stripe へ自動リダイレクト（components.v1.html で確実にJS実行）
+                    st.components.v1.html(
+                        f'<script>window.top.location.href = "{_link_url}";</script>',
+                        height=0
+                    )
+                    # JSが効かない場合のフォールバックリンク
                     st.markdown(f"""
                     <div style="background:rgba(139,92,246,0.15);border:2px solid rgba(139,92,246,0.5);border-radius:16px;padding:24px;margin:16px 0;text-align:center;">
                         <div style="font-size:20px;margin-bottom:8px;">🏦</div>
-                        <div style="font-size:16px;font-weight:900;color:#c4b5fd;margin-bottom:8px;">Stripeで受け取り設定を完了してください</div>
-                        <div style="font-size:12px;color:rgba(240,240,245,0.6);margin-bottom:16px;">下のボタンをタップして口座情報を登録します</div>
+                        <div style="font-size:16px;font-weight:900;color:#c4b5fd;margin-bottom:8px;">Stripeに移動しています...</div>
+                        <div style="font-size:12px;color:rgba(240,240,245,0.6);margin-bottom:16px;">自動で移動しない場合は下をタップ</div>
                         <a href="{_link_url}" target="_top" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;text-decoration:none;border-radius:12px;padding:14px 32px;font-size:16px;font-weight:900;">
                             Stripeで受け取り設定する →
                         </a>
                     </div>
                     """, unsafe_allow_html=True)
-                    st.markdown(f'<script>window.top.location.href = "{_link_url}";</script>', unsafe_allow_html=True)
                 except Exception as _se:
                     st.error(f"エラー: {_se}")
 
