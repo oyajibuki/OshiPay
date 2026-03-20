@@ -1819,58 +1819,34 @@ else: # Dashboard
             """, unsafe_allow_html=True)
 
             new_email = st.text_input("メールアドレス（必須）", key="new_email", placeholder="example@gmail.com")
-            st.caption("🔤 ユーザーID: ログイン・応援URLに使います（例: nana → oshipay.me/u/nana）")
-            new_slug_reg = st.text_input("ユーザーID（3〜20文字・英数字・ハイフンのみ）", key="new_slug_reg", placeholder="例: nana")
             st.caption("🔐 パスワード条件: 8文字以上・英字＋数字必須・同じ文字の3連続禁止（例: Oshi1234）")
             new_pass = st.text_input("管理用パスワードを作成", type="password", key="new_pass")
 
-            # バリデーション表示
             _pass_ok = False
-            _slug_ok_reg = False
             if new_pass:
                 _pass_ok, _pass_err = validate_password(new_pass)
                 if not _pass_ok:
                     st.error(f"⚠️ {_pass_err}")
                 else:
                     st.success("✅ パスワードOK")
-            if new_slug_reg:
-                _slug_ok_reg, _slug_err_reg = validate_username(new_slug_reg.lower())
-                if not _slug_ok_reg:
-                    st.error(f"⚠️ {_slug_err_reg}")
-                else:
-                    try:
-                        _dup = get_db().table("creators").select("acct_id").or_(
-                            f"acct_id.eq.{new_slug_reg.lower()},slug.eq.{new_slug_reg.lower()}"
-                        ).limit(1).execute()
-                        if _dup.data:
-                            st.error(f"⚠️「{new_slug_reg}」はすでに使われています。別のIDを選んでください。")
-                            _slug_ok_reg = False
-                        else:
-                            st.success("✅ このIDは使えます")
-                    except Exception:
-                        pass
 
             # 作成中フラグ（連打防止）
             _reg_creating = st.session_state.get("_reg_creating", False)
 
             if st.checkbox("利用規約に同意して、応援ページを作成する"):
-                _btn_disabled = _reg_creating or not (new_email and _slug_ok_reg and _pass_ok)
+                _btn_disabled = _reg_creating or not (new_email and _pass_ok)
                 if st.button("✨ 応援ページを作成する（無料）", type="primary",
                              disabled=_btn_disabled, use_container_width=True):
                     st.session_state["_reg_creating"] = True
                     with st.spinner("応援ページを作成しています..."):
                         try:
-                            _login_id = new_slug_reg.strip().lower()
                             creator_id = "usr_" + uuid.uuid4().hex[:16]
                             _reg_ok, _reg_err = register_creator(creator_id, new_pass, email=new_email)
                             if not _reg_ok:
                                 st.session_state["_reg_creating"] = False
                                 st.error(f"登録エラー: {_reg_err}")
                                 st.stop()
-                            # slug をセット（ログインID）
-                            get_db().table("creators").update({"slug": _login_id}).eq("acct_id", creator_id).execute()
-                            # メール送信（ユーザーIDベース）
-                            send_acct_id_email(new_email, _login_id)
+                            send_acct_id_email(new_email, creator_id)
                         except Exception as _e:
                             st.session_state["_reg_creating"] = False
                             st.error(f"エラー: {_e}")
@@ -1879,7 +1855,7 @@ else: # Dashboard
                     st.session_state["_reg_creating"] = False
                     st.session_state["creator_auth"] = creator_id
                     st.success("✅ 作成完了！ダッシュボードへ移動します...")
-                    st.query_params.update({"page": "dashboard", "acct": _login_id})
+                    st.query_params.update({"page": "dashboard", "acct": creator_id})
                     st.rerun()
 
         with tab_recover:
