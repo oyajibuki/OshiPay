@@ -1150,11 +1150,11 @@ if page == "test":
         new_sid = str(uuid.uuid4())
         add_support(new_sid, t_acct, t_creator, t_amount, t_msg)
         my_url = f"{BASE_URL}?page=my_support&sid={new_sid}"
-        rv_url = f"{BASE_URL}?page=reply_view&acct={t_acct}"
+        rv_url = f"{BASE_URL}?page=dashboard&acct={t_acct}"
         st.success(f"追加完了！ `{new_sid[:8]}...`")
         b1, b2 = st.columns(2)
         b1.link_button("🏅 応援証明を確認", my_url, use_container_width=True)
-        b2.link_button("💌 返信ダッシュボード", rv_url, use_container_width=True)
+        b2.link_button("💌 クリエイターダッシュボード", rv_url, use_container_width=True)
 
     # ── 保存済みデータ一覧 ──
     all_supports = load_supports()
@@ -1166,7 +1166,7 @@ if page == "test":
             replied = s["reply_emoji"] or s["reply_text"]
             badge = f"✅ {s['reply_emoji']}" if replied else "⏳ 未返信"
             my_url = f"{BASE_URL}?page=my_support&sid={s['support_id']}"
-            rv_url  = f"{BASE_URL}?page=reply_view&acct={s['creator_acct']}"
+            rv_url  = f"{BASE_URL}?page=dashboard&acct={s['creator_acct']}"
             st.markdown(f"""
             <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);
                         border-radius:10px;padding:14px;margin-bottom:8px;font-size:13px;
@@ -1181,7 +1181,7 @@ if page == "test":
                 <div style="margin-bottom:6px;">💬 {s['message'] or '（なし）'}</div>
                 <div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:8px;">{badge}</div>
                 <a href="{my_url}" target="_top" style="color:#8b5cf6;font-size:12px;margin-right:12px;">🏅 応援証明</a>
-                <a href="{rv_url}" target="_top" style="color:#8b5cf6;font-size:12px;">💌 返信DL</a>
+                <a href="{rv_url}" target="_top" style="color:#8b5cf6;font-size:12px;">💌 クリエイターDL</a>
             </div>
             """, unsafe_allow_html=True)
 
@@ -2266,20 +2266,23 @@ else: # Dashboard
                         </div>
                         """, unsafe_allow_html=True)
 
-        # ── Stripe リダイレクト（session_state 経由で確実にワンクリック同タブ遷移）──
+        # ── Stripe リダイレクト（フォーム送信 target="_top" で確実に同タブ遷移）──
         if "_stripe_link_url" in st.session_state:
             _pending_stripe_url = st.session_state.pop("_stripe_link_url")
             st.components.v1.html(f"""
-            <html><body style="margin:0;background:transparent;">
-            <script>window.top.location.href = "{_pending_stripe_url}";</script>
-            <a href="{_pending_stripe_url}" target="_top"
-               style="display:block;width:100%;box-sizing:border-box;background:linear-gradient(135deg,#8b5cf6,#6d28d9);
-                      color:white;text-align:center;text-decoration:none;border-radius:12px;padding:16px;
-                      font-size:16px;font-weight:900;margin-top:4px;">
+            <html><body style="margin:0;padding:0;background:transparent;">
+            <form id="sf" action="{_pending_stripe_url}" method="GET" target="_top"
+                  style="margin:0;padding:0;display:block;">
+              <button type="submit"
+                style="width:100%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);
+                       color:white;border:none;border-radius:12px;padding:16px;
+                       font-size:16px;font-weight:900;cursor:pointer;box-sizing:border-box;">
                 🏦 Stripeで受け取り設定する →
-            </a>
+              </button>
+            </form>
+            <script>setTimeout(function(){{document.getElementById('sf').submit();}},150);</script>
             </body></html>
-            """, height=60, scrolling=False)
+            """, height=64, scrolling=False)
             st.stop()
 
         if not _has_stripe:
@@ -2447,10 +2450,9 @@ else: # Dashboard
         else:
             st.info("💾 プロフィールを保存すると、QRコードを発行できます。")
 
-        # 返信ダッシュボードへのリンク
+        # 返信ダッシュボードへのリンク（このページに留まる）
         if st.button("💌 応援メッセージ・返信ダッシュボードを開く", use_container_width=True):
-            st.query_params["page"] = "reply_view"
-            st.query_params["acct"] = acct_id
+            st.session_state["show_reply_section"] = True
             st.rerun()
 
         # パスワード変更
@@ -2485,8 +2487,8 @@ else: # Dashboard
             st.stop()
         if "qr_url" in st.session_state:
             b64_qr, qr_bytes = generate_qr_data(st.session_state.qr_url)
-            reply_dash_url = f"{BASE_URL}?page=reply_view&acct={acct_id}"
-            info_txt = f"クリエイターID: {acct_id}\n応援URL: {st.session_state.qr_url}\n返信ダッシュボード: {reply_dash_url}"
+            reply_dash_url = f"{BASE_URL}?page=dashboard&acct={acct_id}"
+            info_txt = f"クリエイターID: {acct_id}\n応援URL: {st.session_state.qr_url}\nダッシュボード: {reply_dash_url}"
             # QR画像とURLを表示
             st.markdown(f'<div class="qr-frame"><img src="data:image/png;base64,{b64_qr}"></div>', unsafe_allow_html=True)
             st.code(st.session_state.qr_url)
