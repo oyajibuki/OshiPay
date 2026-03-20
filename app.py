@@ -25,7 +25,7 @@ from PIL import Image
 # ── ページ設定 ──
 st.set_page_config(
     page_title="OshiPay",
-    page_icon="https://oyajibuki.github.io/OshiPay/favicon.png?v=4",
+    page_icon="https://raw.githubusercontent.com/oyajibuki/OshiPay/main/docs/favicon.png",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
@@ -1364,7 +1364,7 @@ if page == "ranking":
             return
         _s_acct_ids = [d["creator_acct"] for d in stamp_data]
         try:
-            _s_cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url").in_("acct_id", _s_acct_ids).execute()
+            _s_cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url,stripe_acct_id").in_("acct_id", _s_acct_ids).execute()
             _s_cr_map  = {r["acct_id"]: r for r in (_s_cr_rows.data or [])}
         except Exception:
             _s_cr_map = {}
@@ -1377,6 +1377,13 @@ if page == "ranking":
             _sphoto= _scr.get("photo_url") or ""
             _smedal= _s_medals[_si] if _si < 3 else f"{_si+1}位"
             _surl  = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_sa}"
+            _has_stripe_s = bool(_scr.get("stripe_acct_id") or _sa.startswith("acct_"))
+            _no_stripe_badge_s = (
+                '<span style="font-size:10px;color:#94a3b8;background:rgba(148,163,184,0.1);'
+                'border:1px solid rgba(148,163,184,0.25);border-radius:9999px;padding:2px 7px;'
+                'margin-left:6px;white-space:nowrap;">受取口座未登録</span>'
+                if not _has_stripe_s else ""
+            )
             _sav = (f'<img src="{_sphoto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.15);flex-shrink:0;">'
                     if _sphoto else
                     '<div style="width:40px;height:40px;border-radius:50%;background:rgba(139,92,246,0.2);border:2px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🎤</div>')
@@ -1385,7 +1392,10 @@ if page == "ranking":
                 f'<div style="display:flex;align-items:center;gap:10px;">'
                 f'<span style="font-size:22px;min-width:28px;text-align:center;">{_smedal}</span>'
                 f'{_sav}'
-                f'<a href="{_surl}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;flex:1;">{_sname}</a>'
+                f'<div style="flex:1;min-width:0;">'
+                f'<a href="{_surl}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;">{_sname}</a>'
+                f'{_no_stripe_badge_s}'
+                f'</div>'
                 f'<span style="font-size:18px;font-weight:900;color:#c4b5fd;">{_scnt} 💜</span>'
                 f'</div></div>',
                 unsafe_allow_html=True
@@ -1583,7 +1593,7 @@ if page == "support" and support_user:
             ・設定した金額は現在送金できません。クリエイター側が口座登録完了次第、送金可能となります。<br>
             ・クリエイター側が <b>72時間以内</b> に口座登録を完了できない場合、自動的にキャンセルとなります。<br>
             ・入金可能な状況となり次第ご連絡しますので、LINE ID またはメールアドレスの入力をお願いします。<br>
-            ・メール送付後、<b>24時間以内</b> に入金が確認できない場合は自動的にキャンセルとなります。
+            ・メール送付後、<b>72時間以内</b> に入金が確認できない場合は自動的にキャンセルとなります。
         </div>
         """, unsafe_allow_html=True)
 
