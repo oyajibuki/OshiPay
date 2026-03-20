@@ -876,7 +876,17 @@ if page == "reply_view":
 
     supports = get_supports_for_creator(rv_acct)
 
-    if not supports:
+    # pending_supports も取得（口座登録済みなら全内容開放）
+    _rv_pending = []
+    try:
+        import datetime as _dt2
+        _rv_now = _dt2.datetime.now(_dt2.timezone.utc).isoformat()
+        _rv_pr = get_db().table("pending_supports").select("*").eq("creator_acct", rv_acct).eq("status", "pending").gte("expires_at", _rv_now).execute()
+        _rv_pending = _rv_pr.data or []
+    except Exception:
+        _rv_pending = []
+
+    if not supports and not _rv_pending:
         st.markdown("""
         <div style="background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.12);
                     border-radius:12px;padding:32px;text-align:center;margin-top:20px;">
@@ -885,6 +895,33 @@ if page == "reply_view":
         </div>
         """, unsafe_allow_html=True)
         st.stop()
+
+    # ── pending_supports（送金待ち）を先に表示 ──
+    if _rv_pending:
+        _rv_pending_total = sum(r["amount"] for r in _rv_pending)
+        st.markdown(f"""
+        <div style="background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.3);border-radius:14px;padding:16px 20px;margin-bottom:16px;">
+            <div style="font-size:13px;color:#4ade80;font-weight:700;margin-bottom:4px;">💰 送金待ち応援（{len(_rv_pending)}件 / 合計 {_rv_pending_total:,}円）</div>
+            <div style="font-size:11px;color:rgba(240,240,245,0.5);">ファンに連絡して入金確認後に確定します。24時間以内に振り込みない場合には強制キャンセルとなります。</div>
+        </div>
+        """, unsafe_allow_html=True)
+        for _rvp in _rv_pending:
+            _rvp_msg = _rvp.get("message") or "（メッセージなし）"
+            _rvp_contact = _rvp.get("contact_info") or "（連絡先なし）"
+            _rvp_date = (_rvp.get("created_at") or "")[:10]
+            _rvp_exp  = (_rvp.get("expires_at") or "")[:16].replace("T", " ")
+            st.markdown(f"""
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(74,222,128,0.2);border-radius:14px;padding:16px;margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <div style="font-size:20px;font-weight:900;color:#f97316;">{_rvp["amount"]:,}円</div>
+                    <span style="font-size:11px;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:9999px;padding:3px 10px;">⏳ 送金待ち</span>
+                </div>
+                <div style="font-size:13px;color:rgba(240,240,245,0.8);margin-bottom:6px;">💬 {_rvp_msg}</div>
+                <div style="font-size:11px;color:rgba(240,240,245,0.45);">📩 連絡先: {_rvp_contact}</div>
+                <div style="font-size:11px;color:rgba(240,240,245,0.35);margin-top:4px;">登録日: {_rvp_date}　⚠️ 期限: {_rvp_exp} UTC</div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
 
     # 未返信 / 返信済み カウント
     unreplied = [s for s in supports if not s["reply_emoji"] and not s["reply_text"]]
@@ -2124,7 +2161,7 @@ else: # Dashboard
                 <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.35);border-radius:14px;padding:16px 20px;margin-bottom:16px;">
                     <div style="font-size:12px;color:#4ade80;font-weight:700;margin-bottom:8px;">💰 送金希望（口座登録済み・確認待ち）</div>
                     <div style="font-size:24px;font-weight:900;color:#f97316;margin-bottom:6px;">{_pending_total:,}円</div>
-                    <div style="font-size:11px;color:rgba(240,240,245,0.5);">ファンに連絡して入金確認後に確定します。</div>
+                    <div style="font-size:11px;color:rgba(240,240,245,0.5);">ファンに連絡して入金確認後に確定します。24時間以内に振り込みない場合には強制キャンセルとなります。</div>
                 </div>
                 """, unsafe_allow_html=True)
 
