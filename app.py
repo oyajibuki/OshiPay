@@ -2482,24 +2482,92 @@ else: # Dashboard
             """, unsafe_allow_html=True)
         uploaded_photo = st.file_uploader("📷 プロフィール写真を選ぶ（任意・自動圧縮）", type=["jpg", "jpeg", "png"], key=f"photo_{acct_id}")
         if uploaded_photo:
-            try:
-                img = Image.open(uploaded_photo).convert("RGB")
-                img.thumbnail((200, 200), Image.LANCZOS)
-                buf = io.BytesIO()
-                img.save(buf, format="JPEG", quality=85)
-                buf.seek(0)
-                img_bytes = buf.read()
-                file_path = f"creators/{acct_id}.jpg"
-                get_db().storage.from_("creator-photos").upload(
-                    file_path, img_bytes,
-                    {"content-type": "image/jpeg", "upsert": "true"}
-                )
-                photo_url = get_db().storage.from_("creator-photos").get_public_url(file_path)
-                get_db().table("creators").update({"photo_url": photo_url}).eq("acct_id", acct_id).execute()
-                st.success("写真を保存しました！")
-                st.image(img, width=100)
-            except Exception as e:
-                st.error(f"写真の保存に失敗しました: {e}")
+            import base64 as _b64
+            _raw_b64 = _b64.b64encode(uploaded_photo.read()).decode()
+            _mime = "image/jpeg" if uploaded_photo.name.lower().endswith((".jpg",".jpeg")) else "image/png"
+            _cropper_html = f"""
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"/>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+            <style>
+              body{{margin:0;background:#0a0a0f;}}
+              #crop-wrap{{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;}}
+              #crop-container{{width:300px;height:300px;overflow:hidden;border-radius:12px;background:#111;}}
+              #crop-container img{{max-width:100%;}}
+              .crop-btn{{background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%;max-width:300px;}}
+              .crop-btn:hover{{background:#7c3aed;}}
+              #preview-circle{{width:96px;height:96px;border-radius:50%;overflow:hidden;border:3px solid rgba(139,92,246,0.6);}}
+              #status{{color:#6ee7b7;font-size:13px;font-weight:600;display:none;}}
+              .hint{{color:rgba(240,240,245,0.45);font-size:11px;text-align:center;}}
+            </style>
+            <div id="crop-wrap">
+              <div class="hint">✋ ドラッグ移動 / ピンチ or スクロール拡大縮小 / 回転ボタンで回転</div>
+              <div id="crop-container"><img id="crop-img" src="data:{_mime};base64,{_raw_b64}"/></div>
+              <div style="display:flex;gap:8px;max-width:300px;width:100%;">
+                <button class="crop-btn" style="background:#374151;" onclick="cropper.rotate(-90)">↺ 左回転</button>
+                <button class="crop-btn" style="background:#374151;" onclick="cropper.rotate(90)">↻ 右回転</button>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                <div style="color:rgba(240,240,245,0.5);font-size:11px;">プレビュー</div>
+                <div id="preview-circle"></div>
+              </div>
+              <button class="crop-btn" onclick="saveCrop()">✅ この位置で保存</button>
+              <div id="status">✅ 送信中...</div>
+            </div>
+            <script>
+              const img = document.getElementById('crop-img');
+              const preview = document.getElementById('preview-circle');
+              const cropper = new Cropper(img, {{
+                aspectRatio: 1,
+                viewMode: 1,
+                dragMode: 'move',
+                autoCropArea: 0.8,
+                cropBoxResizable: false,
+                cropBoxMovable: false,
+                preview: '#preview-circle',
+              }});
+              function saveCrop() {{
+                const canvas = cropper.getCroppedCanvas({{width:200,height:200}});
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                document.getElementById('status').style.display='block';
+                window.parent.postMessage({{type:'streamlit:setComponentValue', value: dataUrl}}, '*');
+              }}
+            </script>
+            """
+            _cropped_b64 = st.components.v1.html(_cropper_html, height=560, scrolling=False)
+            if _cropped_b64 and isinstance(_cropped_b64, str) and _cropped_b64.startswith("data:image"):
+                try:
+                    _header, _data = _cropped_b64.split(",", 1)
+                    _img_bytes = base64.b64decode(_data)
+                    _file_path = f"creators/{acct_id}.jpg"
+                    get_db().storage.from_("creator-photos").upload(
+                        _file_path, _img_bytes,
+                        {"content-type": "image/jpeg", "upsert": "true"}
+                    )
+                    _photo_url = get_db().storage.from_("creator-photos").get_public_url(_file_path)
+                    get_db().table("creators").update({"photo_url": _photo_url}).eq("acct_id", acct_id).execute()
+                    st.success("✅ 写真を保存しました！")
+                except Exception as e:
+                    st.error(f"写真の保存に失敗しました: {e}")
+            elif uploaded_photo and not (isinstance(_cropped_b64, str) and _cropped_b64.startswith("data:")):
+                # フォールバック：クロッパーが使えない場合は従来通り圧縮保存
+                try:
+                    uploaded_photo.seek(0)
+                    _img = Image.open(uploaded_photo).convert("RGB")
+                    _img.thumbnail((200, 200), Image.LANCZOS)
+                    _buf = io.BytesIO()
+                    _img.save(_buf, format="JPEG", quality=85)
+                    _buf.seek(0)
+                    _img_bytes = _buf.read()
+                    _file_path = f"creators/{acct_id}.jpg"
+                    get_db().storage.from_("creator-photos").upload(
+                        _file_path, _img_bytes,
+                        {"content-type": "image/jpeg", "upsert": "true"}
+                    )
+                    _photo_url = get_db().storage.from_("creator-photos").get_public_url(_file_path)
+                    get_db().table("creators").update({"photo_url": _photo_url}).eq("acct_id", acct_id).execute()
+                    st.success("写真を保存しました！")
+                except Exception as e:
+                    st.error(f"写真の保存に失敗しました: {e}")
 
         name = st.text_input("表示名", value=_def_name)
         icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx, key=f"icon_{acct_id}")
@@ -2525,7 +2593,7 @@ else: # Dashboard
             _sns_line = st.text_input("LINE（公式アカウント）", value=_sns_raw.get("line", ""),      placeholder="https://line.me/R/ti/p/@username",  key=f"sns_line_{acct_id}")
 
         slug = st.text_input("ユーザーID（プロフィールURL用）", value=_cr_data.get("slug") or "", key=f"slug_{acct_id}",
-                             help="例: asagiri → oshipay.com/asagiri（3〜20文字・英数字・ハイフンのみ）")
+                             help="例: asagiri → oshipay.me/u/asagiri（3〜20文字・英数字・ハイフンのみ）\n※ログイン時のIDとして使用・QRコードに表示されるURLの末尾になります")
 
         if st.button("💾 プロフィールを保存", type="primary", key=f"save_profile_{acct_id}"):
             _save_errors = []
@@ -2575,21 +2643,19 @@ else: # Dashboard
         # ── QRコード発行ボタン（保存後のみ表示）──
         _profile_ready = st.session_state.get(f"profile_saved_{acct_id}") or _cr_data.get("profile_done")
         if _profile_ready:
-            with st.expander("✨ QRコードを発行する"):
-                if st.button("QRコードを生成", use_container_width=True):
-                    _final_id = slug.lower() if slug else acct_id
-                    support_url = f"{QR_BASE}/u/{_final_id}"
-                    st.session_state.qr_url = support_url
-                    st.session_state.qr_just_generated = True
-                    st.session_state[f"creator_name_{acct_id}"] = name
-                    st.session_state[f"creator_icon_{acct_id}"] = icon
+            if st.button("✨ QRコードを発行する", type="primary", use_container_width=True, key="qr_gen_btn"):
+                _final_id = slug.lower() if slug else acct_id
+                support_url = f"{QR_BASE}/u/{_final_id}"
+                st.session_state.qr_url = support_url
+                st.session_state.qr_just_generated = True
+                st.session_state[f"creator_name_{acct_id}"] = name
+                st.session_state[f"creator_icon_{acct_id}"] = icon
         else:
             st.info("💾 プロフィールを保存すると、QRコードを発行できます。")
 
-        # 返信ダッシュボードへのリンク（このページに留まる）
-        if st.button("💌 応援メッセージ・返信ダッシュボードを開く", use_container_width=True):
-            st.session_state["show_reply_section"] = True
-            st.rerun()
+        # 返信ダッシュボードへのリンク
+        _reply_url = f"{BASE_URL}?page=reply_view&acct={acct_id}"
+        st.link_button("💌 応援メッセージ・返信ダッシュボードを開く", url=_reply_url, use_container_width=True)
 
         # パスワード変更
         with st.expander("🔑 パスワードを変更する"):
