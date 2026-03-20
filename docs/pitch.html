@@ -13,18 +13,28 @@
       font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
     }
     .slide-container {
+      display: flex;
+      flex-direction: row;
+      width: 100vw;
       height: 100vh;
-      overflow-y: scroll;
-      scroll-snap-type: y mandatory;
+      overflow-x: scroll;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
     }
     .slide {
-      min-height: 100vh;
+      min-width: 100vw;
+      width: 100vw;
+      height: 100vh;
+      flex-shrink: 0;
       scroll-snap-align: start;
       display: flex;
       flex-direction: column;
       justify-content: center;
+      overflow-y: auto;
       padding: 2rem;
       position: relative;
+      box-sizing: border-box;
     }
     .slide-content {
       max-width: 64rem;
@@ -33,11 +43,23 @@
     }
     .slide-number {
       position: absolute;
-      bottom: 2rem;
-      right: 2rem;
+      bottom: 1rem;
+      right: 1.5rem;
       color: #94a3b8;
       font-size: 0.875rem;
       font-weight: bold;
+    }
+    /* スワイプヒント矢印 */
+    .swipe-hint {
+      position: absolute;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #94a3b8;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
     .text-gradient {
       background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
@@ -66,8 +88,10 @@
       <div class="mt-3 inline-block bg-purple-50 text-purple-700 px-6 py-2 rounded-full font-semibold text-sm border border-purple-200">
         Product Pitch — 2026.03
       </div>
-      <div class="mt-12 animate-bounce text-gray-400">
-        <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+      <div class="mt-12 text-gray-400 flex items-center justify-center gap-2 animate-pulse">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        <span class="text-sm font-medium">スワイプして次へ</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
       </div>
     </div>
     <div class="slide-number">1 / 11</div>
@@ -143,8 +167,11 @@
     <div class="slide-content">
       <p class="text-pink-400 font-bold tracking-wide uppercase mb-2">The Solution & UX Hack</p>
       <h2 class="text-3xl md:text-5xl font-bold mb-6 leading-tight">「仮想予約」で熱量を可視化し、<br>クリエイターを動かす</h2>
-      <p class="text-xl text-gray-300 mb-10 leading-relaxed">
-        最大の壁である「Stripe登録（口座・本人確認）」を越えさせるため、<br>
+      <div class="bg-slate-700/50 border border-pink-500/30 rounded-xl p-4 mb-6 text-sm text-gray-300 leading-relaxed">
+        <span class="text-pink-400 font-bold">もともとの設計：</span>クリエイターが<span class="text-white font-bold">銀行口座を事前登録</span>してからファンを待つ仕組みでした。しかし「いきなり知らないアプリに銀行口座を登録するのは怖い」というのが最大の壁でした。<br>
+        <span class="text-green-400 font-bold mt-2 block">→ そこで「熱量が先、口座登録は後」の設計に転換しました。</span>
+      </div>
+      <p class="text-xl text-gray-300 mb-6 leading-relaxed">
         <span class="text-pink-400 font-bold">お金より先に「ファンの熱量」を届け、人間の「欲求」をトリガーにします。</span>
       </p>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -260,29 +287,36 @@
     <div class="slide-content">
       <p class="text-purple-600 font-bold tracking-wide uppercase mb-2">Go-To-Market Strategy</p>
       <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-6 leading-tight">最初の100人をどう集めるか（ドミノ戦略）</h2>
-      <p class="text-lg text-gray-700 mb-8">
+      <p class="text-lg text-gray-700 mb-6">
         広く薄くLPを打つのではなく、<span class="font-bold border-b-4 border-purple-300">「特定のオフライン・コミュニティ」</span>をボウリングの1番ピンとして狙います。
       </p>
-      <div class="space-y-4">
-        <div class="bg-white p-6 rounded-xl border-l-4 border-purple-500 shadow-sm flex items-start">
+      <div class="space-y-3">
+        <div class="bg-purple-50 p-5 rounded-xl border-l-4 border-purple-600 shadow-sm flex items-start">
+          <div class="text-3xl mr-4">🚀</div>
+          <div>
+            <h3 class="font-bold text-lg mb-1">今すぐ実行中：SNS 200名への直接アプローチ</h3>
+            <p class="text-gray-600 text-sm leading-relaxed">X・Instagram 各100名のアーティストへDMを送信。<span class="font-bold text-purple-700">3月31日までに完了予定。</span>反応をもとに刺さるメッセージを磨きます。</p>
+          </div>
+        </div>
+        <div class="bg-white p-5 rounded-xl border-l-4 border-pink-500 shadow-sm flex items-start">
           <div class="text-3xl mr-4">🎯</div>
           <div>
             <h3 class="font-bold text-lg mb-1">Step 1: 特定エリアの「路上ライブ界隈」をジャック</h3>
-            <p class="text-gray-600 text-sm leading-relaxed">例：川崎駅前など、路上ライブが盛んなエリアの顔役（オーガナイザー）にアプローチ。「投げ銭QRの看板」を無償提供し、数名のアーティストに同時に導入してもらう。ファンに「あのQRコードね」と認知させる。</p>
+            <p class="text-gray-600 text-sm leading-relaxed">路上ライブが盛んなエリアの顔役にアプローチ。「投げ銭QRの看板」を無償提供し、数名のアーティストに同時に導入。</p>
           </div>
         </div>
-        <div class="bg-white p-6 rounded-xl border-l-4 border-pink-500 shadow-sm flex items-start">
+        <div class="bg-white p-5 rounded-xl border-l-4 border-orange-400 shadow-sm flex items-start">
           <div class="text-3xl mr-4">🎯</div>
           <div>
-            <h3 class="font-bold text-lg mb-1">Step 2: 「同人誌即売会」での公式/非公式ツール化</h3>
-            <p class="text-gray-600 text-sm leading-relaxed">小中規模の同人イベントにて、「差し入れ・応援用QR」としてサークル参加者に配布。面倒な小銭のやり取りを減らすツールとして定着させる。</p>
+            <h3 class="font-bold text-lg mb-1">Step 2: 「同人誌即売会」での非公式ツール化</h3>
+            <p class="text-gray-600 text-sm leading-relaxed">小中規模の同人イベントで「差し入れ・応援用QR」として配布。小銭不要の応援ツールとして定着させる。</p>
           </div>
         </div>
-        <div class="bg-white p-6 rounded-xl border-l-4 border-blue-500 shadow-sm flex items-start">
+        <div class="bg-white p-5 rounded-xl border-l-4 border-blue-500 shadow-sm flex items-start">
           <div class="text-3xl mr-4">🎯</div>
           <div>
             <h3 class="font-bold text-lg mb-1">Step 3: ファン経由でのバイラル（クリエイター逆指名）</h3>
-            <p class="text-gray-600 text-sm leading-relaxed">「仮想予約」の仕組みを活用。ファンが自分の推しに対して「OshiPay登録してくれたら1,000円投げるのに！」とSNSでメンションするUGC（口コミ）を生み出す。</p>
+            <p class="text-gray-600 text-sm leading-relaxed">「OshiPay登録してくれたら1,000円投げるのに！」とファンがSNSでメンション → UGCで自然拡散。</p>
           </div>
         </div>
       </div>
