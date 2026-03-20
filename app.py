@@ -949,19 +949,19 @@ if page == "reply_view":
             <div style="font-size:11px;color:rgba(240,240,245,0.5);">ファンに連絡して入金確認後に確定します。72時間以内に振り込みない場合には強制キャンセルとなります。</div>
         </div>
         """, unsafe_allow_html=True)
+        import html as _html_mod2
         for _rvp in _rv_pending:
-            _rvp_msg = _rvp.get("message") or "（メッセージなし）"
-            _rvp_contact = _rvp.get("contact_info") or "（連絡先なし）"
+            _rvp_msg  = _html_mod2.escape(str(_rvp.get("message") or "（メッセージなし）"))
+            _rvp_amt  = f'{_rvp["amount"]:,}'
             _rvp_date = (_rvp.get("created_at") or "")[:16].replace("T", " ")
             _rvp_exp  = (_rvp.get("expires_at") or "")[:16].replace("T", " ")
             st.markdown(f"""
             <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(74,222,128,0.2);border-radius:14px;padding:16px;margin-bottom:10px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                    <div style="font-size:20px;font-weight:900;color:#f97316;">{_rvp["amount"]:,}円</div>
+                    <div style="font-size:20px;font-weight:900;color:#f97316;">{_rvp_amt}円</div>
                     <span style="font-size:11px;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:9999px;padding:3px 10px;">⏳ 送金待ち</span>
                 </div>
                 <div style="font-size:13px;color:rgba(240,240,245,0.8);margin-bottom:6px;">💬 {_rvp_msg}</div>
-                <div style="font-size:11px;color:rgba(240,240,245,0.45);">📩 連絡先: {_rvp_contact}</div>
                 <div style="font-size:11px;color:rgba(240,240,245,0.35);margin-top:4px;">登録日: {_rvp_date}　⚠️ 期限: {_rvp_exp} UTC</div>
             </div>
             """, unsafe_allow_html=True)
@@ -2254,17 +2254,33 @@ else: # Dashboard
             else:
                 # 口座登録済み → 全内容を表示
                 st.markdown(f'<div style="font-size:13px;color:#c4b5fd;font-weight:700;margin-bottom:10px;">💌 応援メッセージ（{_pending_msg_count}件）</div>', unsafe_allow_html=True)
+                import html as _html_mod
                 for _pmr in _pending_rows:
                     if _pmr.get("message"):
+                        _safe_msg = _html_mod.escape(str(_pmr["message"]))
+                        _safe_amt = f'{_pmr["amount"]:,}'
                         st.markdown(f"""
                         <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
-                            <div style="font-size:13px;color:#f0f0f5;line-height:1.6;">{_pmr["message"]}</div>
-                            <div style="font-size:11px;color:rgba(240,240,245,0.4);margin-top:6px;">
-                                💰 {_pmr["amount"]:,}円
-                                {"　📩 " + _pmr["contact_info"] if _pmr.get("contact_info") else ""}
-                            </div>
+                            <div style="font-size:13px;color:#f0f0f5;line-height:1.6;">{_safe_msg}</div>
+                            <div style="font-size:11px;color:rgba(240,240,245,0.4);margin-top:6px;">💰 {_safe_amt}円</div>
                         </div>
                         """, unsafe_allow_html=True)
+
+        # ── Stripe リダイレクト（session_state 経由で確実にワンクリック同タブ遷移）──
+        if "_stripe_link_url" in st.session_state:
+            _pending_stripe_url = st.session_state.pop("_stripe_link_url")
+            st.components.v1.html(f"""
+            <html><body style="margin:0;background:transparent;">
+            <script>window.top.location.href = "{_pending_stripe_url}";</script>
+            <a href="{_pending_stripe_url}" target="_top"
+               style="display:block;width:100%;box-sizing:border-box;background:linear-gradient(135deg,#8b5cf6,#6d28d9);
+                      color:white;text-align:center;text-decoration:none;border-radius:12px;padding:16px;
+                      font-size:16px;font-weight:900;margin-top:4px;">
+                🏦 Stripeで受け取り設定する →
+            </a>
+            </body></html>
+            """, height=60, scrolling=False)
+            st.stop()
 
         if not _has_stripe:
             st.markdown("""
@@ -2286,26 +2302,13 @@ else: # Dashboard
                         "business_profile": {"mcc": "7922", "product_description": "OshiPay - 投げ銭サービス", "url": BASE_URL},
                     }
                     if _cr_email:
-                        _new_stripe_kwargs["email"] = _cr_email  # ⑤ OshiPayのメールをStripeに補完
+                        _new_stripe_kwargs["email"] = _cr_email
                     _new_stripe_acct = stripe.Account.create(**_new_stripe_kwargs)
                     get_db().table("creators").update({"stripe_acct_id": _new_stripe_acct.id}).eq("acct_id", acct_id).execute()
-                    _link_url = create_account_link(_new_stripe_acct.id, creator_acct_id=acct_id)  # ① return_url を内部IDに修正
-                    # Stripe へ自動リダイレクト（components.v1.html で確実にJS実行）
-                    st.components.v1.html(
-                        f'<script>window.top.location.href = "{_link_url}";</script>',
-                        height=0
-                    )
-                    # JSが効かない場合のフォールバックリンク
-                    st.markdown(f"""
-                    <div style="background:rgba(139,92,246,0.15);border:2px solid rgba(139,92,246,0.5);border-radius:16px;padding:24px;margin:16px 0;text-align:center;">
-                        <div style="font-size:20px;margin-bottom:8px;">🏦</div>
-                        <div style="font-size:16px;font-weight:900;color:#c4b5fd;margin-bottom:8px;">Stripeに移動しています...</div>
-                        <div style="font-size:12px;color:rgba(240,240,245,0.6);margin-bottom:16px;">自動で移動しない場合は下をタップ</div>
-                        <a href="{_link_url}" target="_top" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;text-decoration:none;border-radius:12px;padding:14px 32px;font-size:16px;font-weight:900;">
-                            Stripeで受け取り設定する →
-                        </a>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    _link_url = create_account_link(_new_stripe_acct.id, creator_acct_id=acct_id)
+                    # session_state に保存して rerun → 次フレームで確実にリダイレクト
+                    st.session_state["_stripe_link_url"] = _link_url
+                    st.rerun()
                 except Exception as _se:
                     st.error(f"エラー: {_se}")
 
