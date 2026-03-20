@@ -627,7 +627,8 @@ if page == "success":
 
     s_name = params.get("s_name", "")
     s_amt_str = params.get("s_amt", "0")
-    s_acct = params.get("s_acct", "")
+    s_acct = params.get("s_acct", "")          # DBのacct_id（支払い記録用）
+    s_stripe_acct = params.get("s_stripe_acct", "") or s_acct  # StripeアカウントID（メール送信用、後方互換でs_acctをフォールバック）
     s_msg = params.get("s_msg", "")
     s_sid = params.get("s_sid", "")
     s_sup_id   = params.get("s_sup_id", "")
@@ -695,9 +696,9 @@ if page == "success":
         """, unsafe_allow_html=True)
 
     # ── 応援メール送信 ──
-    if s_acct and s_name and s_amt > 0:
+    if s_stripe_acct and s_stripe_acct.startswith("acct_") and s_name and s_amt > 0:
         try:
-            acct_info = stripe.Account.retrieve(s_acct)
+            acct_info = stripe.Account.retrieve(s_stripe_acct)
             creator_email = acct_info.get("email", "")
             if creator_email:
                 ok, err = send_support_email(creator_email, s_name, s_amt, s_msg)
@@ -1680,7 +1681,7 @@ if page == "support" and support_user:
                 checkout_params = {
                     "payment_method_types": ["card"], "mode": "payment",
                     "line_items": [{"price_data": {"currency": "jpy", "product_data": {"name": f"{support_name}への応援"}, "unit_amount": amt}, "quantity": 1}],
-                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(support_name)}&s_amt={amt}&s_acct={_stripe_connect_acct}&s_msg={urllib.parse.quote(msg or '')}&s_sid={support_id}&s_sup_id={final_sup_id}&s_sup_name={urllib.parse.quote(sup_display_name or '')}",
+                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(support_name)}&s_amt={amt}&s_acct={connect_acct}&s_stripe_acct={_stripe_connect_acct}&s_msg={urllib.parse.quote(msg or '')}&s_sid={support_id}&s_sup_id={final_sup_id}&s_sup_name={urllib.parse.quote(sup_display_name or '')}",
                     "cancel_url": f"{BASE_URL}?page=cancel",
                     "metadata": {"user_id": support_user, "message": msg, "support_id": support_id, "supporter_id": opt_sup_id}
                 }
