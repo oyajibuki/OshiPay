@@ -2139,7 +2139,9 @@ else: # Dashboard
             # 作成中フラグ（連打防止）
             _reg_creating = st.session_state.get("_reg_creating", False)
 
-            if st.checkbox("利用規約に同意して、応援ページを作成する"):
+            _age_ok   = st.checkbox("私は18歳以上です（受取機能の利用に必要）")
+            _terms_ok = st.checkbox("利用規約に同意して、応援ページを作成する")
+            if _age_ok and _terms_ok:
                 _btn_disabled = _reg_creating or not (new_email and _pass_ok)
                 if st.button("✨ 応援ページを作成する（無料）", type="primary",
                              disabled=_btn_disabled, use_container_width=True):
@@ -2424,7 +2426,8 @@ else: # Dashboard
                     <div style="font-size:15px;font-weight:900;color:#f97316;margin-bottom:6px;">💰 受取口座を登録して応援を受け取ろう</div>
                     <div style="font-size:12px;color:rgba(240,240,245,0.6);line-height:1.6;">
                         Stripeアカウントを作成すると、ファンからの応援金を受け取れます。<br>
-                        登録済みのメールアドレスで自動入力されます。
+                        登録済みのメールアドレスで自動入力されます。<br>
+                        <span style="color:#f97316;font-weight:bold;">⚠️ 受取機能は18歳以上の方のみご利用いただけます。</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
