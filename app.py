@@ -2110,7 +2110,11 @@ else: # Dashboard
         st.markdown('<div class="header">応援用QRコードを作成・復元</div>', unsafe_allow_html=True)
         st.write("新しく応援（決済）を受け取るための設定を行うか、以前作成したアカウントを復元します。")
 
-        tab_recover, tab_new, tab_forgot_c = st.tabs(["🔑 既存アカウント", "✨ 新規作成", "🔓 パスワードを忘れた"])
+        # ?tab=new のときは新規作成をデフォルト、それ以外は既存アカウントをデフォルト
+        if st.query_params.get("tab") == "new":
+            tab_new, tab_recover, tab_forgot_c = st.tabs(["✨ 新規作成", "🔑 既存アカウント", "🔓 パスワードを忘れた"])
+        else:
+            tab_recover, tab_new, tab_forgot_c = st.tabs(["🔑 既存アカウント", "✨ 新規作成", "🔓 パスワードを忘れた"])
 
         with tab_new:
             # 「1回だけ・一生使えるQR」訴求
