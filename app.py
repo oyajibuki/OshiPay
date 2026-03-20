@@ -1630,14 +1630,17 @@ if page == "support" and support_user:
     sup_display_name = st.text_input("お名前", value=_default_name, placeholder="例: たろう", label_visibility="collapsed")
 
     # 口座未登録クリエイター向け：連絡先入力
-    _pending_contact = ""
-    _pending_email   = ""
+    _pending_contact   = ""
+    _pending_email     = ""
+    _pending_sup_id    = ""
     if not _creator_has_stripe:
         st.markdown('<div style="font-size:12px;color:rgba(240,240,245,0.6);margin-top:12px;margin-bottom:4px;">📩 入金可能時の連絡先（LINE IDなど）</div>', unsafe_allow_html=True)
         _pending_contact = st.text_input("連絡先", placeholder="例: line_id_here", label_visibility="collapsed")
-        st.markdown('<div style="font-size:12px;color:rgba(240,240,245,0.6);margin-top:8px;margin-bottom:4px;">🎫 予約チケット確認用メール（任意・応援者ダッシュボードで確認可能）</div>', unsafe_allow_html=True)
-        _pre_email = sup_user.get("email", "") if "supporter_auth" in st.session_state else ""
-        _pending_email = st.text_input("メールアドレス", value=_pre_email, placeholder="you@example.com", label_visibility="collapsed", key="pending_email_input")
+        st.markdown('<div style="font-size:12px;color:rgba(240,240,245,0.6);margin-top:8px;margin-bottom:4px;">🎫 サポーターID または メールアドレス（任意・応援者ダッシュボードで予約チケット確認可能）</div>', unsafe_allow_html=True)
+        _pre_sup_id = st.session_state.get("supporter_auth", {}).get("supporter_id", "")
+        _pre_email  = st.session_state.get("supporter_auth", {}).get("email", "")
+        _pending_sup_id = st.text_input("サポーターID", value=_pre_sup_id, placeholder="sup_xxxx（任意）", label_visibility="collapsed", key="pending_sup_id_input")
+        _pending_email  = st.text_input("またはメールアドレス", value=_pre_email, placeholder="you@example.com（任意）", label_visibility="collapsed", key="pending_email_input")
 
     is_disabled = st.session_state.amt < 100
     if is_disabled:
@@ -1699,9 +1702,19 @@ if page == "support" and support_user:
                     "message": msg or "",
                     "contact_info": _pending_contact or "",
                 }
+                if _pending_sup_id and _pending_sup_id.startswith("sup_"):
+                    _pend_row["supporter_id"] = _pending_sup_id.strip()
                 if _pending_email and "@" in _pending_email:
-                    _pend_row["supporter_email"] = _pending_email.strip().lower()
-                get_db().table("pending_supports").insert(_pend_row).execute()
+                    try:
+                        _pend_row["supporter_email"] = _pending_email.strip().lower()
+                    except Exception:
+                        pass
+                try:
+                    get_db().table("pending_supports").insert(_pend_row).execute()
+                except Exception as _pe_inner:
+                    # supporter_email列がキャッシュにない場合はそれなしで再試行
+                    _pend_row.pop("supporter_email", None)
+                    get_db().table("pending_supports").insert(_pend_row).execute()
                 # ③ クリエイターへ通知メール
                 try:
                     _notif_cr = get_db().table("creators").select("email,display_name").eq("acct_id", connect_acct).maybe_single().execute()
@@ -1912,8 +1925,22 @@ elif page == "supporter_dashboard":
         try:
             import datetime as _dt_t
             _t_now = _dt_t.datetime.now(_dt_t.timezone.utc).isoformat()
-            _tickets_resp = get_db().table("pending_supports").select("*").eq("supporter_email", _sup_email).gte("expires_at", _t_now).execute()
-            _active_tickets = [t for t in (_tickets_resp.data or []) if t.get("status") == "pending"]
+            _sup_id_for_tickets = sup_user.get("supporter_id", "")
+            # supporter_id で取得
+            _t1 = get_db().table("pending_supports").select("*").eq("supporter_id", _sup_id_for_tickets).gte("expires_at", _t_now).execute().data or [] if _sup_id_for_tickets else []
+            # supporter_email で取得（重複除去）
+            _t2 = []
+            try:
+                _t2 = get_db().table("pending_supports").select("*").eq("supporter_email", _sup_email).gte("expires_at", _t_now).execute().data or []
+            except Exception:
+                pass
+            _seen_ids = set()
+            _all_raw = []
+            for _t in (_t1 + _t2):
+                if _t["id"] not in _seen_ids:
+                    _seen_ids.add(_t["id"])
+                    _all_raw.append(_t)
+            _active_tickets = [t for t in _all_raw if t.get("status") == "pending"]
             if _active_tickets:
                 st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="header" style="font-size:16px;">🎫 予約チケット（{len(_active_tickets)}件）</div>', unsafe_allow_html=True)
