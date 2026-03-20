@@ -481,7 +481,7 @@ def get_ranking_creators() -> list:
     try:
         resp = (
             get_db().table("creators")
-            .select("acct_id,display_name,name,slug,bio,photo_url,stripe_acct_id")
+            .select("acct_id,display_name,name,slug,bio,photo_url,stripe_acct_id,payout_enabled")
             .not_.is_("display_name", "null")
             .execute()
         )
@@ -1211,8 +1211,8 @@ if page == "ranking":
             for _bc in base_creators:
                 _bid = _bc["acct_id"]
                 _bname = _bc.get("display_name") or _bc.get("name") or _bc.get("slug") or _bid
-                # stripe_acct_id あり OR 旧 acct_ プレフィックス → 口座登録済み
-                _bhas = bool(_bc.get("stripe_acct_id")) or _bid.startswith("acct_")
+                # payout_enabled=True のみ口座登録済み扱い
+                _bhas = bool(_bc.get("payout_enabled"))
                 creator_map[_bid] = {
                     "name": _bname, "acct": _bid, "total": 0, "count": 0,
                     "first_at": "", "has_reply": False, "supports": [],
@@ -1241,14 +1241,14 @@ if page == "ranking":
             _base_ids = {r["acct_id"] for r in (base_creators or [])}
             _extra_ids = [c["acct"] for c in creator_map.values() if c["acct"] not in _base_ids]
             if _extra_ids:
-                _cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url,stripe_acct_id").in_("acct_id", _extra_ids).execute()
+                _cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url,payout_enabled").in_("acct_id", _extra_ids).execute()
                 _cr_name_map = {r["acct_id"]: r for r in (_cr_rows.data or [])}
                 for c in creator_map.values():
                     if c["acct"] in _extra_ids:
                         _cr = _cr_name_map.get(c["acct"], {})
                         c["name"] = _cr.get("display_name") or _cr.get("name") or _cr.get("slug") or c["name"]
                         c["photo_url"] = _cr.get("photo_url") or ""
-                        c["has_stripe"] = bool(_cr.get("stripe_acct_id")) or c["acct"].startswith("acct_")
+                        c["has_stripe"] = bool(_cr.get("payout_enabled"))
         except Exception:
             pass
 
@@ -1362,7 +1362,7 @@ if page == "ranking":
             return
         _s_acct_ids = [d["creator_acct"] for d in stamp_data]
         try:
-            _s_cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url,stripe_acct_id").in_("acct_id", _s_acct_ids).execute()
+            _s_cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url,payout_enabled").in_("acct_id", _s_acct_ids).execute()
             _s_cr_map  = {r["acct_id"]: r for r in (_s_cr_rows.data or [])}
         except Exception:
             _s_cr_map = {}
@@ -1375,7 +1375,7 @@ if page == "ranking":
             _sphoto= _scr.get("photo_url") or ""
             _smedal= _s_medals[_si] if _si < 3 else f"{_si+1}位"
             _surl  = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_sa}"
-            _has_stripe_s = bool(_scr.get("stripe_acct_id") or _sa.startswith("acct_"))
+            _has_stripe_s = bool(_scr.get("payout_enabled"))
             _no_stripe_badge_s = (
                 '<span style="font-size:10px;color:#94a3b8;background:rgba(148,163,184,0.1);'
                 'border:1px solid rgba(148,163,184,0.25);border-radius:9999px;padding:2px 7px;'
@@ -2278,7 +2278,26 @@ else: # Dashboard
         except Exception:
             _my_stamp_count = 0
         _est_yen    = _my_stamp_count * 100
-        _has_stripe = bool(_cr_data.get("stripe_acct_id")) or acct_id.startswith("acct_")
+
+        # ── Stripeの完了状態をリアルタイムで確認 ──
+        # stripe_acct_idがDBにあっても、Stripe側でonboardingが完了していなければ未登録扱い
+        _raw_stripe_acct = _cr_data.get("stripe_acct_id") or (acct_id if acct_id.startswith("acct_") else "")
+        _stripe_payouts_ok = False
+        _stripe_incomplete = False  # stripe_acct_idはあるがonboarding未完了
+        if _raw_stripe_acct:
+            _st_status = check_account_status(_raw_stripe_acct)
+            if _st_status:
+                _stripe_payouts_ok = _st_status.get("payouts_enabled", False)
+                _stripe_incomplete = not _stripe_payouts_ok  # acctはあるが未完了
+                # 完了確認できたらDBのpayout_enabledを更新
+                if _stripe_payouts_ok:
+                    try:
+                        get_db().table("creators").update({"payout_enabled": True}).eq("acct_id", acct_id).execute()
+                    except Exception:
+                        pass
+            else:
+                _stripe_incomplete = True  # 取得失敗＝未完了扱い
+        _has_stripe = _stripe_payouts_ok
 
         # ── pending_supports 集計（登録済み・未登録ともに取得）──
         _pending_total = 0
@@ -2379,16 +2398,36 @@ else: # Dashboard
             st.stop()
 
         if not _has_stripe:
-            st.markdown("""
-            <div style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
-                <div style="font-size:15px;font-weight:900;color:#f97316;margin-bottom:6px;">💰 受取口座を登録して応援を受け取ろう</div>
-                <div style="font-size:12px;color:rgba(240,240,245,0.6);line-height:1.6;">
-                    Stripeアカウントを作成すると、ファンからの応援金を受け取れます。<br>
-                    登録済みのメールアドレスで自動入力されます。
+            if _stripe_incomplete:
+                # stripe_acct_idはあるがonboarding未完了→続きへ誘導
+                try:
+                    _resume_link = create_account_link(_raw_stripe_acct, creator_acct_id=acct_id)
+                except Exception:
+                    _resume_link = None
+                st.markdown("""
+                <div style="background:rgba(249,115,22,0.12);border:2px solid rgba(249,115,22,0.55);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+                    <div style="font-size:15px;font-weight:900;color:#f97316;margin-bottom:6px;">⚠️ Stripeの口座登録が途中です</div>
+                    <div style="font-size:12px;color:rgba(240,240,245,0.7);line-height:1.8;">
+                        銀行口座の登録が完了していません。<br>
+                        応援金を受け取るには、Stripeの手続きを最後まで完了してください。
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("💰 受け取りを有効にする（収益化する）", type="primary", key="monetize_btn", use_container_width=True):
+                """, unsafe_allow_html=True)
+                if _resume_link:
+                    st.link_button("👉 Stripeの登録を続けて完了する", _resume_link, type="primary", use_container_width=True)
+                st.caption("登録完了後、このページを再読み込みすると状態が更新されます。")
+            else:
+                # stripe_acct_id自体がない→完全な新規
+                st.markdown("""
+                <div style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+                    <div style="font-size:15px;font-weight:900;color:#f97316;margin-bottom:6px;">💰 受取口座を登録して応援を受け取ろう</div>
+                    <div style="font-size:12px;color:rgba(240,240,245,0.6);line-height:1.6;">
+                        Stripeアカウントを作成すると、ファンからの応援金を受け取れます。<br>
+                        登録済みのメールアドレスで自動入力されます。
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            if not _stripe_incomplete and st.button("💰 受け取りを有効にする（収益化する）", type="primary", key="monetize_btn", use_container_width=True):
                 try:
                     _cr_email = _cr_data.get("email") or ""
                     _new_stripe_kwargs = {
