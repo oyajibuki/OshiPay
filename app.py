@@ -436,6 +436,24 @@ def get_stamp_ranking() -> list:
     except Exception:
         return []
 
+def get_ranking_creators() -> list:
+    """bio・slug・display_name が全て設定されたクリエイター一覧を取得"""
+    try:
+        resp = (
+            get_db().table("creators")
+            .select("acct_id,display_name,name,slug,bio,photo_url,stripe_acct_id")
+            .not_.is_("slug", "null")
+            .not_.is_("bio", "null")
+            .not_.is_("display_name", "null")
+            .execute()
+        )
+        return [
+            r for r in (resp.data or [])
+            if r.get("slug") and r.get("bio") and r.get("display_name")
+        ]
+    except Exception:
+        return []
+
 def get_supporters_map(supporter_ids: list) -> dict:
     """supporter_id リストから {supporter_id: display_name} マップを返す"""
     if not supporter_ids:
@@ -1098,16 +1116,30 @@ if page == "ranking":
     st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🏆 応援ランキング</div>', unsafe_allow_html=True)
 
-    def render_ranking(supports, total_label):
-        if not supports:
+    def render_ranking(supports, total_label, base_creators=None):
+        # ① プロフィール完成クリエイターをベースに全員ランキング入り
+        creator_map = {}
+        if base_creators:
+            for _bc in base_creators:
+                _bid = _bc["acct_id"]
+                _bname = _bc.get("display_name") or _bc.get("name") or _bc.get("slug") or _bid
+                # stripe_acct_id あり OR 旧 acct_ プレフィックス → 口座登録済み
+                _bhas = bool(_bc.get("stripe_acct_id")) or _bid.startswith("acct_")
+                creator_map[_bid] = {
+                    "name": _bname, "acct": _bid, "total": 0, "count": 0,
+                    "first_at": "", "has_reply": False, "supports": [],
+                    "photo_url": _bc.get("photo_url") or "", "has_stripe": _bhas,
+                }
+
+        if not supports and not creator_map:
             st.markdown('<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.35);font-size:14px;">まだ応援データがありません 🌱</div>', unsafe_allow_html=True)
             return
-        # クリエイター別に集計
-        creator_map = {}
+
+        # supports データを creator_map に加算
         for s in supports:
             acct = s["creator_acct"]
             if acct not in creator_map:
-                creator_map[acct] = {"name": s["creator_name"], "acct": acct, "total": 0, "count": 0, "first_at": s.get("created_at",""), "has_reply": False, "supports": []}
+                creator_map[acct] = {"name": s["creator_name"], "acct": acct, "total": 0, "count": 0, "first_at": s.get("created_at",""), "has_reply": False, "supports": [], "photo_url": "", "has_stripe": False}
             creator_map[acct]["total"] += s["amount"]
             creator_map[acct]["count"] += 1
             if s.get("created_at","") < creator_map[acct]["first_at"] or not creator_map[acct]["first_at"]:
@@ -1116,33 +1148,25 @@ if page == "ranking":
                 creator_map[acct]["has_reply"] = True
             creator_map[acct]["supports"].append(s)
 
-        ranked = sorted(
-            creator_map.values(),
-            key=lambda x: (
-                -x["total"],           # 1位: 応援額が多い順
-                x["first_at"],         # 2位A: 先に応援された順（昇順）
-                -x["count"],           # 3位C: 応援回数が多い順
-                not x["has_reply"],    # 4位B: 返信ありが上（False=0が先）
-            )
-        )
-
-        # creatorsテーブルから display_name / slug / stripe_acct_id を一括取得して上書き
+        # base_creators に含まれないクリエイターの情報をDBから補完
         try:
-            _acct_ids = [c["acct"] for c in ranked]
-            _cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url,stripe_acct_id").in_("acct_id", _acct_ids).execute()
-            _cr_name_map = {r["acct_id"]: r for r in (_cr_rows.data or [])}
-            for c in ranked:
-                _cr = _cr_name_map.get(c["acct"], {})
-                _dn = _cr.get("display_name") or _cr.get("name") or _cr.get("slug") or c["name"]
-                c["name"] = _dn
-                c["photo_url"] = _cr.get("photo_url") or ""
-                c["has_stripe"] = bool(_cr.get("stripe_acct_id"))
+            _base_ids = {r["acct_id"] for r in (base_creators or [])}
+            _extra_ids = [c["acct"] for c in creator_map.values() if c["acct"] not in _base_ids]
+            if _extra_ids:
+                _cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url,stripe_acct_id").in_("acct_id", _extra_ids).execute()
+                _cr_name_map = {r["acct_id"]: r for r in (_cr_rows.data or [])}
+                for c in creator_map.values():
+                    if c["acct"] in _extra_ids:
+                        _cr = _cr_name_map.get(c["acct"], {})
+                        c["name"] = _cr.get("display_name") or _cr.get("name") or _cr.get("slug") or c["name"]
+                        c["photo_url"] = _cr.get("photo_url") or ""
+                        c["has_stripe"] = bool(_cr.get("stripe_acct_id")) or c["acct"].startswith("acct_")
         except Exception:
             pass
 
-        # Stripe未登録（受取口座なし）は応援額ランキングの最下位に固定
-        ranked = sorted(ranked, key=lambda x: (
-            not x.get("has_stripe", True),  # Stripe未登録は後ろ（True=1が後ろ）
+        # ② 口座登録済みが上位・未登録が下位（それぞれ amount desc）
+        ranked = sorted(creator_map.values(), key=lambda x: (
+            not x.get("has_stripe", False),  # 未登録を後ろ
             -x["total"],
             x["first_at"],
             -x["count"],
@@ -1214,16 +1238,22 @@ if page == "ranking":
 
     tab_monthly, tab_alltime, tab_stamps = st.tabs([f"📅 月間 ({month_label})", "🌟 全期間", "💜 スタンプ"])
 
+    # プロフィール完成クリエイター一覧（全タブ共通）
+    try:
+        _base_creators = get_ranking_creators()
+    except Exception:
+        _base_creators = []
+
     with tab_monthly:
         try:
-            render_ranking(get_monthly_ranking(), "月間合計")
+            render_ranking(get_monthly_ranking(), "月間合計", base_creators=_base_creators)
         except Exception:
             st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
             st.stop()
 
     with tab_alltime:
         try:
-            render_ranking(get_all_time_ranking(), "全期間合計")
+            render_ranking(get_all_time_ranking(), "全期間合計", base_creators=_base_creators)
         except Exception:
             st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
             st.stop()
@@ -1343,10 +1373,11 @@ support_photo = ""
 
 # 新URL形式: ?page=support&creator={slug or acct_id}
 _creator_param = params.get("creator", "")
+_creator_stripe_acct = ""  # Stripe Connect用アカウントID
 if _creator_param and not support_user:
     try:
         _cr_resp = get_db().table("creators").select(
-            "acct_id,display_name,name,photo_url"
+            "acct_id,display_name,name,photo_url,stripe_acct_id"
         ).or_(f"slug.eq.{_creator_param},acct_id.eq.{_creator_param}").maybe_single().execute()
         if _cr_resp.data:
             _cr = _cr_resp.data
@@ -1354,21 +1385,32 @@ if _creator_param and not support_user:
             connect_acct  = _cr.get("acct_id", _creator_param)
             support_name  = _cr.get("display_name") or _cr.get("name") or _creator_param
             support_photo = _cr.get("photo_url") or ""
+            _creator_stripe_acct = _cr.get("stripe_acct_id") or ""
         else:
-            # DBにデータなし → クリエイター不在フラグ
             support_user = None
     except Exception:
-        # DBクエリ失敗 → クリエイター特定不可
         support_user = None
 elif support_user:
-    # 旧URL形式でもDBからphoto_urlを取得
     try:
-        _cr_resp2 = get_db().table("creators").select("photo_url").or_(
+        _cr_resp2 = get_db().table("creators").select("photo_url,stripe_acct_id").or_(
             f"slug.eq.{support_user},acct_id.eq.{support_user}"
         ).maybe_single().execute()
         support_photo = (_cr_resp2.data or {}).get("photo_url") or ""
+        _creator_stripe_acct = (_cr_resp2.data or {}).get("stripe_acct_id") or ""
     except Exception:
         pass
+
+# 実際に Stripe Connect で使うアカウントIDを決定
+# 1) stripe_acct_id 列が設定済み → 使う（新方式 usr_）
+# 2) acct_ プレフィックス → acct_id そのものが Stripe ID（旧方式）
+# 3) usr_ でstripe未登録 → 口座未登録
+if _creator_stripe_acct:
+    _stripe_connect_acct = _creator_stripe_acct
+elif connect_acct and connect_acct.startswith("acct_"):
+    _stripe_connect_acct = connect_acct
+else:
+    _stripe_connect_acct = ""
+_creator_has_stripe = bool(_stripe_connect_acct)
 
 if page == "support" and _creator_param and not support_user:
     st.markdown('<div class="oshi-logo"><span class="text">OshiPay</span></div>', unsafe_allow_html=True)
@@ -1423,23 +1465,36 @@ if page == "support" and support_user:
     st.markdown('</div>', unsafe_allow_html=True)
 
     if "amt" not in st.session_state: st.session_state.amt = 100
-    
+
     st.markdown('<div class="section-subtitle">応援する金額を選んで、メッセージを送ろう</div>', unsafe_allow_html=True)
-    
-    # 金額の選択肢（ドラム用）: 非線形で作成して操作性を向上
-    # 100-1000(100刻み), 1000-10000(500刻み), 10000-100000(5000刻み), 100000-1000000(50000刻み)
-    slider_options = (
-        list(range(100, 1000, 100)) + 
-        list(range(1000, 10000, 500)) + 
-        list(range(10000, 100000, 5000)) + 
-        list(range(100000, 1000001, 50000))
-    )
-    # 現在のamtがoptionsにない場合は一番近い値を探す
+
+    # ── 口座未登録クリエイターへの注意書き ──
+    if not _creator_has_stripe:
+        st.markdown("""
+        <div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.4);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.7;color:rgba(240,240,245,0.85);">
+            ⚠️ <b style="color:#fbbf24;">このクリエイターはまだ受取口座を登録していません</b><br>
+            ・設定した金額は現在送金できません。クリエイター側が口座登録完了次第、送金可能となります。<br>
+            ・クリエイター側が <b>72時間以内</b> に口座登録を完了できない場合、自動的にキャンセルとなります。<br>
+            ・入金可能な状況となり次第ご連絡しますので、LINE ID またはメールアドレスの入力をお願いします。<br>
+            ・メール送付後、<b>24時間以内</b> に入金が確認できない場合は自動的にキャンセルとなります。
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 金額スライダー（口座未登録は1000円上限）
+    if _creator_has_stripe:
+        slider_options = (
+            list(range(100, 1000, 100)) +
+            list(range(1000, 10000, 500)) +
+            list(range(10000, 100000, 5000)) +
+            list(range(100000, 1000001, 50000))
+        )
+    else:
+        slider_options = list(range(100, 1100, 100))  # 100〜1000円
+
     current_amt = int(st.session_state.amt)
     if current_amt not in slider_options:
         current_amt = min(slider_options, key=lambda x: abs(x - current_amt))
 
-    # ドラム型スライダー
     selected_amt = st.select_slider(
         "応援金額を選択 (ドラムロール)",
         options=slider_options,
@@ -1457,56 +1512,77 @@ if page == "support" and support_user:
     _default_name = st.session_state.get("supporter_auth", {}).get("display_name", "")
     sup_display_name = st.text_input("お名前", value=_default_name, placeholder="例: たろう", label_visibility="collapsed")
 
-    # ボタンの無効化処理を追加
+    # 口座未登録クリエイター向け：連絡先入力
+    _pending_contact = ""
+    if not _creator_has_stripe:
+        st.markdown('<div style="font-size:12px;color:rgba(240,240,245,0.6);margin-top:12px;margin-bottom:4px;">📩 入金可能時の連絡先（LINE ID またはメールアドレス）</div>', unsafe_allow_html=True)
+        _pending_contact = st.text_input("連絡先", placeholder="例: line_id_here  または  you@example.com", label_visibility="collapsed")
+
     is_disabled = st.session_state.amt < 100
     if is_disabled:
-        st.info("💡 応援は100円から受け付けています。金額を選択してください。")
+        st.info("💡 応援は100円から受け付けています。")
 
-    # ── 改正特商法に基づく最終確認表示 ──
+    # ── 最終確認 ──
     st.markdown(f"""
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin-top: 20px; margin-bottom: 20px;">
-        <div style="font-size: 13px; color: #f0f0f5; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">最終確認</div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span style="font-size: 12px; color: rgba(240,240,245,0.6);">支払総額（税込）</span>
-            <span style="font-size: 14px; color: #f97316; font-weight: 700;">{int(st.session_state.amt):,}</span>
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;margin-top:20px;margin-bottom:20px;">
+        <div style="font-size:13px;color:#f0f0f5;font-weight:700;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:5px;">最終確認</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;color:rgba(240,240,245,0.6);">支払予定額（税込）</span>
+            <span style="font-size:14px;color:#f97316;font-weight:700;">{int(st.session_state.amt):,}円</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span style="font-size: 12px; color: rgba(240,240,245,0.6);">支払時期</span>
-            <span style="font-size: 12px; color: #f0f0f5;">決済手続き完了時</span>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;color:rgba(240,240,245,0.6);">支払時期</span>
+            <span style="font-size:12px;color:#f0f0f5;">{"口座登録完了後にご連絡" if not _creator_has_stripe else "決済手続き完了時"}</span>
         </div>
-        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
-            <div style="font-size: 11px; color: rgba(240,240,245,0.5); line-height: 1.4;">
-                ※デジタルコンテンツおよび投げ銭の性質上、決済手続き完了後のキャンセル、返金、返品には一切応じられません。
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,0.1);">
+            <div style="font-size:11px;color:rgba(240,240,245,0.5);line-height:1.4;">
+                {"※クリエイターが72時間以内に口座登録しない場合、自動キャンセルとなります。" if not _creator_has_stripe else "※デジタルコンテンツおよび投げ銭の性質上、決済手続き完了後のキャンセル・返金・返品には一切応じられません。"}
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-subtitle" style="text-align:left; margin-bottom:5px;">🎫 あなたのサポーターID（任意）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:10px;">IDを入れると実績が自動でアカウントに紐づきます。</div>', unsafe_allow_html=True)
-    _default_sup_id = st.session_state.get("supporter_auth", {}).get("supporter_id", "")
-    opt_sup_id = st.text_input("サポーターID", value=_default_sup_id, placeholder="sup_xxxxxxxx", label_visibility="collapsed")
 
-    if st.button("🔥 応援する！", disabled=is_disabled):
-        amt = st.session_state.amt
-        support_id = str(uuid.uuid4())  # 応援証明用ユニークID
-        # 名前入力ありでsup_idなし → 自動生成
-        final_sup_id = opt_sup_id or ("sup_" + uuid.uuid4().hex[:8] if sup_display_name else "")
-        try:
-            checkout_params = {
-                "payment_method_types": ["card"], "mode": "payment",
-                "line_items": [{"price_data": {"currency": "jpy", "product_data": {"name": f"{support_name}への応援"}, "unit_amount": amt}, "quantity": 1}],
-                "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(support_name)}&s_amt={amt}&s_acct={connect_acct}&s_msg={urllib.parse.quote(msg or '')}&s_sid={support_id}&s_sup_id={final_sup_id}&s_sup_name={urllib.parse.quote(sup_display_name or '')}",
-                "cancel_url": f"{BASE_URL}?page=cancel",
-                "metadata": {"user_id": support_user, "message": msg, "support_id": support_id, "supporter_id": opt_sup_id}
-            }
-            if connect_acct:
+    if _creator_has_stripe:
+        # ── 口座登録済み：通常 Stripe フロー ──
+        st.markdown('<div class="section-subtitle" style="text-align:left;margin-bottom:5px;">🎫 あなたのサポーターID（任意）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:10px;">IDを入れると実績が自動でアカウントに紐づきます。</div>', unsafe_allow_html=True)
+        _default_sup_id = st.session_state.get("supporter_auth", {}).get("supporter_id", "")
+        opt_sup_id = st.text_input("サポーターID", value=_default_sup_id, placeholder="sup_xxxxxxxx", label_visibility="collapsed")
+
+        if st.button("🔥 応援する！", disabled=is_disabled):
+            amt = st.session_state.amt
+            support_id = str(uuid.uuid4())
+            final_sup_id = opt_sup_id or ("sup_" + uuid.uuid4().hex[:8] if sup_display_name else "")
+            try:
+                checkout_params = {
+                    "payment_method_types": ["card"], "mode": "payment",
+                    "line_items": [{"price_data": {"currency": "jpy", "product_data": {"name": f"{support_name}への応援"}, "unit_amount": amt}, "quantity": 1}],
+                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(support_name)}&s_amt={amt}&s_acct={_stripe_connect_acct}&s_msg={urllib.parse.quote(msg or '')}&s_sid={support_id}&s_sup_id={final_sup_id}&s_sup_name={urllib.parse.quote(sup_display_name or '')}",
+                    "cancel_url": f"{BASE_URL}?page=cancel",
+                    "metadata": {"user_id": support_user, "message": msg, "support_id": support_id, "supporter_id": opt_sup_id}
+                }
                 checkout_params["payment_intent_data"] = {"application_fee_amount": int(amt * 0.1)}
-                session = stripe.checkout.Session.create(**checkout_params, stripe_account=connect_acct)
-            else: session = stripe.checkout.Session.create(**checkout_params)
-            st.markdown(f'<script>window.top.location.href = "{session.url}";</script>', unsafe_allow_html=True)
-            st.link_button("💳 決済ページへ", session.url)
-        except Exception as e: st.error(e)
+                session = stripe.checkout.Session.create(**checkout_params, stripe_account=_stripe_connect_acct)
+                st.markdown(f'<script>window.top.location.href = "{session.url}";</script>', unsafe_allow_html=True)
+                st.link_button("💳 決済ページへ", session.url)
+            except Exception as e:
+                st.error(e)
+    else:
+        # ── 口座未登録：pending_supports に保存（Stripe不使用）──
+        if st.button("💜 応援を登録する", disabled=is_disabled, type="primary"):
+            try:
+                get_db().table("pending_supports").insert({
+                    "creator_acct": connect_acct,
+                    "amount": int(st.session_state.amt),
+                    "message": msg or "",
+                    "contact_info": _pending_contact or "",
+                }).execute()
+                st.success(f"✅ {int(st.session_state.amt):,}円の応援を登録しました！クリエイターが口座登録次第ご連絡します。")
+                st.balloons()
+            except Exception as _pe:
+                st.error(f"エラー: {_pe}")
+
     st.markdown(f'<div class="oshi-footer">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
 
@@ -1973,7 +2049,21 @@ else: # Dashboard
         except Exception:
             _my_stamp_count = 0
         _est_yen    = _my_stamp_count * 100
-        _has_stripe = bool(_cr_data.get("stripe_acct_id"))
+        _has_stripe = bool(_cr_data.get("stripe_acct_id")) or acct_id.startswith("acct_")
+
+        # ── pending_supports 集計（口座未登録のみ表示）──
+        _pending_total = 0
+        _pending_msg_count = 0
+        if not _has_stripe:
+            try:
+                import datetime as _dt
+                _now_iso = _dt.datetime.now(_dt.timezone.utc).isoformat()
+                _pr = get_db().table("pending_supports").select("amount,message").eq("creator_acct", acct_id).eq("status", "pending").gte("expires_at", _now_iso).execute()
+                _pr_rows = _pr.data or []
+                _pending_total = sum(r["amount"] for r in _pr_rows)
+                _pending_msg_count = sum(1 for r in _pr_rows if r.get("message"))
+            except Exception:
+                pass
 
         st.markdown(f"""
         <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:16px 20px;margin-bottom:16px;text-align:center;">
@@ -1986,7 +2076,30 @@ else: # Dashboard
         </div>
         """, unsafe_allow_html=True)
 
-        if acct_id.startswith("usr_") and not _has_stripe:
+        # 口座未登録：送金希望額・メッセージ通知
+        if not _has_stripe and _pending_total > 0:
+            st.markdown(f"""
+            <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.35);border-radius:14px;padding:16px 20px;margin-bottom:16px;">
+                <div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:8px;">💰 送金希望が届いています</div>
+                <div style="font-size:24px;font-weight:900;color:#f97316;margin-bottom:6px;">{_pending_total:,}円 相当</div>
+                <div style="font-size:11px;color:rgba(240,240,245,0.5);line-height:1.6;">
+                    ※確約ではありません。口座登録完了後にファンへ連絡し、入金確認後に確定します。<br>
+                    ⚠️ 72時間以内に口座登録が確認できない場合、リセットされます。
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        if not _has_stripe and _pending_msg_count > 0:
+            st.markdown(f"""
+            <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:14px 18px;margin-bottom:16px;">
+                <div style="font-size:13px;color:#c4b5fd;font-weight:700;">💌 応援メッセージが {_pending_msg_count} 件届いています</div>
+                <div style="font-size:11px;color:rgba(240,240,245,0.45);margin-top:6px;">
+                    ※内容は口座登録完了後に全開放されます。
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        if not _has_stripe:
             if st.button("💰 受け取りを有効にする（収益化する）", type="primary", key="monetize_btn", use_container_width=True):
                 try:
                     _cr_email = _cr_data.get("email") or ""
