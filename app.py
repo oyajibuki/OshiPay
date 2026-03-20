@@ -1780,12 +1780,14 @@ else: # Dashboard
     st.markdown('<div class="section-title">QRコードを発行</div>', unsafe_allow_html=True)
     # アカウントIDの特定
     acct_id = connect_acct or params.get("acct")
-    # ④(5) slug lookup（acct_で始まらない場合はslugとして検索）
+    # acct_id / slug / usr_ いずれでもOK → 実際の acct_id に解決
     if acct_id and not acct_id.startswith("acct_"):
         try:
-            _slug_res = get_db().table("creators").select("acct_id").eq("slug", acct_id).maybe_single().execute()
+            _slug_res = get_db().table("creators").select("acct_id").or_(
+                f"acct_id.eq.{acct_id},slug.eq.{acct_id}"
+            ).limit(1).execute()
             if _slug_res.data:
-                acct_id = _slug_res.data["acct_id"]
+                acct_id = _slug_res.data[0]["acct_id"]
         except Exception:
             pass
 
@@ -1796,7 +1798,7 @@ else: # Dashboard
             (function(){{
               try {{
                 var saved = localStorage.getItem('oshipay_acct');
-                if (saved && saved.startsWith('acct_')) {{
+                if (saved && (saved.startsWith('acct_') || saved.startsWith('usr_'))) {{
                   window.parent.location.href = '{BASE_URL}?page=dashboard&acct=' + encodeURIComponent(saved);
                 }}
               }} catch(e) {{}}
@@ -1858,71 +1860,70 @@ else: # Dashboard
                     🔑 既にアカウントをお持ちの方
                 </div>
                 <div style="font-size:12px;color:rgba(240,240,245,0.5);">
-                    登録完了メールに記載の <code>usr_</code> または <code>acct_</code> から始まるIDを入力してください
+                    ユーザーID（slug）・<code>usr_</code>・<code>acct_</code> どれでもログインできます
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            recover_input = st.text_input("アカウントID", placeholder="usr_xxxxxxxxxxxxxxxx", label_visibility="collapsed")
+            recover_input = st.text_input("ユーザーID または アカウントID", placeholder="例: nana  /  usr_xxxx  /  acct_xxxx", label_visibility="collapsed")
             recover_pass = st.text_input("パスワード", type="password", placeholder="パスワードを入力")
             if st.button("✅ このアカウントで開く", use_container_width=True):
                 rid = recover_input.strip()
-                if rid and len(rid) > 5 and recover_pass:
-                    resp = get_db().table("creators").select("*").eq("acct_id", rid).execute()
-                    if not resp.data:
-                        # まだパスワードが設定されていない既存アカウントへの対応
-                        register_creator(rid, recover_pass)
-                        st.success("初期パスワードを設定しました！")
-                        st.query_params["acct"] = rid
-                        st.session_state["creator_auth"] = rid
-                        st.rerun()
-                    else:
-                        if verify_creator(rid, recover_pass):
-                            st.query_params["acct"] = rid
-                            st.session_state["creator_auth"] = rid
+                if rid and len(rid) >= 2 and recover_pass:
+                    # acct_id OR slug どちらでも検索
+                    try:
+                        _r = get_db().table("creators").select("acct_id,password_hash").or_(
+                            f"acct_id.eq.{rid},slug.eq.{rid}"
+                        ).limit(1).execute()
+                    except Exception as _e:
+                        st.error(f"DB接続エラー: {_e}")
+                        _r = None
+                    if _r and _r.data:
+                        real_id = _r.data[0]["acct_id"]
+                        if verify_creator(real_id, recover_pass):
+                            st.query_params["acct"] = real_id
+                            st.session_state["creator_auth"] = real_id
                             st.rerun()
                         else:
                             st.error("パスワードが間違っています。")
+                    else:
+                        st.error("アカウントが見つかりません。IDを確認してください。")
                 else:
-                    st.error("アカウントIDとパスワードを正しく入力してください。")
+                    st.error("IDとパスワードを入力してください。")
 
         with tab_forgot_c:
-            st.markdown('<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px;">登録時のメールアドレスで本人確認し、仮パスワードを発行します。</div>', unsafe_allow_html=True)
-            fc_acct  = st.text_input("アカウントID（usr_ または acct_ で始まる）", key="fc_acct", placeholder="usr_xxxxxxxxxxxxxxxx")
+            st.markdown('<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px;">登録時のメールアドレスで本人確認し、仮パスワードを発行します。<br>ユーザーID（slug）・usr_・acct_ どれでも入力できます。</div>', unsafe_allow_html=True)
+            fc_acct  = st.text_input("ユーザーID または アカウントID", key="fc_acct", placeholder="例: nana  /  usr_xxxx  /  acct_xxxx")
             fc_email = st.text_input("登録メールアドレス", key="fc_email", placeholder="example@email.com")
             if st.button("仮パスワードを発行", key="fc_btn", use_container_width=True):
                 if fc_acct and fc_email:
-                    if fc_acct.strip().startswith("usr_"):
-                        # 新方式: DBに保存したemailで照合
-                        try:
-                            resp = get_db().table("creators").select("acct_id,email").eq("acct_id", fc_acct.strip()).maybe_single().execute()
-                            db_email = (resp.data or {}).get("email", "")
-                            if db_email and db_email.lower() == fc_email.strip().lower():
-                                temp_pass = uuid.uuid4().hex[:8]
-                                get_db().table("creators").update({"password_hash": hash_password(temp_pass)}).eq("acct_id", fc_acct.strip()).execute()
-                                st.success("本人確認完了！ログイン後にパスワードを変更してください。")
-                                st.info(f"🔑 仮パスワード: `{temp_pass}`")
-                            else:
-                                st.error("メールアドレスが一致しません。")
-                        except Exception:
-                            st.error("アカウントIDが見つかりません。")
+                    # acct_id OR slug で検索して real acct_id を取得
+                    try:
+                        _fc_r = get_db().table("creators").select("acct_id,email").or_(
+                            f"acct_id.eq.{fc_acct.strip()},slug.eq.{fc_acct.strip()}"
+                        ).limit(1).execute()
+                        _fc_row = _fc_r.data[0] if _fc_r.data else None
+                    except Exception:
+                        _fc_row = None
+
+                    if not _fc_row:
+                        st.error("アカウントが見つかりません。")
                     else:
-                        # 旧方式(acct_): Stripe APIで照合
-                        try:
-                            acct_info = stripe.Account.retrieve(fc_acct.strip())
-                            stripe_email = acct_info.get("email", "")
-                            if stripe_email.lower() == fc_email.strip().lower():
-                                temp_pass = uuid.uuid4().hex[:8]
-                                resp = get_db().table("creators").select("acct_id").eq("acct_id", fc_acct.strip()).execute()
-                                if resp.data:
-                                    get_db().table("creators").update({"password_hash": hash_password(temp_pass)}).eq("acct_id", fc_acct.strip()).execute()
-                                else:
-                                    register_creator(fc_acct.strip(), temp_pass)
-                                st.success("本人確認完了！ログイン後にパスワードを変更してください。")
-                                st.info(f"🔑 仮パスワード: `{temp_pass}`")
-                            else:
-                                st.error("メールアドレスが一致しません。")
-                        except Exception:
-                            st.error("アカウントIDが見つかりません。")
+                        _fc_real_id = _fc_row["acct_id"]
+                        _fc_db_email = _fc_row.get("email", "")
+                        if _fc_real_id.startswith("acct_") and not _fc_db_email:
+                            # 旧Stripeアカウント: Stripe APIでメール照合
+                            try:
+                                acct_info = stripe.Account.retrieve(_fc_real_id)
+                                _fc_db_email = acct_info.get("email", "")
+                            except Exception:
+                                pass
+                        if _fc_db_email and _fc_db_email.lower() == fc_email.strip().lower():
+                            temp_pass = uuid.uuid4().hex[:8]
+                            get_db().table("creators").update({"password_hash": hash_password(temp_pass)}).eq("acct_id", _fc_real_id).execute()
+                            st.success("本人確認完了！ログイン後にパスワードを変更してください。")
+                            st.info(f"🔑 仮パスワード: `{temp_pass}`")
+                        else:
+                            st.error("メールアドレスが一致しません。")
                 else:
                     st.warning("IDとメールアドレスを入力してください。")
     else:
