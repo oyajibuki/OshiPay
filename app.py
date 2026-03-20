@@ -94,9 +94,11 @@ def create_connect_account():
     )
     return account.id
 
-def create_account_link(account_id, return_params=""):
-    return_url = f"{BASE_URL}?page=dashboard&acct={account_id}{return_params}"
-    refresh_url = f"{BASE_URL}?page=dashboard&acct={account_id}&refresh=1{return_params}"
+def create_account_link(account_id, creator_acct_id=None, return_params=""):
+    # return_url は OshiPay の内部 acct_id（usr_XXX など）を使う
+    _ret_acct = creator_acct_id or account_id
+    return_url  = f"{BASE_URL}?page=dashboard&acct={_ret_acct}{return_params}"
+    refresh_url = f"{BASE_URL}?page=dashboard&acct={_ret_acct}&refresh=1{return_params}"
     link = stripe.AccountLink.create(
         account=account_id, refresh_url=refresh_url, return_url=return_url, type="account_onboarding",
     )
@@ -1578,6 +1580,25 @@ if page == "support" and support_user:
                     "message": msg or "",
                     "contact_info": _pending_contact or "",
                 }).execute()
+                # ③ クリエイターへ通知メール
+                try:
+                    _notif_cr = get_db().table("creators").select("email,display_name").eq("acct_id", connect_acct).maybe_single().execute()
+                    _notif_email = (_notif_cr.data or {}).get("email", "")
+                    _notif_name  = (_notif_cr.data or {}).get("display_name", support_name)
+                    if _notif_email:
+                        _notif_body = (
+                            f"{_notif_name}さん\n\n"
+                            f"OshiPayに送金希望が届きました！\n\n"
+                            f"💰 金額: {int(st.session_state.amt):,}円\n"
+                            f"💬 メッセージ: {msg or '（なし）'}\n"
+                            f"📩 ファンの連絡先: {_pending_contact or '（未入力）'}\n\n"
+                            f"口座登録を完了するとファンに連絡が届き、入金が確定します。\n"
+                            f"⚠️ 72時間以内に口座登録がない場合、自動キャンセルになります。\n\n"
+                            f"👉 口座登録はこちら: {BASE_URL}?page=dashboard&acct={connect_acct}\n\n--\nOshiPay"
+                        )
+                        send_support_email(_notif_email, _notif_name, int(st.session_state.amt), _notif_body)
+                except Exception:
+                    pass
                 st.success(f"✅ {int(st.session_state.amt):,}円の応援を登録しました！クリエイターが口座登録次第ご連絡します。")
                 st.balloons()
             except Exception as _pe:
@@ -2037,7 +2058,7 @@ else: # Dashboard
 
         # ── プロフィールテキスト（先に取得してdisplay_nameをデフォルト値に使う）──
         try:
-            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name,sns_links,profile_done").eq("acct_id", acct_id).maybe_single().execute()
+            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name,sns_links,profile_done,stripe_acct_id,email").eq("acct_id", acct_id).maybe_single().execute()
             _cr_data = _cr.data or {}
         except Exception:
             _cr_data = {}
@@ -2100,6 +2121,15 @@ else: # Dashboard
             """, unsafe_allow_html=True)
 
         if not _has_stripe:
+            st.markdown("""
+            <div style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+                <div style="font-size:15px;font-weight:900;color:#f97316;margin-bottom:6px;">💰 受取口座を登録して応援を受け取ろう</div>
+                <div style="font-size:12px;color:rgba(240,240,245,0.6);line-height:1.6;">
+                    Stripeアカウントを作成すると、ファンからの応援金を受け取れます。<br>
+                    登録済みのメールアドレスで自動入力されます。
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             if st.button("💰 受け取りを有効にする（収益化する）", type="primary", key="monetize_btn", use_container_width=True):
                 try:
                     _cr_email = _cr_data.get("email") or ""
@@ -2110,12 +2140,21 @@ else: # Dashboard
                         "business_profile": {"mcc": "7922", "product_description": "OshiPay - 投げ銭サービス", "url": BASE_URL},
                     }
                     if _cr_email:
-                        _new_stripe_kwargs["email"] = _cr_email
+                        _new_stripe_kwargs["email"] = _cr_email  # ⑤ OshiPayのメールをStripeに補完
                     _new_stripe_acct = stripe.Account.create(**_new_stripe_kwargs)
                     get_db().table("creators").update({"stripe_acct_id": _new_stripe_acct.id}).eq("acct_id", acct_id).execute()
-                    _link_url = create_account_link(_new_stripe_acct.id)
+                    _link_url = create_account_link(_new_stripe_acct.id, creator_acct_id=acct_id)  # ① return_url を内部IDに修正
+                    st.markdown(f"""
+                    <div style="background:rgba(139,92,246,0.15);border:2px solid rgba(139,92,246,0.5);border-radius:16px;padding:24px;margin:16px 0;text-align:center;">
+                        <div style="font-size:20px;margin-bottom:8px;">🏦</div>
+                        <div style="font-size:16px;font-weight:900;color:#c4b5fd;margin-bottom:8px;">Stripeで受け取り設定を完了してください</div>
+                        <div style="font-size:12px;color:rgba(240,240,245,0.6);margin-bottom:16px;">下のボタンをタップして口座情報を登録します</div>
+                        <a href="{_link_url}" target="_top" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;text-decoration:none;border-radius:12px;padding:14px 32px;font-size:16px;font-weight:900;">
+                            Stripeで受け取り設定する →
+                        </a>
+                    </div>
+                    """, unsafe_allow_html=True)
                     st.markdown(f'<script>window.top.location.href = "{_link_url}";</script>', unsafe_allow_html=True)
-                    st.link_button("Stripeで受け取り設定を完了する →", _link_url)
                 except Exception as _se:
                     st.error(f"エラー: {_se}")
 
