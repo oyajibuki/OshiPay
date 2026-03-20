@@ -2072,53 +2072,84 @@ else: # Dashboard
         _est_yen    = _my_stamp_count * 100
         _has_stripe = bool(_cr_data.get("stripe_acct_id")) or acct_id.startswith("acct_")
 
-        # ── pending_supports 集計（口座未登録のみ表示）──
+        # ── pending_supports 集計（登録済み・未登録ともに取得）──
         _pending_total = 0
-        _pending_msg_count = 0
-        if not _has_stripe:
-            try:
-                import datetime as _dt
-                _now_iso = _dt.datetime.now(_dt.timezone.utc).isoformat()
-                _pr = get_db().table("pending_supports").select("amount,message").eq("creator_acct", acct_id).eq("status", "pending").gte("expires_at", _now_iso).execute()
-                _pr_rows = _pr.data or []
-                _pending_total = sum(r["amount"] for r in _pr_rows)
-                _pending_msg_count = sum(1 for r in _pr_rows if r.get("message"))
-            except Exception:
-                pass
+        _pending_rows  = []
+        try:
+            import datetime as _dt
+            _now_iso = _dt.datetime.now(_dt.timezone.utc).isoformat()
+            _pr = get_db().table("pending_supports").select("amount,message,contact_info,created_at").eq("creator_acct", acct_id).eq("status", "pending").gte("expires_at", _now_iso).execute()
+            _pending_rows  = _pr.data or []
+            _pending_total = sum(r["amount"] for r in _pending_rows)
+        except Exception:
+            pass
+        _pending_msg_count = sum(1 for r in _pending_rows if r.get("message"))
 
-        st.markdown(f"""
-        <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:16px 20px;margin-bottom:16px;text-align:center;">
-            <div style="font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:4px;">💜 あなたへの応援スタンプ</div>
-            <div style="font-size:28px;font-weight:900;color:#c4b5fd;">{_my_stamp_count} スタンプ</div>
-            <div style="font-size:13px;color:rgba(240,240,245,0.6);margin-top:4px;">
-                受け取り設定をすると 推定
-                <span style="color:#f97316;font-weight:700;">{_est_yen:,}円</span> が受け取れます
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # 口座未登録：送金希望額・メッセージ通知
-        if not _has_stripe and _pending_total > 0:
+        # ① スタンプカード：登録済みは「受取設定済み」表示
+        if _has_stripe:
             st.markdown(f"""
-            <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.35);border-radius:14px;padding:16px 20px;margin-bottom:16px;">
-                <div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:8px;">💰 送金希望が届いています</div>
-                <div style="font-size:24px;font-weight:900;color:#f97316;margin-bottom:6px;">{_pending_total:,}円 相当</div>
-                <div style="font-size:11px;color:rgba(240,240,245,0.5);line-height:1.6;">
-                    ※確約ではありません。口座登録完了後にファンへ連絡し、入金確認後に確定します。<br>
-                    ⚠️ 72時間以内に口座登録が確認できない場合、リセットされます。
+            <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:16px 20px;margin-bottom:16px;text-align:center;">
+                <div style="font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:4px;">💜 あなたへの応援スタンプ</div>
+                <div style="font-size:28px;font-weight:900;color:#c4b5fd;">{_my_stamp_count} スタンプ</div>
+                <div style="font-size:13px;color:#4ade80;font-weight:700;margin-top:6px;">✅ 受取設定済み</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:16px 20px;margin-bottom:16px;text-align:center;">
+                <div style="font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:4px;">💜 あなたへの応援スタンプ</div>
+                <div style="font-size:28px;font-weight:900;color:#c4b5fd;">{_my_stamp_count} スタンプ</div>
+                <div style="font-size:13px;color:rgba(240,240,245,0.6);margin-top:4px;">
+                    受け取り設定をすると 推定
+                    <span style="color:#f97316;font-weight:700;">{_est_yen:,}円</span> が受け取れます
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-        if not _has_stripe and _pending_msg_count > 0:
-            st.markdown(f"""
-            <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:14px 18px;margin-bottom:16px;">
-                <div style="font-size:13px;color:#c4b5fd;font-weight:700;">💌 応援メッセージが {_pending_msg_count} 件届いています</div>
-                <div style="font-size:11px;color:rgba(240,240,245,0.45);margin-top:6px;">
-                    ※内容は口座登録完了後に全開放されます。
+        # ② pending 送金希望：未登録→金額のみ / 登録済み→金額＋メッセージ全開放
+        if _pending_total > 0:
+            if not _has_stripe:
+                st.markdown(f"""
+                <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.35);border-radius:14px;padding:16px 20px;margin-bottom:16px;">
+                    <div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:8px;">💰 送金希望が届いています</div>
+                    <div style="font-size:24px;font-weight:900;color:#f97316;margin-bottom:6px;">{_pending_total:,}円 相当</div>
+                    <div style="font-size:11px;color:rgba(240,240,245,0.5);line-height:1.6;">
+                        ※確約ではありません。口座登録完了後にファンへ連絡し、入金確認後に確定します。<br>
+                        ⚠️ 72時間以内に口座登録が確認できない場合、リセットされます。
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.35);border-radius:14px;padding:16px 20px;margin-bottom:16px;">
+                    <div style="font-size:12px;color:#4ade80;font-weight:700;margin-bottom:8px;">💰 送金希望（口座登録済み・確認待ち）</div>
+                    <div style="font-size:24px;font-weight:900;color:#f97316;margin-bottom:6px;">{_pending_total:,}円</div>
+                    <div style="font-size:11px;color:rgba(240,240,245,0.5);">ファンに連絡して入金確認後に確定します。</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        if _pending_msg_count > 0:
+            if not _has_stripe:
+                st.markdown(f"""
+                <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:14px 18px;margin-bottom:16px;">
+                    <div style="font-size:13px;color:#c4b5fd;font-weight:700;">💌 応援メッセージが {_pending_msg_count} 件届いています</div>
+                    <div style="font-size:11px;color:rgba(240,240,245,0.45);margin-top:6px;">※内容は口座登録完了後に全開放されます。</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # 口座登録済み → 全内容を表示
+                st.markdown(f'<div style="font-size:13px;color:#c4b5fd;font-weight:700;margin-bottom:10px;">💌 応援メッセージ（{_pending_msg_count}件）</div>', unsafe_allow_html=True)
+                for _pmr in _pending_rows:
+                    if _pmr.get("message"):
+                        st.markdown(f"""
+                        <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+                            <div style="font-size:13px;color:#f0f0f5;line-height:1.6;">{_pmr["message"]}</div>
+                            <div style="font-size:11px;color:rgba(240,240,245,0.4);margin-top:6px;">
+                                💰 {_pmr["amount"]:,}円
+                                {"　📩 " + _pmr["contact_info"] if _pmr.get("contact_info") else ""}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
 
         if not _has_stripe:
             st.markdown("""
