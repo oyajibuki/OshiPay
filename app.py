@@ -2469,9 +2469,11 @@ else: # Dashboard
         # ── プロフィール写真（一番上・丸枠センター）──
         _current_photo = _cr_data.get("photo_url") or ""
         if _current_photo:
+            import time as _time
+            _photo_cb = f"{_current_photo}?v={int(_time.time())}"
             st.markdown(f"""
             <div style="display:flex;justify-content:center;margin-bottom:16px;">
-                <img src="{_current_photo}" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(139,92,246,0.5);">
+                <img src="{_photo_cb}" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(139,92,246,0.5);">
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -2500,7 +2502,7 @@ else: # Dashboard
               .rot-btn{{flex:1;background:#374151;color:#fff;border:none;border-radius:8px;padding:8px 0;font-size:13px;font-weight:700;cursor:pointer;}}
               .rot-btn:hover{{background:#4b5563;}}
               .mid-row{{display:flex;align-items:center;gap:12px;width:280px;}}
-              #preview-circle{{width:72px;height:72px;border-radius:50%;overflow:hidden;border:3px solid rgba(139,92,246,0.6);flex-shrink:0;}}
+              #preview-circle{{width:96px;height:96px;border-radius:50%;overflow:hidden;border:3px solid rgba(139,92,246,0.6);flex-shrink:0;}}
               #auto-status{{flex:1;font-size:11px;font-weight:600;color:rgba(240,240,245,0.5);text-align:center;}}
               #auto-status.saving{{color:#fbbf24;}}
               #auto-status.saved{{color:#6ee7b7;}}
@@ -2602,7 +2604,7 @@ else: # Dashboard
               }}
             </script>
             """
-            st.components.v1.html(_cropper_html, height=420, scrolling=False)
+            st.components.v1.html(_cropper_html, height=490, scrolling=False)
 
         # ── アイコン確定ボタン（uploaded_photo の外に配置・常に表示）──
         if st.button("✅ アイコンを確定する", key=f"confirm_icon_{acct_id}", use_container_width=True):
