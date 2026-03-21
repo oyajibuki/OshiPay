@@ -386,7 +386,7 @@ def register_creator(acct_id: str, password: str, email: str = "") -> tuple[bool
     except Exception as e:
         return False, str(e)
 
-def set_reply(support_id: str, emoji: str, text: str, show_on_profile: bool = False) -> bool:
+def set_reply(support_id: str, emoji: str, text: str, show_on_profile: bool = True) -> bool:
     """クリエイターの返信を保存"""
     try:
         resp = get_db().table("supports").update({
@@ -742,6 +742,22 @@ if page == "success":
     portfolio_url = f"{BASE_URL}?page=portfolio&id={s_sup_id}" if s_sup_id else BASE_URL
     share_text = f"{s_name}にOshiPayで応援したよ！\n#OshiPay\n{portfolio_url}"
     st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
+
+    # ── プロフィールに戻る / 閉じるボタン ──
+    _back_url = f"{BASE_URL}?page=support&creator={s_acct}" if s_acct else BASE_URL
+    _btn_col1, _btn_col2 = st.columns(2)
+    with _btn_col1:
+        st.link_button("← プロフィールに戻る", _back_url, use_container_width=True)
+    with _btn_col2:
+        components.html("""
+        <button onclick="window.close()" style="
+            width:100%;padding:10px 0;border-radius:8px;border:1px solid rgba(139,92,246,0.4);
+            background:rgba(139,92,246,0.12);color:#c4b5fd;font-size:14px;font-weight:700;
+            cursor:pointer;font-family:inherit;">
+            ✕ 閉じる
+        </button>
+        """, height=46)
+
     st.markdown(f'<div style="text-align:center;margin-top:10px;"><a href="{BASE_URL}?page=my_history" target="_top" style="font-size:12px;color:rgba(240,240,245,0.4); text-decoration:underline;">（ブラウザ限定）簡易履歴を見る</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="oshi-footer">Powered by <a href="https://oshipay.me/index.html">OshiPay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
@@ -1055,7 +1071,7 @@ if page == "reply_view":
 
             show_on_profile = st.checkbox(
                 "💬 このメッセージをプロフィール画面に表示する",
-                value=bool(record.get("show_on_profile", False)),
+                value=bool(record.get("show_on_profile", True)),
                 key=f"sop_{sid}",
             )
 
