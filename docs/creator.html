@@ -181,10 +181,6 @@
       document.getElementById('creator-name').textContent = name;
       document.title = `${name} | OshiPay`;
 
-      // Language switch link
-      const slug = c.slug || c.acct_id;
-      document.getElementById('en-link').href = `./en/creator.html?id=${slug}`;
-
       // 自分のページなら編集ボタンを表示
       if (savedAcct && savedAcct === c.acct_id) {
         const editBtn = document.getElementById('edit-btn');
@@ -231,6 +227,10 @@
         a.innerHTML = svg;
         snsContainer.appendChild(a);
       });
+
+      // ログインボタン: acct_id を URL に補完（パスワードだけで入れる）
+      const loginBtn = document.getElementById('login-btn');
+      if (loginBtn) loginBtn.href = `${BASE_APP}/?page=dashboard&acct=${c.acct_id}`;
 
       // Support button & QR
       const creatorId = c.slug || c.acct_id;
