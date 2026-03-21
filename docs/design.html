@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OshiPay デザイン案プレビュー</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes shimmer { 100% { transform: translateX(200%) skewX(-12deg); } }
+    .animate-shimmer { animation: shimmer 1.5s infinite; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    /* ── SVG アイコンコンポーネント ── */
+    const Heart = ({ className, fill, stroke }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24"
+        fill={fill ?? "none"} stroke={stroke !== undefined ? stroke : "currentColor"}
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    );
+    const ShieldCheck = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <polyline points="9 12 11 14 15 10"/>
+      </svg>
+    );
+    const Zap = ({ className, fill, stroke }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24"
+        fill={fill ?? "none"} stroke={stroke !== undefined ? stroke : "currentColor"}
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+    );
+    const ArrowRight = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"/>
+        <polyline points="12 5 19 12 12 19"/>
+      </svg>
+    );
+    const Gift = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 12 20 22 4 22 4 12"/>
+        <rect x="2" y="7" width="20" height="5"/>
+        <line x1="12" y1="22" x2="12" y2="7"/>
+        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+      </svg>
+    );
+    const MessageCircle = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    );
+    const Star = ({ className, fill, stroke, strokeWidth }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24"
+        fill={fill ?? "none"} stroke={stroke !== undefined ? stroke : "currentColor"}
+        strokeWidth={strokeWidth ?? 2} strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    );
+    const Sparkles = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/>
+        <path d="M5 3l.5 1.5L7 5l-1.5.5L5 7l-.5-1.5L3 5l1.5-.5z"/>
+        <path d="M19 13l.5 1.5L21 15l-1.5.5L19 17l-.5-1.5L17 15l1.5-.5z"/>
+      </svg>
+    );
+
+    /* ── SVG グラデーション定義 ── */
+    const SvgGradients = () => (
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="pink-orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ec4899"/>
+            <stop offset="100%" stopColor="#f97316"/>
+          </linearGradient>
+          <linearGradient id="blue-indigo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6"/>
+            <stop offset="100%" stopColor="#4338ca"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    );
+
+    /* ── メインアプリ ── */
+    function App() {
+      const [activeTheme, setActiveTheme] = useState(1);
+
+      const themes = {
+        1: {
+          id: 1,
+          label: "案1: 親しみ・安心 (白×ピンク)",
+          description: "光と透明感を加えた、上質で温かみのあるデザイン",
+          appBg: "bg-[#FAFAFA]",
+          textColor: "text-gray-800",
+          headerBg: "bg-white/70 backdrop-blur-xl border-b border-pink-100/50 shadow-[0_4px_30px_rgba(0,0,0,0.03)]",
+          logoColor: "text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-400",
+          heroBg: "relative overflow-hidden bg-gradient-to-br from-pink-50/50 via-white to-orange-50/50",
+          primaryButton: "relative overflow-hidden group bg-gradient-to-r from-pink-500 via-rose-500 to-orange-400 text-white rounded-full shadow-[0_10px_25px_rgba(236,72,153,0.4),inset_0_-3px_0_rgba(0,0,0,0.15)] hover:scale-105 hover:shadow-[0_15px_30px_rgba(236,72,153,0.5)] font-bold transition-all duration-300 py-5 px-10 text-xl",
+          secondaryButton: "bg-white text-pink-600 rounded-full shadow-sm hover:shadow-md hover:bg-pink-50 font-semibold px-6 py-2 transition-all border border-pink-100",
+          cardBg: "bg-white/80 backdrop-blur-md border border-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] transition-all duration-300 hover:-translate-y-1",
+          accentIcon: <Heart className="w-16 h-16 drop-shadow-lg transform group-hover:scale-110 transition-transform" fill="url(#pink-orange-grad)" stroke="none"/>,
+          featureIconColor: "text-orange-400",
+          footerBg: "bg-white border-t border-pink-50",
+          mockupBg: "bg-gradient-to-tr from-pink-200 to-orange-100 shadow-2xl",
+          decorativeBg: (
+            <>
+              <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-pink-300/20 rounded-full mix-blend-multiply filter blur-[80px] opacity-70 animate-pulse" style={{animationDuration:'4s'}}></div>
+              <div className="absolute top-20 right-1/4 w-[400px] h-[400px] bg-orange-300/20 rounded-full mix-blend-multiply filter blur-[80px] opacity-70 animate-pulse" style={{animationDuration:'6s'}}></div>
+            </>
+          )
+        },
+        2: {
+          id: 2,
+          label: "案2: 洗練・都会的 (グレー×ブルー)",
+          description: "奥行きとシャープな光を意識した、モダンで信頼感のあるデザイン",
+          appBg: "bg-slate-50",
+          textColor: "text-slate-800",
+          headerBg: "bg-slate-50/80 backdrop-blur-lg border-b border-slate-200/60",
+          logoColor: "text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600",
+          heroBg: "relative overflow-hidden bg-slate-50",
+          primaryButton: "relative group bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl shadow-[0_10px_20px_rgba(37,99,235,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(37,99,235,0.4)] font-medium tracking-wide transition-all duration-300 py-5 px-10 text-xl",
+          secondaryButton: "bg-white border border-slate-200 text-slate-700 rounded-lg shadow-sm hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 font-medium px-6 py-2 transition-all",
+          cardBg: "bg-white border border-slate-200/60 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] hover:border-blue-300/50 hover:shadow-[0_20px_50px_-10px_rgba(37,99,235,0.15)] transition-all duration-300 hover:-translate-y-1",
+          accentIcon: <Zap className="w-16 h-16 drop-shadow-lg transform group-hover:scale-110 transition-transform" fill="url(#blue-indigo-grad)" stroke="none"/>,
+          featureIconColor: "text-blue-500",
+          footerBg: "bg-slate-900 text-slate-300 border-t border-slate-800",
+          mockupBg: "bg-gradient-to-tr from-blue-200 to-indigo-200 shadow-[0_20px_50px_rgba(37,99,235,0.2)]",
+          decorativeBg: (
+            <>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-blue-400/10 to-indigo-500/10 rounded-full filter blur-[100px] -z-10 pointer-events-none"></div>
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-300/50 to-transparent"></div>
+            </>
+          )
+        },
+        3: {
+          id: 3,
+          label: "案3: ポップ・楽しさ (カラフル)",
+          description: "立体感と動きを強調した、ゲームのようなワクワクするデザイン",
+          appBg: "bg-[#FFFDF0]",
+          textColor: "text-gray-900",
+          headerBg: "bg-[#FFFDF0] border-b-4 border-black relative z-50",
+          logoColor: "text-[#FF5757]",
+          heroBg: "relative overflow-hidden bg-[#FFFDF0]",
+          primaryButton: "relative group bg-[#FFE800] border-4 border-black text-black font-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-2 hover:translate-y-2 rounded-2xl transition-all duration-150 py-5 px-10 text-xl tracking-widest",
+          secondaryButton: "bg-white border-2 border-black text-black font-bold rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none px-6 py-2 transition-all duration-150",
+          cardBg: "bg-white border-4 border-black rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-2 hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] transition-all duration-200",
+          accentIcon: <Star className="w-16 h-16 text-[#FF5757] drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] transform group-hover:rotate-12 transition-transform" fill="#FF5757" strokeWidth={2} stroke="black"/>,
+          featureIconColor: "text-[#FF5757]",
+          footerBg: "bg-[#FF5757] text-white border-t-4 border-black",
+          mockupBg: "bg-[#4D96FF] border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]",
+          decorativeBg: (
+            <>
+              <div className="absolute top-10 right-10 md:top-20 md:right-20 w-24 h-24 md:w-32 md:h-32 bg-[#4D96FF] rounded-full border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] animate-bounce" style={{animationDuration:'3s'}}></div>
+              <div className="absolute bottom-10 left-4 md:bottom-20 md:left-10 w-16 h-16 md:w-24 md:h-24 bg-[#FFD93D] rounded-lg border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rotate-12"></div>
+              <Sparkles className="absolute top-1/4 left-1/4 w-12 h-12 text-[#FF5757] animate-pulse"/>
+            </>
+          )
+        }
+      };
+
+      const theme = themes[activeTheme];
+
+      return (
+        <div className="flex flex-col min-h-screen font-sans">
+          <SvgGradients/>
+
+          {/* テーマ切り替えバー */}
+          <div className="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-md text-white p-3 shadow-xl border-b border-gray-800">
+            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-xs text-gray-400 font-bold tracking-wider">PREVIEW PATTERNS</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {[1, 2, 3].map(num => (
+                  <button key={num} onClick={() => setActiveTheme(num)}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
+                      activeTheme === num
+                        ? 'bg-white text-gray-900 shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                    }`}>
+                    {themes[num].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className={`flex-grow ${theme.appBg} ${theme.textColor} transition-colors duration-700`}>
+
+            {/* Navbar */}
+            <header className={`sticky top-[68px] z-40 ${theme.headerBg} transition-all duration-700`}>
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
+                <div className={`text-3xl font-black tracking-tighter ${theme.logoColor}`}>OshiPay</div>
+                <div className="hidden md:flex gap-8 text-sm font-bold">
+                  <a href="#" className="hover:opacity-60 transition-opacity">OshiPayとは</a>
+                  <a href="#" className="hover:opacity-60 transition-opacity">使い方</a>
+                  <a href="#" className="hover:opacity-60 transition-opacity">よくある質問</a>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button className={`hidden sm:block font-bold py-2 px-4 rounded-lg hover:bg-gray-100/50 transition-colors ${theme.textColor}`}>ログイン</button>
+                  <button className={theme.secondaryButton}>新規登録</button>
+                </div>
+              </div>
+            </header>
+
+            {/* Hero */}
+            <section className={`${theme.heroBg} py-20 md:py-32 px-4 transition-colors duration-700 min-h-[80vh] flex items-center`}>
+              {theme.decorativeBg}
+              <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16 relative z-10">
+                <div className="flex-1 text-center md:text-left">
+                  <span className={`inline-block mb-6 px-4 py-1.5 rounded-full text-sm font-bold bg-white/90 backdrop-blur-sm shadow-sm border ${activeTheme === 3 ? 'border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]' : 'border-gray-200/50 text-gray-600'}`}>
+                    ✨ {theme.description}
+                  </span>
+                  <h1 className="text-5xl md:text-7xl font-black leading-[1.1] mb-8 tracking-tight">
+                    推しへの想いを、<br/>もっと<span className={theme.logoColor}>ダイレクト</span>に。
+                  </h1>
+                  <p className="text-lg md:text-xl opacity-80 mb-12 leading-relaxed font-medium max-w-xl mx-auto md:mx-0">
+                    OshiPay（オシペイ）は、あなたの「応援したい」気持ちを<br className="hidden lg:block"/>安全かつ一番お得に届けるサービスです。
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-6">
+                    <button className={`group flex items-center justify-center gap-3 w-full sm:w-auto ${theme.primaryButton}`}>
+                      <span className="relative z-10">今すぐ無料で始める</span>
+                      <ArrowRight className="w-6 h-6 relative z-10 group-hover:translate-x-2 transition-transform duration-300"/>
+                      {activeTheme !== 3 && (
+                        <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 pointer-events-none"></div>
+                      )}
+                    </button>
+                    <div className="flex items-center gap-2 text-sm font-bold opacity-70">
+                      <ShieldCheck className="w-5 h-5 text-green-500"/>
+                      最短1分で登録完了
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 w-full max-w-md relative">
+                  <div className={`absolute top-4 -right-4 md:top-10 md:-right-10 w-full h-full rounded-[2.5rem] -z-10 ${theme.mockupBg} transition-colors duration-700`}></div>
+                  <div className={`group ${theme.cardBg} p-8 relative z-10`}>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${activeTheme === 3 ? 'bg-[#FFE800] border-2 border-black' : 'bg-gray-100 text-gray-400'}`}>
+                        {activeTheme === 3 ? '😎' : 'Icon'}
+                      </div>
+                      <div>
+                        <div className="font-bold text-xl mb-1">推しクリエイター</div>
+                        <div className="text-sm opacity-60 font-medium">@oshi_creator</div>
+                      </div>
+                    </div>
+                    <div className={`rounded-2xl p-6 mb-8 text-center border-2 border-dashed ${activeTheme === 3 ? 'bg-white border-black' : 'bg-gray-50 border-gray-200'}`}>
+                      <p className="font-bold opacity-70 mb-3 text-sm tracking-widest">応援金額</p>
+                      <p className={`text-4xl font-black tracking-wider ${theme.logoColor}`}>¥ 1,000</p>
+                    </div>
+                    <div className="flex justify-center mb-8 relative">
+                      {theme.accentIcon}
+                    </div>
+                    <button className={`w-full py-4 rounded-xl font-bold text-center text-lg transition-transform active:scale-95 ${activeTheme === 3 ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(255,232,0,1)]' : 'bg-gray-900 text-white shadow-lg'}`}>
+                      想いを送信する
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Features */}
+            <section className="py-32 px-4 relative z-20">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-20">
+                  <h2 className="text-3xl md:text-5xl font-black mb-6 tracking-tight">なぜOshiPayが選ばれるのか</h2>
+                  <p className="text-lg md:text-xl opacity-70 font-bold">クリエイターにも、ファンにも優しい3つの理由</p>
+                </div>
+                <div className="grid md:grid-cols-3 gap-8 md:gap-12">
+                  {[
+                    { icon: <Gift className="w-10 h-10"/>, title: "還元率 業界トップクラス", desc: "システム手数料を最小限に抑え、あなたの支援を1円でも多く推しに直接届けます。" },
+                    { icon: <ShieldCheck className="w-10 h-10"/>, title: "完全匿名で安心・安全", desc: "本名や住所を一切公開することなく、セキュアな環境で安全に気持ちを伝えられます。" },
+                    { icon: <MessageCircle className="w-10 h-10"/>, title: "想いが伝わるレター機能", desc: "支援金と一緒に、あなたの熱いメッセージを特別なデザインのレターとして直接届けられます。" }
+                  ].map((feature, idx) => (
+                    <div key={idx} className={`${theme.cardBg} p-10 flex flex-col items-center text-center group`}>
+                      <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3
+                        ${activeTheme === 1 ? 'bg-gradient-to-br from-orange-100 to-pink-100 shadow-inner' :
+                          activeTheme === 2 ? 'bg-gradient-to-br from-blue-50 to-indigo-100 shadow-inner' :
+                          'bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'} ${theme.featureIconColor}`}>
+                        {feature.icon}
+                      </div>
+                      <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
+                      <p className="opacity-75 leading-relaxed font-medium">{feature.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Footer */}
+            <footer className={`${theme.footerBg} pt-20 pb-12 px-4 transition-colors duration-700`}>
+              <div className="max-w-6xl mx-auto">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-12">
+                  <div className="text-3xl font-black tracking-tighter">OshiPay</div>
+                  <div className={`flex flex-wrap justify-center gap-8 text-sm font-bold ${activeTheme === 2 ? 'text-slate-400' : activeTheme === 3 ? 'text-white' : 'text-gray-500'}`}>
+                    <a href="#" className="hover:opacity-70 transition-opacity">運営会社</a>
+                    <a href="#" className="hover:opacity-70 transition-opacity">利用規約</a>
+                    <a href="#" className="hover:opacity-70 transition-opacity">プライバシーポリシー</a>
+                    <a href="#" className="hover:opacity-70 transition-opacity">お問い合わせ</a>
+                  </div>
+                </div>
+                <div className={`text-center text-sm font-bold ${activeTheme === 2 ? 'text-slate-600' : activeTheme === 3 ? 'text-white/80' : 'text-gray-400'}`}>
+                  © 2026 OshiPay Inc. All rights reserved.
+                </div>
+              </div>
+            </footer>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
