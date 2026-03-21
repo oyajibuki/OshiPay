@@ -1831,114 +1831,182 @@ elif page == "supporter_dashboard":
     st.markdown('<div class="section-title">サポーター・ダッシュボード</div>', unsafe_allow_html=True)
     
     if "supporter_auth" not in st.session_state:
-        _prefill_sid = params.get("sid", "")
-        st.info("応援チケットの確認・応援履歴の管理ができます。")
-        tab_login, tab_register, tab_forgot = st.tabs(["🔑 ログイン", "✨ 新規登録", "🔓 パスワードを忘れた"])
+        _prefill_sid = st.session_state.pop("_sup_prefill_id", None) or params.get("sid", "")
 
-        with tab_login:
-            st.caption("メールアドレス または 旧サポーターID でログインできます")
-            _prefill_val = st.session_state.pop("_sup_prefill_id", None) or _prefill_sid
-            if _prefill_val:
-                st.info(f"🔑 サポーターID: `{_prefill_val}` — パスワードを入力してください")
-            l_id   = st.text_input("メールアドレス または サポーターID", key="l_id",
-                                   value=_prefill_val or "",
-                                   placeholder="you@example.com または sup_xxxx")
-            l_pass = st.text_input("パスワード", type="password", key="l_pass")
+        # ── IDが渡された場合はDBをチェックして最適なフォームを表示 ──
+        _sid_db_row = None
+        _sid_has_email = False
+        if _prefill_sid:
+            try:
+                _sid_chk = get_db().table("supporters").select("supporter_id,display_name,email,password_hash").eq("supporter_id", _prefill_sid).maybe_single().execute()
+                if _sid_chk.data:
+                    _sid_db_row = _sid_chk.data
+                    _sid_has_email = bool(_sid_chk.data.get("email"))
+            except Exception:
+                pass
+
+        # ── フォームのモード決定 ──
+        # A: IDあり＋メール登録済み → パスワードのみ
+        # B: IDあり＋メール未登録   → 「このIDを登録しましょう」メール＋PW入力
+        # C: IDなし                 → タブ形式（新規登録優先）
+
+        if _prefill_sid and _sid_db_row and _sid_has_email:
+            # ── モードA: パスワードのみ ──
+            st.success(f"✅ サポーターID `{_prefill_sid}` が確認できました。パスワードを入力してください。")
+            a_pass = st.text_input("パスワード", type="password", key="a_pass")
             if st.button("ログイン", use_container_width=True, type="primary"):
-                _l_found = False
-                if "@" in l_id:
-                    # supporter_accounts テーブルをメールで検索
-                    _sa = get_db().table("supporter_accounts").select("*").eq("email", l_id.strip().lower()).limit(1).execute()
-                    if _sa.data:
-                        if _sa.data[0].get("password_hash") == hash_password(l_pass):
+                if _sid_db_row.get("password_hash") == hash_password(a_pass):
+                    _disp = _sid_db_row.get("display_name") or _sid_db_row["email"].split("@")[0]
+                    st.session_state["supporter_auth"] = {
+                        "supporter_id": _prefill_sid,
+                        "display_name": _disp,
+                        "email": _sid_db_row["email"]
+                    }
+                    st.rerun()
+                else:
+                    st.error("パスワードが違います。")
+            with st.expander("🔓 パスワードを忘れた"):
+                if st.button("仮パスワードを発行", key="a_forgot"):
+                    _temp = uuid.uuid4().hex[:8]
+                    get_db().table("supporters").update({"password_hash": hash_password(_temp)}).eq("supporter_id", _prefill_sid).execute()
+                    try:
+                        get_db().table("supporter_accounts").update({"password_hash": hash_password(_temp)}).eq("supporter_id", _prefill_sid).execute()
+                    except Exception:
+                        pass
+                    st.success(f"仮パスワード: `{_temp}`")
+
+        elif _prefill_sid and _sid_db_row and not _sid_has_email:
+            # ── モードB: IDは確認済み・メール未登録 → 登録促進 ──
+            st.info(f"🎉 サポーターID `{_prefill_sid}` が見つかりました！メールアドレスとパスワードを登録すると、応援履歴をまとめて管理できます。")
+            b_email = st.text_input("メールアドレス", key="b_email", placeholder="you@example.com")
+            b_name  = st.text_input("表示名（任意）", key="b_name", placeholder=_sid_db_row.get("display_name") or "例: たろう")
+            b_pass  = st.text_input("パスワード", type="password", key="b_pass")
+            if st.button("このIDで登録する", use_container_width=True, type="primary"):
+                if b_email and b_pass:
+                    _email_lc = b_email.strip().lower()
+                    _existing = get_db().table("supporter_accounts").select("supporter_id").eq("email", _email_lc).limit(1).execute()
+                    if _existing.data:
+                        st.error("このメールアドレスは既に使用されています。")
+                    else:
+                        _disp = b_name.strip() or _sid_db_row.get("display_name") or _email_lc.split("@")[0]
+                        get_db().table("supporters").update({
+                            "email": _email_lc,
+                            "display_name": _disp,
+                            "password_hash": hash_password(b_pass)
+                        }).eq("supporter_id", _prefill_sid).execute()
+                        try:
+                            get_db().table("supporter_accounts").insert({
+                                "supporter_id": _prefill_sid,
+                                "email": _email_lc,
+                                "password_hash": hash_password(b_pass)
+                            }).execute()
+                        except Exception:
+                            pass
+                        st.session_state["supporter_auth"] = {
+                            "supporter_id": _prefill_sid,
+                            "display_name": _disp,
+                            "email": _email_lc
+                        }
+                        send_welcome_email(b_email, _disp, _prefill_sid)
+                        st.rerun()
+                else:
+                    st.warning("メールアドレスとパスワードを入力してください。")
+
+        else:
+            # ── モードC: IDなし or 不明 → タブ（新規登録優先）──
+            st.info("応援チケットの確認・応援履歴の管理ができます。")
+            tab_register, tab_login, tab_forgot = st.tabs(["✨ 新規登録", "🔑 ログイン", "🔓 パスワードを忘れた"])
+
+            with tab_register:
+                st.caption("メールアドレスとパスワードだけで登録できます")
+                r_sid   = st.text_input("サポーターID（お持ちの方のみ）", key="r_sid",
+                                        value=_prefill_sid or "",
+                                        placeholder="sup_xxxx （なければ空欄でOK）")
+                r_email = st.text_input("メールアドレス（必須）", key="r_new_email", placeholder="you@example.com")
+                r_name  = st.text_input("表示名（任意・公開されます）", key="r_new_name", placeholder="例: たろう")
+                r_pass  = st.text_input("パスワード", type="password", key="r_new_pass")
+                if st.button("アカウントを作成", type="primary", use_container_width=True):
+                    if r_email and r_pass:
+                        _email_lc = r_email.strip().lower()
+                        _existing_sa = get_db().table("supporter_accounts").select("supporter_id").eq("email", _email_lc).limit(1).execute()
+                        if _existing_sa.data:
+                            st.error("このメールアドレスは既に登録済みです。ログインしてください。")
+                        else:
+                            try:
+                                _use_sid = r_sid.strip() if r_sid.strip().startswith("sup_") else "sup_" + uuid.uuid4().hex[:12]
+                                _disp_name = r_name.strip() or _email_lc.split("@")[0]
+                                get_db().table("supporter_accounts").insert({
+                                    "supporter_id": _use_sid,
+                                    "email": _email_lc,
+                                    "password_hash": hash_password(r_pass)
+                                }).execute()
+                                try:
+                                    get_db().table("supporters").upsert({
+                                        "supporter_id": _use_sid,
+                                        "display_name": _disp_name,
+                                        "email": _email_lc,
+                                        "password_hash": hash_password(r_pass)
+                                    }).execute()
+                                except Exception:
+                                    pass
+                                st.session_state["supporter_auth"] = {"supporter_id": _use_sid, "display_name": _disp_name, "email": _email_lc}
+                                send_welcome_email(r_email, _disp_name, _use_sid)
+                                st.rerun()
+                            except Exception as _re:
+                                st.error(f"登録エラー: {_re}")
+                    else:
+                        st.warning("メールアドレスとパスワードを入力してください。")
+
+            with tab_login:
+                st.caption("メールアドレス または サポーターID でログインできます")
+                l_id   = st.text_input("メールアドレス または サポーターID", key="l_id",
+                                       value=_prefill_sid or "",
+                                       placeholder="you@example.com または sup_xxxx")
+                l_pass = st.text_input("パスワード", type="password", key="l_pass")
+                if st.button("ログイン", use_container_width=True, type="primary"):
+                    if "@" in l_id:
+                        _sa = get_db().table("supporter_accounts").select("*").eq("email", l_id.strip().lower()).limit(1).execute()
+                        if _sa.data and _sa.data[0].get("password_hash") == hash_password(l_pass):
                             _sa_row = _sa.data[0]
                             _sn = get_db().table("supporters").select("display_name").eq("supporter_id", _sa_row["supporter_id"]).limit(1).execute()
                             _disp = (_sn.data[0]["display_name"] if _sn.data else None) or _sa_row["email"].split("@")[0]
                             st.session_state["supporter_auth"] = {"supporter_id": _sa_row["supporter_id"], "display_name": _disp, "email": _sa_row["email"]}
-                            _l_found = True
                             st.rerun()
-                        else:
+                        elif _sa.data:
                             st.error("パスワードが違います。")
-                    else:
-                        st.error("アカウントが見つかりません。")
-                else:
-                    # 旧 supporters テーブルをIDで検索
-                    resp = get_db().table("supporters").select("*").eq("supporter_id", l_id.strip()).execute()
-                    if not resp.data:
-                        st.error("アカウントが見つかりません。")
-                    elif resp.data[0].get("password_hash") == hash_password(l_pass):
-                        st.session_state["supporter_auth"] = resp.data[0]
-                        _l_found = True
-                        st.rerun()
-                    else:
-                        st.error("パスワードが違います。")
-
-        with tab_register:
-            st.caption("メールアドレスとパスワードだけで登録できます")
-            r_new_email = st.text_input("メールアドレス（必須）", key="r_new_email", placeholder="you@example.com")
-            r_new_name  = st.text_input("表示名（任意・公開されます）", key="r_new_name", placeholder="例: たろう")
-            r_new_pass  = st.text_input("パスワード", type="password", key="r_new_pass")
-            if st.button("新規アカウントを作成", type="primary", use_container_width=True):
-                if r_new_email and r_new_pass:
-                    _email_lc = r_new_email.strip().lower()
-                    _existing_sa = get_db().table("supporter_accounts").select("supporter_id").eq("email", _email_lc).limit(1).execute()
-                    if _existing_sa.data:
-                        st.error("このメールアドレスは既に登録済みです。ログインしてください。")
-                    else:
-                        try:
-                            _new_sup_id = "sup_" + uuid.uuid4().hex[:12]
-                            _disp_name  = r_new_name.strip() or _email_lc.split("@")[0]
-                            get_db().table("supporter_accounts").insert({
-                                "supporter_id": _new_sup_id,
-                                "email": _email_lc,
-                                "password_hash": hash_password(r_new_pass)
-                            }).execute()
-                            # supporters テーブルにも追加（ポートフォリオ・旧機能互換）
-                            try:
-                                get_db().table("supporters").insert({
-                                    "supporter_id": _new_sup_id,
-                                    "display_name": _disp_name,
-                                    "email": _email_lc,
-                                    "password_hash": hash_password(r_new_pass)
-                                }).execute()
-                            except Exception:
-                                pass
-                            st.session_state["supporter_auth"] = {"supporter_id": _new_sup_id, "display_name": _disp_name, "email": _email_lc}
-                            send_welcome_email(r_new_email, _disp_name, _new_sup_id)
-                            st.rerun()
-                        except Exception as _re:
-                            st.error(f"登録エラー: {_re}")
-                else:
-                    st.warning("メールアドレスとパスワードを入力してください。")
-
-        with tab_forgot:
-            st.caption("登録したメールアドレスまたはサポーターIDを入力してください")
-            f_input = st.text_input("メールアドレス または サポーターID", key="f_input", placeholder="you@example.com または sup_xxxx")
-            if st.button("仮パスワードを発行", use_container_width=True):
-                if f_input:
-                    temp_pass = uuid.uuid4().hex[:8]
-                    if "@" in f_input:
-                        _sa_f = get_db().table("supporter_accounts").select("*").eq("email", f_input.strip().lower()).limit(1).execute()
-                        if _sa_f.data:
-                            get_db().table("supporter_accounts").update({"password_hash": hash_password(temp_pass)}).eq("email", f_input.strip().lower()).execute()
-                            try:
-                                get_db().table("supporters").update({"password_hash": hash_password(temp_pass)}).eq("supporter_id", _sa_f.data[0]["supporter_id"]).execute()
-                            except Exception:
-                                pass
-                            st.success("仮パスワードを発行しました。")
-                            st.info(f"🔑 仮パスワード: `{temp_pass}`")
-                        else:
-                            st.error("メールアドレスが見つかりません。")
-                    else:
-                        resp_f = get_db().table("supporters").select("*").eq("supporter_id", f_input.strip()).execute()
-                        if resp_f.data:
-                            get_db().table("supporters").update({"password_hash": hash_password(temp_pass)}).eq("supporter_id", f_input.strip()).execute()
-                            st.success("仮パスワードを発行しました。")
-                            st.info(f"🔑 仮パスワード: `{temp_pass}`")
                         else:
                             st.error("アカウントが見つかりません。")
-                else:
-                    st.warning("メールアドレスまたはサポーターIDを入力してください。")
+                    else:
+                        _sr = get_db().table("supporters").select("*").eq("supporter_id", l_id.strip()).execute()
+                        if not _sr.data:
+                            st.error("アカウントが見つかりません。")
+                        elif _sr.data[0].get("email"):
+                            if _sr.data[0].get("password_hash") == hash_password(l_pass):
+                                st.session_state["supporter_auth"] = _sr.data[0]
+                                st.rerun()
+                            else:
+                                st.error("パスワードが違います。")
+                        else:
+                            st.warning("このIDはまだメールアドレスが未登録です。「新規登録」タブからIDを入力して登録してください。")
+
+            with tab_forgot:
+                st.caption("登録したメールアドレスを入力してください")
+                f_email = st.text_input("メールアドレス", key="f_input", placeholder="you@example.com")
+                if st.button("仮パスワードを発行", use_container_width=True):
+                    if f_email and "@" in f_email:
+                        _sa_f = get_db().table("supporter_accounts").select("*").eq("email", f_email.strip().lower()).limit(1).execute()
+                        if _sa_f.data:
+                            _temp = uuid.uuid4().hex[:8]
+                            get_db().table("supporter_accounts").update({"password_hash": hash_password(_temp)}).eq("email", f_email.strip().lower()).execute()
+                            try:
+                                get_db().table("supporters").update({"password_hash": hash_password(_temp)}).eq("supporter_id", _sa_f.data[0]["supporter_id"]).execute()
+                            except Exception:
+                                pass
+                            st.success(f"仮パスワード: `{_temp}`")
+                        else:
+                            st.error("このメールアドレスは登録されていません。")
+                    else:
+                        st.warning("メールアドレスを入力してください。")
         st.stop()
         
     sup_user = st.session_state["supporter_auth"]
@@ -2091,6 +2159,46 @@ elif page == "supporter_dashboard":
     st.code(portfolio_url, language="text")
 
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="header" style="font-size:16px;">⚙️ アカウント設定</div>', unsafe_allow_html=True)
+
+    with st.expander("✏️ 表示名を変更する"):
+        _cur_name = sup_user.get("display_name", "")
+        mn_new = st.text_input("新しい表示名", value=_cur_name, key="mn_new")
+        if st.button("表示名を更新", key="mn_btn"):
+            if mn_new.strip():
+                get_db().table("supporters").update({"display_name": mn_new.strip()}).eq("supporter_id", sup_user["supporter_id"]).execute()
+                st.session_state["supporter_auth"]["display_name"] = mn_new.strip()
+                st.success("表示名を更新しました！")
+                st.rerun()
+            else:
+                st.warning("表示名を入力してください。")
+
+    with st.expander("📧 メールアドレスを変更する"):
+        _cur_email = sup_user.get("email", "")
+        me_new = st.text_input("新しいメールアドレス", value=_cur_email, key="me_new")
+        me_pass = st.text_input("現在のパスワード（確認）", type="password", key="me_pass")
+        if st.button("メールアドレスを更新", key="me_btn"):
+            if me_new.strip() and "@" in me_new:
+                _chk = get_db().table("supporters").select("password_hash").eq("supporter_id", sup_user["supporter_id"]).execute()
+                if _chk.data and _chk.data[0].get("password_hash") == hash_password(me_pass):
+                    _new_email_lc = me_new.strip().lower()
+                    _dup = get_db().table("supporter_accounts").select("supporter_id").eq("email", _new_email_lc).limit(1).execute()
+                    if _dup.data and _dup.data[0]["supporter_id"] != sup_user["supporter_id"]:
+                        st.error("このメールアドレスは既に使用されています。")
+                    else:
+                        get_db().table("supporters").update({"email": _new_email_lc}).eq("supporter_id", sup_user["supporter_id"]).execute()
+                        try:
+                            get_db().table("supporter_accounts").update({"email": _new_email_lc}).eq("supporter_id", sup_user["supporter_id"]).execute()
+                        except Exception:
+                            pass
+                        st.session_state["supporter_auth"]["email"] = _new_email_lc
+                        st.success("メールアドレスを更新しました！")
+                        st.rerun()
+                else:
+                    st.error("パスワードが違います。")
+            else:
+                st.warning("正しいメールアドレスを入力してください。")
+
     with st.expander("🔑 パスワードを変更する"):
         cp_curr = st.text_input("現在のパスワード", type="password", key="cp_curr")
         cp_new  = st.text_input("新しいパスワード", type="password", key="cp_new")
@@ -2103,6 +2211,10 @@ elif page == "supporter_dashboard":
                     chk = get_db().table("supporters").select("password_hash").eq("supporter_id", sup_user["supporter_id"]).execute()
                     if chk.data and chk.data[0]["password_hash"] == hash_password(cp_curr):
                         get_db().table("supporters").update({"password_hash": hash_password(cp_new)}).eq("supporter_id", sup_user["supporter_id"]).execute()
+                        try:
+                            get_db().table("supporter_accounts").update({"password_hash": hash_password(cp_new)}).eq("supporter_id", sup_user["supporter_id"]).execute()
+                        except Exception:
+                            pass
                         st.success("パスワードを更新しました！")
                     else:
                         st.error("現在のパスワードが違います。")
