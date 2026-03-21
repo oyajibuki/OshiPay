@@ -388,13 +388,25 @@ def register_creator(acct_id: str, password: str, email: str = "") -> tuple[bool
 
 def set_reply(support_id: str, emoji: str, text: str, show_on_profile: bool = False) -> bool:
     """クリエイターの返信を保存"""
-    resp = get_db().table("supports").update({
-        "reply_emoji": emoji,
-        "reply_text": text,
-        "replied_at": datetime.datetime.utcnow().isoformat(),
-        "show_on_profile": show_on_profile,
-    }).eq("support_id", support_id).execute()
-    return bool(resp.data)
+    try:
+        resp = get_db().table("supports").update({
+            "reply_emoji": emoji,
+            "reply_text": text,
+            "replied_at": datetime.datetime.utcnow().isoformat(),
+            "show_on_profile": show_on_profile,
+        }).eq("support_id", support_id).execute()
+        return bool(resp.data)
+    except Exception:
+        # show_on_profile カラム未作成の場合はフォールバック
+        try:
+            resp = get_db().table("supports").update({
+                "reply_emoji": emoji,
+                "reply_text": text,
+                "replied_at": datetime.datetime.utcnow().isoformat(),
+            }).eq("support_id", support_id).execute()
+            return bool(resp.data)
+        except Exception:
+            return False
 
 def get_supports_for_creator(creator_acct: str) -> list:
     """クリエイターの応援一覧を新着順で返す"""
