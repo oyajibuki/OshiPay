@@ -2724,6 +2724,33 @@ else: # Dashboard
                 else:
                     st.warning("全ての項目を入力してください。")
 
+        # メールアドレス変更
+        with st.expander("📧 メールアドレスを変更する"):
+            _cur_email = _cr_data.get("email") or ""
+            if _cur_email:
+                _masked = _cur_email[:2] + "****" + _cur_email[_cur_email.find("@"):]
+                st.caption(f"現在: {_masked}")
+            em_new   = st.text_input("新しいメールアドレス", placeholder="new@example.com", key="em_new")
+            em_pass  = st.text_input("現在のパスワード（確認用）", type="password", key="em_pass")
+            if st.button("メールアドレスを更新", key="em_btn"):
+                if not em_new or not em_pass:
+                    st.warning("全ての項目を入力してください。")
+                elif "@" not in em_new or "." not in em_new.split("@")[-1]:
+                    st.error("メールアドレスの形式が正しくありません。")
+                else:
+                    _em_chk = get_db().table("creators").select("password_hash").eq("acct_id", acct_id).execute()
+                    if _em_chk.data and _em_chk.data[0]["password_hash"] == hash_password(em_pass):
+                        _em_lc = em_new.strip().lower()
+                        _em_dup = get_db().table("creators").select("acct_id").eq("email", _em_lc).neq("acct_id", acct_id).execute()
+                        if _em_dup.data:
+                            st.error("このメールアドレスはすでに使用されています。")
+                        else:
+                            get_db().table("creators").update({"email": _em_lc}).eq("acct_id", acct_id).execute()
+                            st.success("✅ メールアドレスを更新しました！")
+                            st.rerun()
+                    else:
+                        st.error("パスワードが違います。")
+
         # 連携解除ボタン
         if st.button("🚫 連携解除", type="secondary", key="disconnect_btn"):
             st.components.v1.html("""
