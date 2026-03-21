@@ -230,7 +230,7 @@
 
       // ログインボタン: acct_id を URL に補完（パスワードだけで入れる）
       const loginBtn = document.getElementById('login-btn');
-      if (loginBtn) loginBtn.href = `${BASE_APP}/?page=dashboard&acct=${c.acct_id}`;
+      if (loginBtn) loginBtn.href = `https://oshipay.streamlit.app/?page=dashboard&acct=${c.acct_id}`;
 
       // Support button & QR
       const creatorId = c.slug || c.acct_id;
