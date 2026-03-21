@@ -2868,7 +2868,8 @@ else: # Dashboard
         with st.expander("🔗 SNSリンクを設定する（任意）"):
             _sns_x    = st.text_input("X（旧Twitter）",       value=_sns_raw.get("x", ""),         placeholder="https://x.com/username",           key=f"sns_x_{acct_id}")
             _sns_ig   = st.text_input("Instagram",             value=_sns_raw.get("instagram", ""), placeholder="https://instagram.com/username",    key=f"sns_ig_{acct_id}")
-            _sns_yt   = st.text_input("YouTube",               value=_sns_raw.get("youtube", ""),   placeholder="https://youtube.com/@username",     key=f"sns_yt_{acct_id}")
+            _sns_yt   = st.text_input("YouTube",               value=_sns_raw.get("youtube", ""),   placeholder="https://youtube.com/@username",     key=f"sns_yt_{acct_id}",
+                                     help="💡 URLの形式: @ハンドル名・channel/UCxxx・c/名前 のいずれか可\n日本語チャンネル名の場合はブラウザのURL欄からそのままコピー&ペーストしてください")
             _sns_tt   = st.text_input("TikTok",                value=_sns_raw.get("tiktok", ""),    placeholder="https://tiktok.com/@username",      key=f"sns_tt_{acct_id}")
             _sns_note = st.text_input("note",                  value=_sns_raw.get("note", ""),      placeholder="https://note.com/username",         key=f"sns_note_{acct_id}")
             _sns_fb   = st.text_input("Facebook",              value=_sns_raw.get("facebook", ""),  placeholder="https://facebook.com/username",     key=f"sns_fb_{acct_id}")

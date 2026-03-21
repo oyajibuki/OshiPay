@@ -38,7 +38,7 @@ _ALLOWED_SNS_PATTERNS = [
     re.compile(r'^https?://(www\.)?x\.com/[\w.]{1,50}/?$', re.IGNORECASE),
     re.compile(r'^https?://(www\.)?twitter\.com/[\w.]{1,50}/?$', re.IGNORECASE),
     re.compile(r'^https?://(www\.)?instagram\.com/[\w.]{1,50}/?$', re.IGNORECASE),
-    re.compile(r'^https?://(www\.)?youtube\.com/(channel/[\w-]+|@[\w.]+|c/[\w.]+)/?$', re.IGNORECASE),
+    re.compile(r'^https?://(www\.)?youtube\.com/(channel/[\w-]+|@[\w.\-\%]+|c/[\w.\-\%]+)/?$', re.IGNORECASE),
     re.compile(r'^https?://(www\.)?tiktok\.com/@[\w.]{1,50}/?$', re.IGNORECASE),
     re.compile(r'^https?://note\.com/[\w.]{1,50}/?$', re.IGNORECASE),
     re.compile(r'^https?://(www\.)?facebook\.com/[\w.\-/?=&%]{1,200}$', re.IGNORECASE),
