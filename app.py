@@ -2163,7 +2163,8 @@ else: # Dashboard
             # 作成中フラグ（連打防止）
             _reg_creating = st.session_state.get("_reg_creating", False)
 
-            _age_ok   = st.checkbox("私は18歳以上です（受取機能の利用に必要）")
+            _age_ok   = st.checkbox("私は13歳以上です（13歳未満の方はご利用いただけません）")
+            st.caption("⚠️ 18歳未満の方が受取機能（口座登録）を利用する場合は、親権者の同意・情報登録が必要です。")
             _terms_ok = st.checkbox("利用規約に同意して、応援ページを作成する")
             if _age_ok and _terms_ok:
                 _btn_disabled = _reg_creating or not (new_email and _pass_ok)
