@@ -2158,6 +2158,47 @@ elif page == "supporter_dashboard":
     st.link_button("🌐 応援実績ページを見る（公開用）", portfolio_url, use_container_width=True)
     st.code(portfolio_url, language="text")
 
+    # ── ② クリエーターになる ──────────────────────────────
+    st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="header" style="font-size:16px;">🎨 クリエーターとして活動する</div>', unsafe_allow_html=True)
+    try:
+        _sup_row = get_db().table("supporters").select("creator_acct_id").eq("supporter_id", sup_user["supporter_id"]).maybe_single().execute()
+        _linked_creator = (_sup_row.data or {}).get("creator_acct_id")
+    except Exception:
+        _linked_creator = None
+
+    if _linked_creator:
+        st.success(f"✅ クリエーターID `{_linked_creator}` と連携済みです")
+        if st.button("🎨 クリエーターダッシュボードへ切り替え", use_container_width=True, key="switch_creator"):
+            st.session_state["creator_auth"] = _linked_creator
+            st.query_params["page"] = "dashboard"
+            st.query_params["acct"] = _linked_creator
+            st.rerun()
+    else:
+        st.markdown('<div style="font-size:13px;color:rgba(240,240,245,0.6);margin-bottom:12px;">応援するだけでなく、自分もクリエーターとして活動できます。クリエーターIDを発行して応援を受け取りましょう。</div>', unsafe_allow_html=True)
+        if st.button("🎨 クリエーターになる（無料）", use_container_width=True, type="primary", key="become_creator"):
+            try:
+                _new_acct_id = "usr_" + uuid.uuid4().hex[:16]
+                _c_name = sup_user.get("display_name") or "クリエーター"
+                _c_email = sup_user.get("email") or ""
+                get_db().table("creators").insert({
+                    "acct_id": _new_acct_id,
+                    "display_name": _c_name,
+                    "name": _c_name,
+                    "email": _c_email,
+                    "supporter_id": sup_user["supporter_id"],
+                    "profile_done": False,
+                    "payout_enabled": False,
+                }).execute()
+                get_db().table("supporters").update({"creator_acct_id": _new_acct_id}).eq("supporter_id", sup_user["supporter_id"]).execute()
+                st.success(f"✅ クリエーターID `{_new_acct_id}` を発行しました！")
+                st.session_state["creator_auth"] = _new_acct_id
+                st.query_params["page"] = "dashboard"
+                st.query_params["acct"] = _new_acct_id
+                st.rerun()
+            except Exception as _ce:
+                st.error(f"クリエーター作成エラー: {_ce}")
+
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
     st.markdown('<div class="header" style="font-size:16px;">⚙️ アカウント設定</div>', unsafe_allow_html=True)
 
@@ -2220,6 +2261,48 @@ elif page == "supporter_dashboard":
                         st.error("現在のパスワードが違います。")
             else:
                 st.warning("全ての項目を入力してください。")
+    # ── ① サポーターIDマージ ────────────────────────────
+    with st.expander("🔀 別のサポーターIDをマージする"):
+        st.caption("2つのIDを1つに統合します。マージ元のIDとコイン・履歴がすべてこのIDに引き継がれます。")
+        mg_other = st.text_input("マージしたいサポーターID（統合元）", key="mg_other", placeholder="sup_xxxx")
+        if st.button("IDを確認する", key="mg_check"):
+            if mg_other.strip() == sup_user["supporter_id"]:
+                st.error("自分自身のIDは入力できません。")
+            elif mg_other.strip():
+                _mg_row = get_db().table("supporters").select("supporter_id,display_name,email").eq("supporter_id", mg_other.strip()).maybe_single().execute()
+                if _mg_row.data:
+                    _mg_cnt = get_db().table("supports").select("support_id", count="exact").eq("supporter_id", mg_other.strip()).execute()
+                    _my_cnt = get_db().table("supports").select("support_id", count="exact").eq("supporter_id", sup_user["supporter_id"]).execute()
+                    st.session_state["_mg_confirmed"] = mg_other.strip()
+                    st.info(f"""
+**マージ元:** `{mg_other.strip()}` ({_mg_row.data.get('display_name') or '名前なし'}) — 応援 {_mg_cnt.count or 0} 件
+**マージ先（このID）:** `{sup_user['supporter_id']}` — 応援 {_my_cnt.count or 0} 件
+→ 合計 {(_mg_cnt.count or 0) + (_my_cnt.count or 0)} 件になります
+                    """)
+                else:
+                    st.error("そのサポーターIDは見つかりません。")
+                    st.session_state.pop("_mg_confirmed", None)
+
+        if st.session_state.get("_mg_confirmed") == mg_other.strip() and mg_other.strip():
+            st.warning("⚠️ マージすると元のIDは削除されます。この操作は取り消せません。")
+            if st.button("✅ マージを実行する", key="mg_exec", type="primary"):
+                _src = st.session_state.pop("_mg_confirmed")
+                try:
+                    get_db().table("supports").update({"supporter_id": sup_user["supporter_id"]}).eq("supporter_id", _src).execute()
+                    try:
+                        get_db().table("pending_supports").update({"supporter_id": sup_user["supporter_id"]}).eq("supporter_id", _src).execute()
+                    except Exception:
+                        pass
+                    get_db().table("supporters").delete().eq("supporter_id", _src).execute()
+                    try:
+                        get_db().table("supporter_accounts").delete().eq("supporter_id", _src).execute()
+                    except Exception:
+                        pass
+                    st.success(f"✅ `{_src}` のデータを `{sup_user['supporter_id']}` にマージしました！")
+                    st.rerun()
+                except Exception as _me:
+                    st.error(f"マージエラー: {_me}")
+
     if st.button("🚪 ログアウト", type="secondary"):
         del st.session_state["supporter_auth"]
         st.rerun()
