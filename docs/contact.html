@@ -1,75 +1,98 @@
 <!DOCTYPE html>
-<html lang="ja">
-
+<html lang="ja" class="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>開発者へのメッセージ | OshiPay</title>
+  <title>開発者へのメッセージ | oshipay</title>
   <link rel="icon" href="https://oyajibuki.github.io/OshiPay/favicon.png?v=2" type="image/png">
   <link rel="apple-touch-icon" href="https://oyajibuki.github.io/OshiPay/favicon.png?v=2">
   <link rel="shortcut icon" href="https://oyajibuki.github.io/OshiPay/favicon.ico?v=2">
-
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {} }
+    }
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+      document.addEventListener("DOMContentLoaded", () => {
+        const knob = document.getElementById('toggle-knob');
+        if (knob) { knob.classList.remove('bg-white'); knob.classList.add('translate-x-7', 'bg-zinc-300'); }
+      });
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    function toggleTheme() {
+      const html = document.documentElement;
+      const knob = document.getElementById('toggle-knob');
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark'); localStorage.theme = 'light';
+        knob.classList.remove('translate-x-7', 'bg-zinc-300'); knob.classList.add('bg-white');
+      } else {
+        html.classList.add('dark'); localStorage.theme = 'dark';
+        knob.classList.remove('bg-white'); knob.classList.add('translate-x-7', 'bg-zinc-300');
+      }
+    }
+  </script>
   <style>
-    body {
-      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-    }
-    .fade-in-section {
-      opacity: 0;
-      transform: translateY(30px);
-      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-    }
-    .fade-in-section.is-visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    textarea:focus, input:focus {
-      outline: none;
-    }
-    .char-count-warning {
-      color: #f87171;
-    }
+    body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; }
+    .fade-in-section { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease-out, transform 0.8s ease-out; }
+    .fade-in-section.is-visible { opacity: 1; transform: translateY(0); }
+    textarea:focus, input:focus { outline: none; }
+    .char-count-warning { color: #f87171; }
   </style>
 </head>
 
-<body class="bg-[#0a0a0f] text-slate-200 selection:bg-purple-500/30 overflow-x-hidden relative min-h-screen">
+<body class="bg-[#F8FAFC] text-slate-800 dark:bg-[#18181B] dark:text-zinc-200 transition-colors duration-700 selection:bg-purple-500/30 overflow-x-hidden relative min-h-screen">
 
-  <!-- 背景装飾 -->
-  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[400px] bg-gradient-to-b from-purple-900/20 via-orange-900/5 to-transparent blur-3xl pointer-events-none -z-10"></div>
-  <div class="absolute top-1/3 left-10 w-72 h-72 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
-  <div class="absolute bottom-1/4 right-10 w-96 h-96 bg-orange-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+  <!-- テーマトグルバー -->
+  <div class="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-md text-white p-3 shadow-xl border-b border-gray-800 transition-colors duration-700">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4">
+      <p class="text-xs text-gray-400 font-bold tracking-wider hidden md:block">THEME PREVIEW</p>
+      <div class="flex items-center gap-3 ml-auto">
+        <i data-lucide="sun" class="w-5 h-5 text-amber-400 dark:text-gray-500 transition-colors"></i>
+        <div class="w-14 h-7 flex items-center bg-gray-700 rounded-full p-1 cursor-pointer" onclick="toggleTheme()">
+          <div id="toggle-knob" class="bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-300"></div>
+        </div>
+        <i data-lucide="moon" class="w-5 h-5 text-gray-500 dark:text-indigo-300 transition-colors"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- 背景装飾（ダークのみ） -->
+  <div class="hidden dark:block absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[400px] bg-gradient-to-b from-purple-900/20 via-orange-900/5 to-transparent blur-3xl pointer-events-none -z-10"></div>
+  <div class="hidden dark:block absolute top-1/3 left-10 w-72 h-72 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+  <div class="hidden dark:block absolute bottom-1/4 right-10 w-96 h-96 bg-orange-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
 
   <!-- ヘッダー -->
   <header class="flex items-center justify-between px-6 py-6 max-w-6xl mx-auto relative z-10">
     <a href="index.html" class="flex items-center gap-2 no-underline">
       <i data-lucide="flame" class="text-orange-500 w-8 h-8 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]"></i>
       <span class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-purple-500 tracking-tight">
-        OshiPay
+        oshipay
       </span>
     </a>
     <nav class="hidden md:flex items-center space-x-4 md:space-x-8">
-      <a href="how-it-works.html" class="text-sm font-medium text-slate-400 hover:text-purple-400 transition-colors">機能紹介</a>
-      <a href="https://oshipay.streamlit.app/?page=dashboard" class="text-sm font-medium text-slate-400 hover:text-purple-400 transition-colors">ログイン</a>
-      <a href="en/index.html" class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 transition-colors text-xs font-bold text-slate-400 hover:text-white">
+      <a href="how-it-works.html" class="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-purple-500 dark:hover:text-purple-400 transition-colors">機能紹介</a>
+      <a href="https://oshipay.streamlit.app/?page=dashboard" class="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-purple-500 dark:hover:text-purple-400 transition-colors">ログイン</a>
+      <a href="en/index.html" class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-300 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white">
         🇬🇧 EN
       </a>
       <a href="https://oshipay.streamlit.app/?page=dashboard&tab=new"
-        class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-full text-sm font-bold transition-all shadow-lg hover:shadow-purple-500/25">
+        class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-full text-sm font-bold text-white transition-all shadow-lg hover:shadow-purple-500/25">
         今すぐ始める
       </a>
     </nav>
-    <!-- モバイルメニューボタン -->
-    <button id="mobile-menu-btn" class="md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-lg hover:bg-white/10 transition-colors gap-1.5" onclick="toggleMobileMenu()" aria-label="メニューを開く">
-      <span class="block w-5 h-0.5 bg-white rounded-full"></span>
-      <span class="block w-5 h-0.5 bg-white rounded-full"></span>
-      <span class="block w-5 h-0.5 bg-white rounded-full"></span>
+    <button id="mobile-menu-btn" class="md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors gap-1.5" onclick="toggleMobileMenu()" aria-label="メニューを開く">
+      <span class="block w-5 h-0.5 bg-slate-700 dark:bg-white rounded-full"></span>
+      <span class="block w-5 h-0.5 bg-slate-700 dark:bg-white rounded-full"></span>
+      <span class="block w-5 h-0.5 bg-slate-700 dark:bg-white rounded-full"></span>
     </button>
   </header>
 
   <!-- モバイルドロップダウン -->
-  <div id="mobile-menu" class="hidden fixed top-[72px] right-4 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-black/10 z-50 flex-col items-stretch p-5 gap-2 w-56">
+  <div id="mobile-menu" class="hidden fixed top-[116px] right-4 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-black/10 z-50 flex-col items-stretch p-5 gap-2 w-56">
     <a href="how-it-works.html" class="flex items-center gap-2 text-sm font-bold text-slate-800 hover:text-purple-700 px-3 py-3 rounded-xl hover:bg-purple-50 transition-colors" onclick="toggleMobileMenu()">🎯 機能紹介</a>
     <a href="https://oshipay.streamlit.app/?page=dashboard" class="flex items-center gap-2 text-sm font-bold text-slate-800 hover:text-purple-700 px-3 py-3 rounded-xl hover:bg-purple-50 transition-colors">🔐 ログイン</a>
     <a href="en/index.html" class="flex items-center gap-2 text-sm font-bold text-slate-800 hover:text-purple-700 px-3 py-3 rounded-xl hover:bg-purple-50 transition-colors" onclick="toggleMobileMenu()">🇬🇧 English</a>
@@ -83,17 +106,17 @@
 
     <!-- タイトル -->
     <div class="fade-in-section text-center mb-12">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-purple-300 mb-6 backdrop-blur-sm">
-        <i data-lucide="heart" class="w-3 h-3 text-pink-400"></i>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-purple-600 dark:text-purple-300 mb-6 backdrop-blur-sm">
+        <i data-lucide="heart" class="w-3 h-3 text-pink-500 dark:text-pink-400"></i>
         開発者への応援・ご意見
       </div>
-      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight mb-4">
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-800 dark:text-white">
         開発者に
-        <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400">
+        <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400">
           メッセージを送る
         </span>
       </h1>
-      <p class="text-slate-400 text-sm md:text-base leading-relaxed">
+      <p class="text-slate-500 dark:text-slate-400 text-sm md:text-base leading-relaxed">
         応援メッセージ・機能のご要望・お問い合わせなど、<br class="hidden md:block" />
         なんでもお気軽にどうぞ。開発の励みになります！
       </p>
@@ -101,14 +124,14 @@
 
     <!-- フォームカード -->
     <div class="fade-in-section" style="transition-delay: 100ms;">
-      <div class="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-sm">
+      <div class="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 md:p-8 shadow-sm dark:shadow-none backdrop-blur-sm">
 
         <form id="contact-form" novalidate>
 
           <!-- ニックネーム -->
           <div class="mb-6">
-            <label class="block text-sm font-semibold text-slate-300 mb-2">
-              お名前（ニックネーム） <span class="text-orange-400">*</span>
+            <label class="block text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">
+              お名前（ニックネーム） <span class="text-orange-500">*</span>
             </label>
             <input
               type="text"
@@ -117,15 +140,15 @@
               placeholder="例：たろう、ふぁんA"
               maxlength="50"
               required
-              class="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:border-purple-500/60 focus:bg-white/10 focus:ring-1 focus:ring-purple-500/30 transition-all text-sm"
+              class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:border-purple-400 dark:focus:border-purple-500/60 focus:ring-1 focus:ring-purple-400/30 dark:focus:ring-purple-500/30 transition-all text-sm"
             />
           </div>
 
           <!-- 内容 -->
           <div class="mb-6">
-            <label class="block text-sm font-semibold text-slate-300 mb-2">
-              内容 <span class="text-orange-400">*</span>
-              <span class="text-slate-500 font-normal ml-1">（500文字以内）</span>
+            <label class="block text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">
+              内容 <span class="text-orange-500">*</span>
+              <span class="text-slate-400 dark:text-slate-500 font-normal ml-1">（500文字以内）</span>
             </label>
             <textarea
               id="message"
@@ -134,18 +157,18 @@
               maxlength="500"
               rows="6"
               required
-              class="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:border-purple-500/60 focus:bg-white/10 focus:ring-1 focus:ring-purple-500/30 transition-all text-sm resize-none"
+              class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:border-purple-400 dark:focus:border-purple-500/60 focus:ring-1 focus:ring-purple-400/30 dark:focus:ring-purple-500/30 transition-all text-sm resize-none"
             ></textarea>
             <div class="flex justify-end mt-1">
-              <span id="char-count" class="text-xs text-slate-500">0 / 500</span>
+              <span id="char-count" class="text-xs text-slate-400 dark:text-slate-500">0 / 500</span>
             </div>
           </div>
 
           <!-- メールアドレス -->
           <div class="mb-6">
-            <label class="block text-sm font-semibold text-slate-300 mb-2">
+            <label class="block text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">
               メールアドレス
-              <span class="text-slate-500 font-normal ml-1">（任意・返信希望の方は必須）</span>
+              <span class="text-slate-400 dark:text-slate-500 font-normal ml-1">（任意・返信希望の方は必須）</span>
             </label>
             <input
               type="email"
@@ -156,7 +179,7 @@
               inputmode="email"
               spellcheck="false"
               autocapitalize="off"
-              class="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:border-purple-500/60 focus:bg-white/10 focus:ring-1 focus:ring-purple-500/30 transition-all text-sm"
+              class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:border-purple-400 dark:focus:border-purple-500/60 focus:ring-1 focus:ring-purple-400/30 dark:focus:ring-purple-500/30 transition-all text-sm"
             />
           </div>
 
@@ -164,19 +187,14 @@
           <div class="mb-8">
             <label class="flex items-center gap-3 cursor-pointer group">
               <div class="relative">
-                <input
-                  type="checkbox"
-                  id="reply-requested"
-                  name="replyRequested"
-                  class="sr-only"
-                />
-                <div id="checkbox-visual" class="w-5 h-5 rounded-md border-2 border-white/20 bg-white/5 group-hover:border-purple-500/60 transition-all flex items-center justify-center">
+                <input type="checkbox" id="reply-requested" name="replyRequested" class="sr-only" />
+                <div id="checkbox-visual" class="w-5 h-5 rounded-md border-2 border-slate-300 dark:border-white/20 bg-slate-50 dark:bg-white/5 group-hover:border-purple-400 dark:group-hover:border-purple-500/60 transition-all flex items-center justify-center">
                   <i data-lucide="check" class="w-3 h-3 text-white hidden" id="check-icon"></i>
                 </div>
               </div>
-              <span class="text-sm text-slate-300">返信を希望する</span>
+              <span class="text-sm text-slate-600 dark:text-slate-300">返信を希望する</span>
             </label>
-            <p class="text-xs text-slate-500 mt-1.5 ml-8">返信希望の場合はメールアドレスの入力が必要です</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5 ml-8">返信希望の場合はメールアドレスの入力が必要です</p>
           </div>
 
           <!-- 送信ボタン -->
@@ -197,22 +215,22 @@
         <!-- 送信成功メッセージ -->
         <div id="success-message" class="hidden text-center py-8">
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 border border-green-500/30 mb-4">
-            <i data-lucide="check-circle" class="w-8 h-8 text-green-400"></i>
+            <i data-lucide="check-circle" class="w-8 h-8 text-green-500 dark:text-green-400"></i>
           </div>
-          <h3 class="text-xl font-bold text-white mb-2">送信しました！</h3>
-          <p class="text-slate-400 text-sm leading-relaxed mb-6">
+          <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2">送信しました！</h3>
+          <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
             メッセージありがとうございます。<br />
             返信希望の場合は、後ほどご連絡いたします。
           </p>
-          <a href="index.html" class="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors">
+          <a href="index.html" class="inline-flex items-center gap-2 text-purple-500 dark:text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 text-sm font-medium transition-colors">
             <i data-lucide="arrow-left" class="w-4 h-4"></i>
             トップページに戻る
           </a>
         </div>
 
         <!-- 送信エラーメッセージ -->
-        <div id="error-message" class="hidden mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-          <p class="text-red-400 text-sm flex items-center gap-2">
+        <div id="error-message" class="hidden mt-4 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl">
+          <p class="text-red-500 dark:text-red-400 text-sm flex items-center gap-2">
             <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
             <span id="error-text">送信に失敗しました。時間をおいてお試しください。</span>
           </p>
@@ -224,21 +242,21 @@
     <!-- 開発者プロフィールリンク -->
     <div class="fade-in-section mt-4" style="transition-delay: 150ms;">
       <a href="https://oshipay.me/creator.html?id=asagiri" target="_blank" rel="noopener noreferrer"
-        class="flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 hover:bg-white/10 hover:border-purple-500/30 transition-all group no-underline">
-        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/30 to-orange-500/30 border border-white/10 shrink-0">
-          <i data-lucide="user" class="w-5 h-5 text-purple-300"></i>
+        class="flex items-center gap-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 hover:bg-slate-50 dark:hover:bg-white/10 hover:border-purple-300 dark:hover:border-purple-500/30 transition-all group no-underline shadow-sm dark:shadow-none">
+        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-orange-500/20 border border-purple-200 dark:border-white/10 shrink-0">
+          <i data-lucide="user" class="w-5 h-5 text-purple-500 dark:text-purple-300"></i>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-xs text-slate-500 mb-0.5">開発者について</p>
-          <p class="text-sm font-semibold text-slate-200 group-hover:text-purple-300 transition-colors">開発者のプロフィールはこちら</p>
+          <p class="text-xs text-slate-400 dark:text-slate-500 mb-0.5">開発者について</p>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">開発者のプロフィールはこちら</p>
         </div>
-        <i data-lucide="external-link" class="w-4 h-4 text-slate-500 group-hover:text-purple-400 transition-colors shrink-0"></i>
+        <i data-lucide="external-link" class="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors shrink-0"></i>
       </a>
     </div>
 
     <!-- 戻るリンク -->
     <div class="fade-in-section text-center mt-8" style="transition-delay: 200ms;">
-      <a href="index.html" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-300 transition-colors no-underline">
+      <a href="index.html" class="inline-flex items-center gap-1.5 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors no-underline">
         <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
         トップページに戻る
       </a>
@@ -247,40 +265,35 @@
   </main>
 
   <!-- フッター -->
-  <footer class="border-t border-white/10 pt-6 pb-8 relative z-10 w-full bg-[#0a0a0f]">
+  <footer class="border-t border-slate-200 dark:border-white/10 pt-6 pb-8 relative z-10 w-full bg-[#F8FAFC] dark:bg-[#18181B] transition-colors duration-700">
     <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
       <div class="flex items-center gap-2">
         <i data-lucide="flame" class="text-orange-500 w-6 h-6"></i>
-        <span class="text-xl font-bold text-white">OshiPay</span>
+        <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-purple-500">oshipay</span>
       </div>
       <div class="flex flex-col items-center md:items-end gap-2">
         <div class="flex gap-4 mb-1">
           <a href="https://oshipay.streamlit.app/?page=terms" target="_blank" rel="noopener noreferrer"
-            class="text-xs text-slate-500 hover:text-slate-300 transition-colors no-underline">利用規約</a>
+            class="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors no-underline">利用規約</a>
           <a href="https://oshipay.streamlit.app/?page=privacy" target="_blank" rel="noopener noreferrer"
-            class="text-xs text-slate-500 hover:text-slate-300 transition-colors no-underline">プライバシーポリシー</a>
+            class="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors no-underline">プライバシーポリシー</a>
           <a href="https://oshipay.streamlit.app/?page=legal" target="_blank" rel="noopener noreferrer"
-            class="text-xs text-slate-500 hover:text-slate-300 transition-colors no-underline">特定商取引法に基づく表記</a>
+            class="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors no-underline">特定商取引法に基づく表記</a>
         </div>
-        <p class="text-xs text-slate-600">© 2026 OshiPay. All rights reserved.</p>
+        <p class="text-xs text-slate-400 dark:text-slate-600">© 2026 oshipay. All rights reserved.</p>
       </div>
     </div>
   </footer>
 
   <script>
-    // GAS Web App URL（デプロイ後にここを更新してください）
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwp8nu2tKuhxiksYOjgr_Ka_dIRE26rDImHvDDP2RFQjjaRaK4w4HXSsK_VHmm_Iv77/exec';
 
     document.addEventListener('DOMContentLoaded', function () {
       lucide.createIcons();
 
-      // フェードインアニメーション
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-            observer.unobserve(entry.target);
-          }
+          if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); }
         });
       }, { threshold: 0.1 });
       document.querySelectorAll('.fade-in-section').forEach(el => observer.observe(el));
@@ -291,11 +304,7 @@
       messageEl.addEventListener('input', function () {
         const len = this.value.length;
         charCountEl.textContent = len + ' / 500';
-        if (len >= 450) {
-          charCountEl.classList.add('char-count-warning');
-        } else {
-          charCountEl.classList.remove('char-count-warning');
-        }
+        charCountEl.classList.toggle('char-count-warning', len >= 450);
       });
 
       // カスタムチェックボックス
@@ -306,11 +315,11 @@
         checkbox.checked = !checkbox.checked;
         if (checkbox.checked) {
           checkboxVisual.classList.add('border-purple-500', 'bg-purple-500/30');
-          checkboxVisual.classList.remove('border-white/20', 'bg-white/5');
+          checkboxVisual.classList.remove('border-slate-300', 'dark:border-white/20', 'bg-slate-50', 'dark:bg-white/5');
           checkIcon.classList.remove('hidden');
         } else {
           checkboxVisual.classList.remove('border-purple-500', 'bg-purple-500/30');
-          checkboxVisual.classList.add('border-white/20', 'bg-white/5');
+          checkboxVisual.classList.add('border-slate-300', 'bg-slate-50');
           checkIcon.classList.add('hidden');
         }
       });
@@ -318,54 +327,27 @@
       // フォーム送信
       document.getElementById('contact-form').addEventListener('submit', async function (e) {
         e.preventDefault();
-
         const nickname = document.getElementById('nickname').value.trim();
         const message = document.getElementById('message').value.trim();
         const email = document.getElementById('email').value.trim();
         const replyRequested = document.getElementById('reply-requested').checked;
-
-        // バリデーション
         const errorEl = document.getElementById('error-message');
         const errorText = document.getElementById('error-text');
         errorEl.classList.add('hidden');
 
-        if (!nickname) {
-          errorText.textContent = 'ニックネームを入力してください。';
-          errorEl.classList.remove('hidden');
-          return;
-        }
-        if (!message) {
-          errorText.textContent = '内容を入力してください。';
-          errorEl.classList.remove('hidden');
-          return;
-        }
-        if (replyRequested && !email) {
-          errorText.textContent = '返信希望の場合はメールアドレスを入力してください。';
-          errorEl.classList.remove('hidden');
-          return;
-        }
-        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          errorText.textContent = '有効なメールアドレスを入力してください。';
-          errorEl.classList.remove('hidden');
-          return;
-        }
+        if (!nickname) { errorText.textContent = 'ニックネームを入力してください。'; errorEl.classList.remove('hidden'); return; }
+        if (!message) { errorText.textContent = '内容を入力してください。'; errorEl.classList.remove('hidden'); return; }
+        if (replyRequested && !email) { errorText.textContent = '返信希望の場合はメールアドレスを入力してください。'; errorEl.classList.remove('hidden'); return; }
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errorText.textContent = '有効なメールアドレスを入力してください。'; errorEl.classList.remove('hidden'); return; }
 
-        // 送信ボタンをローディング状態に
         const btn = document.getElementById('submit-btn');
         const btnText = document.getElementById('btn-text');
         btn.disabled = true;
         btnText.innerHTML = '<svg class="animate-spin w-4 h-4 mr-2 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>送信中...';
 
-        const params = new URLSearchParams({
-          nickname,
-          message,
-          email,
-          replyRequested: replyRequested ? '○' : '-'
-        });
-
+        const params = new URLSearchParams({ nickname, message, email, replyRequested: replyRequested ? '○' : '-' });
         try {
           await fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' });
-          // no-corsのためレスポンス確認不可だが送信は成功とみなす
           document.getElementById('contact-form').classList.add('hidden');
           document.getElementById('success-message').classList.remove('hidden');
           lucide.createIcons();
@@ -381,15 +363,9 @@
 
     function toggleMobileMenu() {
       var menu = document.getElementById('mobile-menu');
-      if (menu.classList.contains('hidden')) {
-        menu.classList.remove('hidden');
-        menu.classList.add('flex');
-      } else {
-        menu.classList.remove('flex');
-        menu.classList.add('hidden');
-      }
+      if (menu.classList.contains('hidden')) { menu.classList.remove('hidden'); menu.classList.add('flex'); }
+      else { menu.classList.remove('flex'); menu.classList.add('hidden'); }
     }
   </script>
 </body>
-
 </html>
