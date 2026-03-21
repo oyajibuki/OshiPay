@@ -1801,6 +1801,13 @@ elif page == "portfolio":
         </div>
         """, unsafe_allow_html=True)
     
+    # サポーターログインボタン（ID補完済み）
+    if st.button("🔑 サポーターログイン", use_container_width=True, key="portfolio_sup_login"):
+        st.session_state["_sup_prefill_id"] = p_id
+        st.query_params["page"] = "supporter_dashboard"
+        st.query_params["sid"]  = p_id
+        st.rerun()
+
     share_text = f"私のOshiPay応援実績はこちら！総額 {total_amount:,}\n#OshiPay\n{BASE_URL}?page=portfolio&id={p_id}"
     st.link_button("𝕏 で公開する", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
     st.link_button("あなたもOshiPayを始めよう", f"{BASE_URL}?page=lp", use_container_width=True)
