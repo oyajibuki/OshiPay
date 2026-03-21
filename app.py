@@ -2186,6 +2186,7 @@ elif page == "supporter_dashboard":
                     "display_name": _c_name,
                     "name": _c_name,
                     "email": _c_email,
+                    "password_hash": "",
                     "supporter_id": sup_user["supporter_id"],
                     "profile_done": False,
                     "payout_enabled": False,
