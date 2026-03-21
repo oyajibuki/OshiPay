@@ -116,10 +116,11 @@
       このページをシェア
     </button>
 
-    <!-- Language switch -->
-    <div class="text-center mt-4">
-      <a id="en-link" href="#" class="text-xs text-slate-600 hover:text-slate-400 transition-colors">🌐 English</a>
-    </div>
+    <!-- Login -->
+    <a id="login-btn" href="https://oshipay.me/?page=dashboard"
+      class="block w-full py-3 mt-2 border border-purple-500/30 rounded-full text-purple-400 text-sm font-medium text-center hover:bg-purple-500/10 transition-colors">
+      🔑 クリエイターログイン
+    </a>
 
     <!-- Message wall -->
     <div id="message-wall" class="mt-8 hidden">
@@ -138,7 +139,7 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpqeWd3anltYnRza2lyeWN3cHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDQxMzksImV4cCI6MjA4ODM4MDEzOX0.U826zOvifFS2BHcs7OlMd6xHL1IXC6w5KZ7Kn7T-3wY'
     );
 
-    const BASE_APP = 'https://oshipay.streamlit.app';
+    const BASE_APP = 'https://oshipay.me';
 
     // localStorage にログイン済みクリエイターIDが保存されていれば編集ボタンを表示
     const savedAcct = localStorage.getItem('oshipay_acct') || '';
