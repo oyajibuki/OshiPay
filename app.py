@@ -386,12 +386,13 @@ def register_creator(acct_id: str, password: str, email: str = "") -> tuple[bool
     except Exception as e:
         return False, str(e)
 
-def set_reply(support_id: str, emoji: str, text: str) -> bool:
+def set_reply(support_id: str, emoji: str, text: str, show_on_profile: bool = False) -> bool:
     """クリエイターの返信を保存"""
     resp = get_db().table("supports").update({
         "reply_emoji": emoji,
         "reply_text": text,
         "replied_at": datetime.datetime.utcnow().isoformat(),
+        "show_on_profile": show_on_profile,
     }).eq("support_id", support_id).execute()
     return bool(resp.data)
 
@@ -831,17 +832,23 @@ if page == "my_support":
     st.markdown(card_html, unsafe_allow_html=True)
 
     if record.get("supporter_id"):
+        _sup_id_val = record["supporter_id"]
         st.markdown(
             f'<div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);'
             f'border-radius:12px;padding:14px;margin:12px 0;text-align:center;">'
             f'<div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:4px;">サポーターID</div>'
-            f'<div style="font-size:16px;font-weight:700;color:#c4b5fd;font-family:monospace;">{record["supporter_id"]}</div>'
+            f'<div style="font-size:16px;font-weight:700;color:#c4b5fd;font-family:monospace;">{_sup_id_val}</div>'
             f'<div style="font-size:10px;color:rgba(240,240,245,0.35);margin-top:4px;">'
             f'<a href="{BASE_URL}?page=supporter_dashboard" target="_top" style="color:#c4b5fd;text-decoration:underline;">'
             f'アカウント登録</a>するとコインが積み重なります</div>'
             f'</div>',
             unsafe_allow_html=True
         )
+        if st.button("🔑 サポーターログイン", use_container_width=True, key="sup_login_btn"):
+            st.session_state["_sup_prefill_id"] = _sup_id_val
+            st.query_params["page"] = "supporter_dashboard"
+            st.query_params["sid"]  = _sup_id_val
+            st.rerun()
     st.markdown(f'<div style="text-align:center;margin-top:16px;"><a href="{BASE_URL}?page=coin_preview" target="_top" style="font-size:11px;color:rgba(240,240,245,0.3);text-decoration:underline;">🪙 コイン全色プレビューを見る</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="oshi-footer" style="margin-top:12px;">Powered by <a href="{BASE_URL}?page=dashboard">OshiPay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
@@ -1034,8 +1041,14 @@ if page == "reply_view":
                 placeholder="ありがとう！いつも応援してくれて嬉しいです 😊",
             )
 
+            show_on_profile = st.checkbox(
+                "💬 このメッセージをプロフィール画面に表示する",
+                value=bool(record.get("show_on_profile", False)),
+                key=f"sop_{sid}",
+            )
+
             if st.button("📨 送信する", key=f"send_{sid}", type="primary"):
-                ok = set_reply(sid, chosen_emoji, reply_text)
+                ok = set_reply(sid, chosen_emoji, reply_text, show_on_profile=show_on_profile)
                 if ok:
                     st.session_state["reply_success_msg"] = "返信を保存しました！"
                     st.rerun()
@@ -1601,8 +1614,7 @@ if page == "support" and support_user:
         slider_options = (
             list(range(100, 1000, 100)) +
             list(range(1000, 10000, 500)) +
-            list(range(10000, 100000, 5000)) +
-            list(range(100000, 1000001, 50000))
+            list(range(10000, 100001, 5000))  # 上限10万円（マネーロンダリング対策）
         )
     else:
         slider_options = list(range(100, 1100, 100))  # 100〜1000円
@@ -1806,7 +1818,12 @@ elif page == "supporter_dashboard":
 
         with tab_login:
             st.caption("メールアドレス または 旧サポーターID でログインできます")
-            l_id   = st.text_input("メールアドレス または サポーターID", key="l_id", placeholder="you@example.com または sup_xxxx")
+            _prefill_val = st.session_state.pop("_sup_prefill_id", None) or _prefill_sid
+            if _prefill_val:
+                st.info(f"🔑 サポーターID: `{_prefill_val}` — パスワードを入力してください")
+            l_id   = st.text_input("メールアドレス または サポーターID", key="l_id",
+                                   value=_prefill_val or "",
+                                   placeholder="you@example.com または sup_xxxx")
             l_pass = st.text_input("パスワード", type="password", key="l_pass")
             if st.button("ログイン", use_container_width=True, type="primary"):
                 _l_found = False

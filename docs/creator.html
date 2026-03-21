@@ -161,8 +161,9 @@
       // Stats
       const { data: supports } = await db
         .from('supports')
-        .select('amount, supporter_id, message, created_at')
+        .select('amount, supporter_id, message, created_at, show_on_profile')
         .eq('creator_acct', creator.acct_id)
+        .eq('show_on_profile', true)
         .order('created_at', { ascending: false });
 
       if (supports && supports.length > 0) {
