@@ -2148,6 +2148,11 @@ else: # Dashboard
                     st.session_state["_reg_creating"] = True
                     with st.spinner("応援ページを作成しています..."):
                         try:
+                            _email_count = get_db().table("creators").select("acct_id").eq("email", new_email.strip().lower()).execute()
+                            if len(_email_count.data or []) >= 10:
+                                st.session_state["_reg_creating"] = False
+                                st.error("このメールアドレスはすでに10アカウントに使用されています。別のメールアドレスをお使いください。")
+                                st.stop()
                             creator_id = "usr_" + uuid.uuid4().hex[:16]
                             _reg_ok, _reg_err = register_creator(creator_id, new_pass, email=new_email)
                             if not _reg_ok:
@@ -2742,8 +2747,8 @@ else: # Dashboard
                     if _em_chk.data and _em_chk.data[0]["password_hash"] == hash_password(em_pass):
                         _em_lc = em_new.strip().lower()
                         _em_dup = get_db().table("creators").select("acct_id").eq("email", _em_lc).neq("acct_id", acct_id).execute()
-                        if _em_dup.data:
-                            st.error("このメールアドレスはすでに使用されています。")
+                        if len(_em_dup.data or []) >= 10:
+                            st.error("このメールアドレスはすでに10アカウントに使用されています。別のメールアドレスをお使いください。")
                         else:
                             get_db().table("creators").update({"email": _em_lc}).eq("acct_id", acct_id).execute()
                             st.success("✅ メールアドレスを更新しました！")
