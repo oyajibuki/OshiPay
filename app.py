@@ -2485,37 +2485,42 @@ else: # Dashboard
             import base64 as _b64
             _raw_b64 = _b64.b64encode(uploaded_photo.read()).decode()
             _mime = "image/jpeg" if uploaded_photo.name.lower().endswith((".jpg",".jpeg")) else "image/png"
+            _supa_url  = st.secrets["SUPABASE_URL"].rstrip("/")
+            _supa_key  = st.secrets["SUPABASE_KEY"]
+            _storage_path = f"creators/{acct_id}.jpg"
             _cropper_html = f"""
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"/>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
             <style>
               body{{margin:0;background:#0a0a0f;}}
-              #crop-wrap{{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;}}
-              #crop-container{{width:300px;height:300px;overflow:hidden;border-radius:12px;background:#111;}}
+              #crop-wrap{{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px;box-sizing:border-box;}}
+              #crop-container{{width:280px;height:280px;overflow:hidden;border-radius:12px;background:#111;}}
               #crop-container img{{max-width:100%;}}
-              .crop-btn{{background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%;max-width:300px;}}
-              .crop-btn:hover{{background:#7c3aed;}}
-              #preview-circle{{width:96px;height:96px;border-radius:50%;overflow:hidden;border:3px solid rgba(139,92,246,0.6);}}
-              #status{{color:#6ee7b7;font-size:13px;font-weight:600;display:none;}}
-              .hint{{color:rgba(240,240,245,0.45);font-size:11px;text-align:center;}}
+              .rot-row{{display:flex;gap:8px;width:280px;}}
+              .rot-btn{{flex:1;background:#374151;color:#fff;border:none;border-radius:8px;padding:8px 0;font-size:13px;font-weight:700;cursor:pointer;}}
+              .rot-btn:hover{{background:#4b5563;}}
+              .mid-row{{display:flex;align-items:center;gap:12px;width:280px;}}
+              #preview-circle{{width:72px;height:72px;border-radius:50%;overflow:hidden;border:3px solid rgba(139,92,246,0.6);flex-shrink:0;}}
+              #auto-status{{flex:1;font-size:11px;font-weight:600;color:rgba(240,240,245,0.5);text-align:center;}}
+              #auto-status.saving{{color:#fbbf24;}}
+              #auto-status.saved{{color:#6ee7b7;}}
+              #auto-status.err{{color:#f87171;}}
+              .hint{{color:rgba(240,240,245,0.4);font-size:10px;text-align:center;}}
             </style>
             <div id="crop-wrap">
-              <div class="hint">✋ ドラッグ移動 / ピンチ or スクロール拡大縮小 / 回転ボタンで回転</div>
+              <div class="hint">✋ ドラッグ移動 / スクロール拡大縮小 / 回転ボタンで回転</div>
               <div id="crop-container"><img id="crop-img" src="data:{_mime};base64,{_raw_b64}"/></div>
-              <div style="display:flex;gap:8px;max-width:300px;width:100%;">
-                <button class="crop-btn" style="background:#374151;" onclick="cropper.rotate(-90)">↺ 左回転</button>
-                <button class="crop-btn" style="background:#374151;" onclick="cropper.rotate(90)">↻ 右回転</button>
+              <div class="rot-row">
+                <button class="rot-btn" onclick="cropper.rotate(-90)">↺ 左回転</button>
+                <button class="rot-btn" onclick="cropper.rotate(90)">↻ 右回転</button>
               </div>
-              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
-                <div style="color:rgba(240,240,245,0.5);font-size:11px;">プレビュー</div>
+              <div class="mid-row">
                 <div id="preview-circle"></div>
+                <div id="auto-status">← 位置を調整してください</div>
               </div>
-              <button class="crop-btn" onclick="saveCrop()">✅ この位置で保存</button>
-              <div id="status">✅ 送信中...</div>
             </div>
             <script>
               const img = document.getElementById('crop-img');
-              const preview = document.getElementById('preview-circle');
               const cropper = new Cropper(img, {{
                 aspectRatio: 1,
                 viewMode: 1,
@@ -2525,49 +2530,86 @@ else: # Dashboard
                 cropBoxMovable: false,
                 preview: '#preview-circle',
               }});
-              function saveCrop() {{
-                const canvas = cropper.getCroppedCanvas({{width:200,height:200}});
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                document.getElementById('status').style.display='block';
-                window.parent.postMessage({{type:'streamlit:setComponentValue', value: dataUrl}}, '*');
+
+              let saveTimer = null;
+              let lastSaveOk = false;
+
+              img.addEventListener('cropend', scheduleSave);
+              img.addEventListener('zoom',    scheduleSave);
+
+              function scheduleSave() {{
+                clearTimeout(saveTimer);
+                const el = document.getElementById('auto-status');
+                el.className = 'saving';
+                el.textContent = '🔄 調整中...';
+                lastSaveOk = false;
+                saveTimer = setTimeout(autoSave, 1200);
+              }}
+
+              async function autoSave() {{
+                const el = document.getElementById('auto-status');
+                el.className = 'saving';
+                el.textContent = '⏳ 保存中...';
+                try {{
+                  const canvas = cropper.getCroppedCanvas({{width:200, height:200}});
+                  const blob   = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+
+                  const uploadRes = await fetch(
+                    '{_supa_url}/storage/v1/object/creator-photos/{_storage_path}',
+                    {{
+                      method: 'POST',
+                      headers: {{
+                        'Authorization': 'Bearer {_supa_key}',
+                        'apikey':        '{_supa_key}',
+                        'Content-Type':  'image/jpeg',
+                        'x-upsert':      'true',
+                      }},
+                      body: blob,
+                    }}
+                  );
+                  if (!uploadRes.ok) {{
+                    const t = await uploadRes.text();
+                    throw new Error(t);
+                  }}
+
+                  const photoUrl = '{_supa_url}/storage/v1/object/public/creator-photos/{_storage_path}';
+                  const dbRes = await fetch(
+                    '{_supa_url}/rest/v1/creators?acct_id=eq.{acct_id}',
+                    {{
+                      method: 'PATCH',
+                      headers: {{
+                        'Authorization': 'Bearer {_supa_key}',
+                        'apikey':        '{_supa_key}',
+                        'Content-Type':  'application/json',
+                        'Prefer':        'return=minimal',
+                      }},
+                      body: JSON.stringify({{photo_url: photoUrl}}),
+                    }}
+                  );
+                  if (!dbRes.ok) {{
+                    const t = await dbRes.text();
+                    throw new Error(t);
+                  }}
+
+                  el.className = 'saved';
+                  el.textContent = '✅ 保存OK！下のボタンで確定';
+                  lastSaveOk = true;
+                }} catch(e) {{
+                  el.className = 'err';
+                  el.textContent = '❌ ' + e.message;
+                  lastSaveOk = false;
+                }}
               }}
             </script>
             """
-            _cropped_b64 = st.components.v1.html(_cropper_html, height=560, scrolling=False)
-            if _cropped_b64 and isinstance(_cropped_b64, str) and _cropped_b64.startswith("data:image"):
-                try:
-                    _header, _data = _cropped_b64.split(",", 1)
-                    _img_bytes = base64.b64decode(_data)
-                    _file_path = f"creators/{acct_id}.jpg"
-                    get_db().storage.from_("creator-photos").upload(
-                        _file_path, _img_bytes,
-                        {"content-type": "image/jpeg", "upsert": "true"}
-                    )
-                    _photo_url = get_db().storage.from_("creator-photos").get_public_url(_file_path)
-                    get_db().table("creators").update({"photo_url": _photo_url}).eq("acct_id", acct_id).execute()
-                    st.success("✅ 写真を保存しました！")
-                except Exception as e:
-                    st.error(f"写真の保存に失敗しました: {e}")
-            elif uploaded_photo and not (isinstance(_cropped_b64, str) and _cropped_b64.startswith("data:")):
-                # フォールバック：クロッパーが使えない場合は従来通り圧縮保存
-                try:
-                    uploaded_photo.seek(0)
-                    _img = Image.open(uploaded_photo).convert("RGB")
-                    _img.thumbnail((200, 200), Image.LANCZOS)
-                    _buf = io.BytesIO()
-                    _img.save(_buf, format="JPEG", quality=85)
-                    _buf.seek(0)
-                    _img_bytes = _buf.read()
-                    _file_path = f"creators/{acct_id}.jpg"
-                    get_db().storage.from_("creator-photos").upload(
-                        _file_path, _img_bytes,
-                        {"content-type": "image/jpeg", "upsert": "true"}
-                    )
-                    _photo_url = get_db().storage.from_("creator-photos").get_public_url(_file_path)
-                    get_db().table("creators").update({"photo_url": _photo_url}).eq("acct_id", acct_id).execute()
-                    st.success("写真を保存しました！")
-                except Exception as e:
-                    st.error(f"写真の保存に失敗しました: {e}")
+            st.components.v1.html(_cropper_html, height=420, scrolling=False)
+
+        # ── アイコン確定ボタン（uploaded_photo の外に配置・常に表示）──
+        if st.button("✅ アイコンを確定する", key=f"confirm_icon_{acct_id}", use_container_width=True):
+            st.session_state[f"icon_confirmed_{acct_id}"] = True
+            st.rerun()
+        if st.session_state.get(f"icon_confirmed_{acct_id}"):
+            st.success("✅ アイコンを確定しました！続けて「プロフィールを保存」を押してください。")
 
         name = st.text_input("表示名", value=_def_name)
         icon = st.selectbox("アイコン", _icon_list, index=_def_icon_idx, key=f"icon_{acct_id}")
