@@ -163,6 +163,20 @@ def send_acct_id_email(to_email: str, acct_id: str) -> tuple[bool, str]:
         return True, "送信成功"
     except Exception as e: return False, str(e)
 
+def send_registration_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
+    try:
+        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
+        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
+        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
+        subject = "【oshipay】メールアドレスの確認コード"
+        body = f"oshipayへようこそ！\n\n以下の6桁のコードを入力して、メールアドレスを確認してください。\n\n確認コード: {otp}\n\nこのコードは5分間有効です。\n登録を依頼していない場合は、このメールを無視してください。\n\n--\noshipay\n{BASE_URL}"
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
+        return True, "送信成功"
+    except Exception as e: return False, str(e)
+
 def send_merge_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
     try:
         smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
@@ -660,12 +674,27 @@ if page == "success":
     s_sid = params.get("s_sid", "")
     s_sup_id   = params.get("s_sup_id", "")
     s_sup_name = params.get("s_sup_name", "")
+    s_session_id = params.get("s_session", "")
 
     # ── 応援金額のパース ──
     try:
         s_amt = int(s_amt_str)
     except ValueError:
         s_amt = 0
+
+    # ── Stripeセッションからメアドを取得してDB保存 ──
+    if s_session_id and s_sup_id and s_stripe_acct:
+        try:
+            _stripe_sess = stripe.checkout.Session.retrieve(s_session_id, stripe_account=s_stripe_acct)
+            _stripe_email = (_stripe_sess.customer_details.email if _stripe_sess.customer_details else None)
+            if _stripe_email:
+                _stripe_email = _stripe_email.strip().lower()
+                # メアド未登録のサポーターIDにのみ保存（上書きしない）
+                _cur = get_db().table("supporters").select("email").eq("supporter_id", s_sup_id).maybe_single().execute()
+                if _cur.data and not _cur.data.get("email"):
+                    get_db().table("supporters").update({"email": _stripe_email}).eq("supporter_id", s_sup_id).execute()
+        except Exception:
+            pass
 
     # ── 名前入力からの軽量サポーターレコード作成 ──
     if s_sup_id and s_sup_name:
@@ -1735,7 +1764,7 @@ if page == "support" and support_user:
                 checkout_params = {
                     "payment_method_types": ["card"], "mode": "payment",
                     "line_items": [{"price_data": {"currency": "jpy", "product_data": {"name": f"{support_name}への応援"}, "unit_amount": amt}, "quantity": 1}],
-                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(support_name)}&s_amt={amt}&s_acct={connect_acct}&s_stripe_acct={_stripe_connect_acct}&s_msg={urllib.parse.quote(msg or '')}&s_sid={support_id}&s_sup_id={final_sup_id}&s_sup_name={urllib.parse.quote(sup_display_name or '')}",
+                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(support_name)}&s_amt={amt}&s_acct={connect_acct}&s_stripe_acct={_stripe_connect_acct}&s_msg={urllib.parse.quote(msg or '')}&s_sid={support_id}&s_sup_id={final_sup_id}&s_sup_name={urllib.parse.quote(sup_display_name or '')}&s_session={{CHECKOUT_SESSION_ID}}",
                     "cancel_url": f"{BASE_URL}?page=cancel",
                     "metadata": {"user_id": support_user, "message": msg, "support_id": support_id, "supporter_id": opt_sup_id}
                 }
@@ -1906,41 +1935,73 @@ elif page == "supporter_dashboard":
                     st.success(f"仮パスワード: `{_temp}`")
 
         elif _prefill_sid and _sid_db_row and not _sid_has_email:
-            # ── モードB: IDは確認済み・メール未登録 → 登録促進 ──
+            # ── モードB: IDは確認済み・メール未登録 → OTP付き登録促進 ──
             st.info(f"🎉 サポーターID `{_prefill_sid}` が見つかりました！メールアドレスとパスワードを登録すると、応援履歴をまとめて管理できます。")
-            b_email = st.text_input("メールアドレス", key="b_email", placeholder="you@example.com")
-            b_name  = st.text_input("表示名（任意）", key="b_name", placeholder=_sid_db_row.get("display_name") or "例: たろう")
-            b_pass  = st.text_input("パスワード", type="password", key="b_pass")
-            if st.button("このIDで登録する", use_container_width=True, type="primary"):
-                if b_email and b_pass:
-                    _email_lc = b_email.strip().lower()
-                    _existing = get_db().table("supporter_accounts").select("supporter_id").eq("email", _email_lc).limit(1).execute()
-                    if _existing.data:
-                        st.error("このメールアドレスは既に使用されています。")
+            if not st.session_state.get("_reg_b_otp_sent"):
+                b_email = st.text_input("メールアドレス", key="b_email", placeholder="you@example.com")
+                b_name  = st.text_input("表示名（任意）", key="b_name", placeholder=_sid_db_row.get("display_name") or "例: たろう")
+                b_pass  = st.text_input("パスワード", type="password", key="b_pass")
+                if st.button("確認コードを送信", use_container_width=True, type="primary"):
+                    if b_email and b_pass:
+                        _email_lc = b_email.strip().lower()
+                        _existing = get_db().table("supporter_accounts").select("supporter_id").eq("email", _email_lc).limit(1).execute()
+                        if _existing.data:
+                            st.error("このメールアドレスは既に使用されています。")
+                        else:
+                            import random, time as _time
+                            _otp = f"{random.randint(0, 999999):06d}"
+                            _ok, _err = send_registration_otp_email(_email_lc, _otp)
+                            if _ok:
+                                st.session_state["_reg_b_email"] = _email_lc
+                                st.session_state["_reg_b_name"] = b_name.strip() or _sid_db_row.get("display_name") or _email_lc.split("@")[0]
+                                st.session_state["_reg_b_pass"] = b_pass
+                                st.session_state["_reg_b_otp"] = _otp
+                                st.session_state["_reg_b_otp_time"] = _time.time()
+                                st.session_state["_reg_b_otp_sent"] = True
+                                st.rerun()
+                            else:
+                                st.error(f"メール送信失敗: {_err}")
                     else:
-                        _disp = b_name.strip() or _sid_db_row.get("display_name") or _email_lc.split("@")[0]
-                        get_db().table("supporters").update({
-                            "email": _email_lc,
-                            "display_name": _disp,
-                            "password_hash": hash_password(b_pass)
-                        }).eq("supporter_id", _prefill_sid).execute()
-                        try:
-                            get_db().table("supporter_accounts").insert({
-                                "supporter_id": _prefill_sid,
-                                "email": _email_lc,
-                                "password_hash": hash_password(b_pass)
-                            }).execute()
-                        except Exception:
-                            pass
-                        st.session_state["supporter_auth"] = {
-                            "supporter_id": _prefill_sid,
-                            "display_name": _disp,
-                            "email": _email_lc
-                        }
-                        send_welcome_email(b_email, _disp, _prefill_sid)
+                        st.warning("メールアドレスとパスワードを入力してください。")
+            else:
+                import time as _time
+                _b_elapsed = _time.time() - st.session_state.get("_reg_b_otp_time", 0)
+                if _b_elapsed > 300:
+                    st.error("⏱️ 有効期限（5分）が切れました。もう一度やり直してください。")
+                    for _k in ["_reg_b_email","_reg_b_name","_reg_b_pass","_reg_b_otp","_reg_b_otp_time","_reg_b_otp_sent"]:
+                        st.session_state.pop(_k, None)
+                    st.rerun()
+                _b_email = st.session_state.get("_reg_b_email", "")
+                st.success(f"📧 {_b_email[:3]}*** に確認コードを送信しました。（残り約 {max(0, 300-int(_b_elapsed))} 秒）")
+                b_otp_input = st.text_input("6桁の確認コード", key="b_otp_input", placeholder="123456", max_chars=6)
+                _bc1, _bc2 = st.columns(2)
+                with _bc1:
+                    if st.button("登録を完了する", use_container_width=True, type="primary", key="b_reg_done"):
+                        if b_otp_input.strip() == st.session_state.get("_reg_b_otp"):
+                            _disp = st.session_state["_reg_b_name"]
+                            _el   = st.session_state["_reg_b_email"]
+                            _pw   = st.session_state["_reg_b_pass"]
+                            get_db().table("supporters").update({
+                                "email": _el, "display_name": _disp, "password_hash": hash_password(_pw)
+                            }).eq("supporter_id", _prefill_sid).execute()
+                            try:
+                                get_db().table("supporter_accounts").insert({
+                                    "supporter_id": _prefill_sid, "email": _el, "password_hash": hash_password(_pw)
+                                }).execute()
+                            except Exception:
+                                pass
+                            for _k in ["_reg_b_email","_reg_b_name","_reg_b_pass","_reg_b_otp","_reg_b_otp_time","_reg_b_otp_sent"]:
+                                st.session_state.pop(_k, None)
+                            st.session_state["supporter_auth"] = {"supporter_id": _prefill_sid, "display_name": _disp, "email": _el}
+                            send_welcome_email(_el, _disp, _prefill_sid)
+                            st.rerun()
+                        else:
+                            st.error("❌ コードが一致しません。")
+                with _bc2:
+                    if st.button("キャンセル", key="b_reg_cancel"):
+                        for _k in ["_reg_b_email","_reg_b_name","_reg_b_pass","_reg_b_otp","_reg_b_otp_time","_reg_b_otp_sent"]:
+                            st.session_state.pop(_k, None)
                         st.rerun()
-                else:
-                    st.warning("メールアドレスとパスワードを入力してください。")
 
         else:
             # ── モードC: IDなし or 不明 → タブ（新規登録優先）──
@@ -1949,43 +2010,81 @@ elif page == "supporter_dashboard":
 
             with tab_register:
                 st.caption("メールアドレスとパスワードだけで登録できます")
-                r_sid   = st.text_input("サポーターID（お持ちの方のみ）", key="r_sid",
-                                        value=_prefill_sid or "",
-                                        placeholder="sup_xxxx （なければ空欄でOK）")
-                r_email = st.text_input("メールアドレス（必須）", key="r_new_email", placeholder="you@example.com")
-                r_name  = st.text_input("表示名（任意・公開されます）", key="r_new_name", placeholder="例: たろう")
-                r_pass  = st.text_input("パスワード", type="password", key="r_new_pass")
-                if st.button("アカウントを作成", type="primary", use_container_width=True):
-                    if r_email and r_pass:
-                        _email_lc = r_email.strip().lower()
-                        _existing_sa = get_db().table("supporter_accounts").select("supporter_id").eq("email", _email_lc).limit(1).execute()
-                        if _existing_sa.data:
-                            st.error("このメールアドレスは既に登録済みです。ログインしてください。")
+                if not st.session_state.get("_reg_c_otp_sent"):
+                    r_sid   = st.text_input("サポーターID（お持ちの方のみ）", key="r_sid",
+                                            value=_prefill_sid or "",
+                                            placeholder="sup_xxxx （なければ空欄でOK）")
+                    r_email = st.text_input("メールアドレス（必須）", key="r_new_email", placeholder="you@example.com")
+                    r_name  = st.text_input("表示名（任意・公開されます）", key="r_new_name", placeholder="例: たろう")
+                    r_pass  = st.text_input("パスワード", type="password", key="r_new_pass")
+                    if st.button("確認コードを送信", type="primary", use_container_width=True):
+                        if r_email and r_pass:
+                            _email_lc = r_email.strip().lower()
+                            _existing_sa = get_db().table("supporter_accounts").select("supporter_id").eq("email", _email_lc).limit(1).execute()
+                            if _existing_sa.data:
+                                st.error("このメールアドレスは既に登録済みです。ログインしてください。")
+                            else:
+                                import random, time as _time
+                                _otp = f"{random.randint(0, 999999):06d}"
+                                _ok, _err = send_registration_otp_email(_email_lc, _otp)
+                                if _ok:
+                                    _use_sid = r_sid.strip() if r_sid.strip().startswith("sup_") else "sup_" + uuid.uuid4().hex[:12]
+                                    st.session_state["_reg_c_sid"]      = _use_sid
+                                    st.session_state["_reg_c_email"]    = _email_lc
+                                    st.session_state["_reg_c_name"]     = r_name.strip() or _email_lc.split("@")[0]
+                                    st.session_state["_reg_c_pass"]     = r_pass
+                                    st.session_state["_reg_c_otp"]      = _otp
+                                    st.session_state["_reg_c_otp_time"] = _time.time()
+                                    st.session_state["_reg_c_otp_sent"] = True
+                                    st.rerun()
+                                else:
+                                    st.error(f"メール送信失敗: {_err}")
                         else:
-                            try:
-                                _use_sid = r_sid.strip() if r_sid.strip().startswith("sup_") else "sup_" + uuid.uuid4().hex[:12]
-                                _disp_name = r_name.strip() or _email_lc.split("@")[0]
-                                get_db().table("supporter_accounts").insert({
-                                    "supporter_id": _use_sid,
-                                    "email": _email_lc,
-                                    "password_hash": hash_password(r_pass)
-                                }).execute()
+                            st.warning("メールアドレスとパスワードを入力してください。")
+                else:
+                    import time as _time
+                    _c_elapsed = _time.time() - st.session_state.get("_reg_c_otp_time", 0)
+                    if _c_elapsed > 300:
+                        st.error("⏱️ 有効期限（5分）が切れました。もう一度やり直してください。")
+                        for _k in ["_reg_c_sid","_reg_c_email","_reg_c_name","_reg_c_pass","_reg_c_otp","_reg_c_otp_time","_reg_c_otp_sent"]:
+                            st.session_state.pop(_k, None)
+                        st.rerun()
+                    _c_email = st.session_state.get("_reg_c_email", "")
+                    st.success(f"📧 {_c_email[:3]}*** に確認コードを送信しました。（残り約 {max(0, 300-int(_c_elapsed))} 秒）")
+                    c_otp_input = st.text_input("6桁の確認コード", key="c_otp_input", placeholder="123456", max_chars=6)
+                    _cc1, _cc2 = st.columns(2)
+                    with _cc1:
+                        if st.button("アカウントを作成", type="primary", use_container_width=True, key="c_reg_done"):
+                            if c_otp_input.strip() == st.session_state.get("_reg_c_otp"):
+                                _use_sid    = st.session_state["_reg_c_sid"]
+                                _email_lc   = st.session_state["_reg_c_email"]
+                                _disp_name  = st.session_state["_reg_c_name"]
+                                _r_pass     = st.session_state["_reg_c_pass"]
                                 try:
-                                    get_db().table("supporters").upsert({
-                                        "supporter_id": _use_sid,
-                                        "display_name": _disp_name,
-                                        "email": _email_lc,
-                                        "password_hash": hash_password(r_pass)
+                                    get_db().table("supporter_accounts").insert({
+                                        "supporter_id": _use_sid, "email": _email_lc, "password_hash": hash_password(_r_pass)
                                     }).execute()
-                                except Exception:
-                                    pass
-                                st.session_state["supporter_auth"] = {"supporter_id": _use_sid, "display_name": _disp_name, "email": _email_lc}
-                                send_welcome_email(r_email, _disp_name, _use_sid)
-                                st.rerun()
-                            except Exception as _re:
-                                st.error(f"登録エラー: {_re}")
-                    else:
-                        st.warning("メールアドレスとパスワードを入力してください。")
+                                    try:
+                                        get_db().table("supporters").upsert({
+                                            "supporter_id": _use_sid, "display_name": _disp_name,
+                                            "email": _email_lc, "password_hash": hash_password(_r_pass)
+                                        }).execute()
+                                    except Exception:
+                                        pass
+                                    for _k in ["_reg_c_sid","_reg_c_email","_reg_c_name","_reg_c_pass","_reg_c_otp","_reg_c_otp_time","_reg_c_otp_sent"]:
+                                        st.session_state.pop(_k, None)
+                                    st.session_state["supporter_auth"] = {"supporter_id": _use_sid, "display_name": _disp_name, "email": _email_lc}
+                                    send_welcome_email(_email_lc, _disp_name, _use_sid)
+                                    st.rerun()
+                                except Exception as _re:
+                                    st.error(f"登録エラー: {_re}")
+                            else:
+                                st.error("❌ コードが一致しません。")
+                    with _cc2:
+                        if st.button("キャンセル", key="c_reg_cancel"):
+                            for _k in ["_reg_c_sid","_reg_c_email","_reg_c_name","_reg_c_pass","_reg_c_otp","_reg_c_otp_time","_reg_c_otp_sent"]:
+                                st.session_state.pop(_k, None)
+                            st.rerun()
 
             with tab_login:
                 st.caption("メールアドレス または サポーターID でログインできます")
