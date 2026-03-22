@@ -208,13 +208,14 @@ def send_pending_reservation_supporter_email(to_email: str, creator_name: str, a
     return _send_email(to_email, subject, body)
 
 def send_pending_reservation_creator_email(to_email: str, creator_name: str, amount: int, message: str, dashboard_url: str) -> tuple[bool, str]:
-    """仮予約時にクリエイターへ送る通知メール"""
+    """仮予約時にクリエイターへ送る通知メール（メッセージ内容は口座登録完了後に開放）"""
     subject = f"【oshipay】応援の仮予約が届きました！口座登録をお急ぎください"
+    msg_hint = "応援メッセージ: あり（口座登録完了後に内容を確認できます）" if message else "応援メッセージ: なし"
     body = (
         f"{creator_name}さん\n\n"
         f"oshipayに応援の仮予約が届きました！\n\n"
         f"💰 金額: {amount:,}円\n"
-        f"💬 メッセージ: {message or '（なし）'}\n\n"
+        f"💬 {msg_hint}\n\n"
         f"⚠️ 72時間以内に口座登録を完了しないと自動キャンセルになります。\n\n"
         f"👉 口座登録はこちら:\n{dashboard_url}\n\n"
         f"--\noshipay\n{BASE_URL}"
