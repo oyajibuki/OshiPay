@@ -163,6 +163,20 @@ def send_acct_id_email(to_email: str, acct_id: str) -> tuple[bool, str]:
         return True, "送信成功"
     except Exception as e: return False, str(e)
 
+def send_merge_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
+    try:
+        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
+        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
+        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
+        subject = "【oshipay】サポーターIDマージの確認コード"
+        body = f"oshipayをご利用いただきありがとうございます。\n\nサポーターIDのマージ操作が行われました。\n以下の6桁のコードを入力してマージを完了させてください。\n\n確認コード: {otp}\n\nこのコードは5分間有効です。\nマージを依頼していない場合は、このメールを無視してください。\n\n--\noshipay\n{BASE_URL}"
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
+        return True, "送信成功"
+    except Exception as e: return False, str(e)
+
 def check_account_status(account_id):
     try:
         account = stripe.Account.retrieve(account_id)
@@ -2278,47 +2292,93 @@ elif page == "supporter_dashboard":
                         st.error("現在のパスワードが違います。")
             else:
                 st.warning("全ての項目を入力してください。")
-    # ── ① サポーターIDマージ ────────────────────────────
+    # ── ① サポーターIDマージ（OTP認証付き）────────────────────────────
     with st.expander("🔀 別のサポーターIDをマージする"):
         st.caption("2つのIDを1つに統合します。マージ元のIDとコイン・履歴がすべてこのIDに引き継がれます。")
-        mg_other = st.text_input("マージしたいサポーターID（統合元）", key="mg_other", placeholder="sup_xxxx")
-        if st.button("IDを確認する", key="mg_check"):
-            if mg_other.strip() == sup_user["supporter_id"]:
-                st.error("自分自身のIDは入力できません。")
-            elif mg_other.strip():
-                _mg_row = get_db().table("supporters").select("supporter_id,display_name,email").eq("supporter_id", mg_other.strip()).maybe_single().execute()
-                if _mg_row.data:
-                    _mg_cnt = get_db().table("supports").select("support_id", count="exact").eq("supporter_id", mg_other.strip()).execute()
-                    _my_cnt = get_db().table("supports").select("support_id", count="exact").eq("supporter_id", sup_user["supporter_id"]).execute()
-                    st.session_state["_mg_confirmed"] = mg_other.strip()
-                    st.info(f"""
-**マージ元:** `{mg_other.strip()}` ({_mg_row.data.get('display_name') or '名前なし'}) — 応援 {_mg_cnt.count or 0} 件
-**マージ先（このID）:** `{sup_user['supporter_id']}` — 応援 {_my_cnt.count or 0} 件
-→ 合計 {(_mg_cnt.count or 0) + (_my_cnt.count or 0)} 件になります
-                    """)
-                else:
-                    st.error("そのサポーターIDは見つかりません。")
-                    st.session_state.pop("_mg_confirmed", None)
 
-        if st.session_state.get("_mg_confirmed") == mg_other.strip() and mg_other.strip():
+        if not st.session_state.get("_mg_otp_sent"):
+            # ── ステップ1: ID入力 ──
+            mg_other = st.text_input("マージしたいサポーターID（統合元）", key="mg_other", placeholder="sup_xxxx")
+            if st.button("IDを確認してコードを送信", key="mg_check"):
+                if mg_other.strip() == sup_user["supporter_id"]:
+                    st.error("自分自身のIDは入力できません。")
+                elif mg_other.strip():
+                    _mg_row = get_db().table("supporters").select("supporter_id,display_name,email").eq("supporter_id", mg_other.strip()).maybe_single().execute()
+                    if not _mg_row.data:
+                        st.error("そのサポーターIDは見つかりません。")
+                    elif not _mg_row.data.get("email"):
+                        st.error("⚠️ このIDにはメールアドレスが登録されていないため、マージできません。")
+                    else:
+                        import random, time as _time
+                        _otp = f"{random.randint(0, 999999):06d}"
+                        _ok, _err = send_merge_otp_email(_mg_row.data["email"], _otp)
+                        if _ok:
+                            _mg_cnt = get_db().table("supports").select("support_id", count="exact").eq("supporter_id", mg_other.strip()).execute()
+                            _my_cnt = get_db().table("supports").select("support_id", count="exact").eq("supporter_id", sup_user["supporter_id"]).execute()
+                            st.session_state["_mg_confirmed"] = mg_other.strip()
+                            st.session_state["_mg_name"] = _mg_row.data.get("display_name") or "名前なし"
+                            st.session_state["_mg_cnt_src"] = _mg_cnt.count or 0
+                            st.session_state["_mg_cnt_dst"] = _my_cnt.count or 0
+                            st.session_state["_mg_otp"] = _otp
+                            st.session_state["_mg_otp_time"] = _time.time()
+                            st.session_state["_mg_otp_sent"] = True
+                            st.session_state["_mg_email_hint"] = _mg_row.data["email"][:3] + "***"
+                            st.rerun()
+                        else:
+                            st.error(f"メール送信に失敗しました: {_err}")
+        else:
+            # ── ステップ2: OTP入力 ──
+            import time as _time
+            _elapsed = _time.time() - st.session_state.get("_mg_otp_time", 0)
+            if _elapsed > 300:
+                st.error("⏱️ コードの有効期限（5分）が切れました。もう一度やり直してください。")
+                for _k in ["_mg_confirmed","_mg_otp","_mg_otp_time","_mg_otp_sent","_mg_email_hint","_mg_name","_mg_cnt_src","_mg_cnt_dst"]:
+                    st.session_state.pop(_k, None)
+                st.rerun()
+
+            _hint = st.session_state.get("_mg_email_hint", "")
+            _src_id = st.session_state.get("_mg_confirmed", "")
+            _src_name = st.session_state.get("_mg_name", "")
+            _cnt_src = st.session_state.get("_mg_cnt_src", 0)
+            _cnt_dst = st.session_state.get("_mg_cnt_dst", 0)
+            st.info(f"""
+**マージ元:** `{_src_id}` ({_src_name}) — 応援 {_cnt_src} 件
+**マージ先（このID）:** `{sup_user['supporter_id']}` — 応援 {_cnt_dst} 件
+→ 合計 {_cnt_src + _cnt_dst} 件になります
+            """)
+            st.success(f"📧 `{_src_id}` に登録されたメールアドレス（{_hint}）に6桁の確認コードを送信しました。")
+            st.caption(f"⏱️ 有効期限: 5分（残り約 {max(0, 300 - int(_elapsed))} 秒）")
+            mg_otp_input = st.text_input("6桁の確認コードを入力", key="mg_otp_input", placeholder="123456", max_chars=6)
             st.warning("⚠️ マージすると元のIDは削除されます。この操作は取り消せません。")
-            if st.button("✅ マージを実行する", key="mg_exec", type="primary"):
-                _src = st.session_state.pop("_mg_confirmed")
-                try:
-                    get_db().table("supports").update({"supporter_id": sup_user["supporter_id"]}).eq("supporter_id", _src).execute()
-                    try:
-                        get_db().table("pending_supports").update({"supporter_id": sup_user["supporter_id"]}).eq("supporter_id", _src).execute()
-                    except Exception:
-                        pass
-                    get_db().table("supporters").delete().eq("supporter_id", _src).execute()
-                    try:
-                        get_db().table("supporter_accounts").delete().eq("supporter_id", _src).execute()
-                    except Exception:
-                        pass
-                    st.success(f"✅ `{_src}` のデータを `{sup_user['supporter_id']}` にマージしました！")
+            _col1, _col2 = st.columns(2)
+            with _col1:
+                if st.button("✅ マージを実行する", key="mg_exec", type="primary"):
+                    if mg_otp_input.strip() == st.session_state.get("_mg_otp"):
+                        _src = st.session_state["_mg_confirmed"]
+                        try:
+                            get_db().table("supports").update({"supporter_id": sup_user["supporter_id"]}).eq("supporter_id", _src).execute()
+                            try:
+                                get_db().table("pending_supports").update({"supporter_id": sup_user["supporter_id"]}).eq("supporter_id", _src).execute()
+                            except Exception:
+                                pass
+                            get_db().table("supporters").delete().eq("supporter_id", _src).execute()
+                            try:
+                                get_db().table("supporter_accounts").delete().eq("supporter_id", _src).execute()
+                            except Exception:
+                                pass
+                            for _k in ["_mg_confirmed","_mg_otp","_mg_otp_time","_mg_otp_sent","_mg_email_hint","_mg_name","_mg_cnt_src","_mg_cnt_dst"]:
+                                st.session_state.pop(_k, None)
+                            st.success(f"✅ `{_src}` のデータをマージしました！")
+                            st.rerun()
+                        except Exception as _me:
+                            st.error(f"マージエラー: {_me}")
+                    else:
+                        st.error("❌ コードが一致しません。もう一度確認してください。")
+            with _col2:
+                if st.button("キャンセル", key="mg_cancel"):
+                    for _k in ["_mg_confirmed","_mg_otp","_mg_otp_time","_mg_otp_sent","_mg_email_hint","_mg_name","_mg_cnt_src","_mg_cnt_dst"]:
+                        st.session_state.pop(_k, None)
                     st.rerun()
-                except Exception as _me:
-                    st.error(f"マージエラー: {_me}")
 
     if st.button("🚪 ログアウト", type="secondary"):
         del st.session_state["supporter_auth"]
