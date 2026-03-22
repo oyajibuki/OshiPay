@@ -1766,6 +1766,10 @@ if page == "support" and support_user:
     _default_email = st.session_state.get("supporter_auth", {}).get("email", "")
     support_email = st.text_input("メールアドレス", value=_default_email, placeholder="you@example.com", label_visibility="collapsed", key="support_email_input")
 
+    st.markdown('<div class="section-subtitle" style="text-align:left;margin-bottom:4px;margin-top:12px;">🎫 サポーターID（任意）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:8px;">お持ちの方は入力すると応援履歴が自動で紐づきます。</div>', unsafe_allow_html=True)
+    _default_sup_id = st.session_state.get("supporter_auth", {}).get("supporter_id", "")
+    opt_sup_id = st.text_input("サポーターID", value=_default_sup_id, placeholder="sup_xxxx", label_visibility="collapsed", key="opt_sup_id_input")
+
     st.markdown('<div class="section-subtitle" style="text-align:left;margin-bottom:4px;margin-top:12px;">👤 お名前（任意）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:8px;">入力するとランキングにお名前が表示されます</div>', unsafe_allow_html=True)
     _default_name = st.session_state.get("supporter_auth", {}).get("display_name", "")
     sup_display_name = st.text_input("お名前", value=_default_name, placeholder="例: たろう", label_visibility="collapsed")
@@ -1805,11 +1809,24 @@ if page == "support" and support_user:
                 st.stop()
             amt = st.session_state.amt
             support_id = str(uuid.uuid4())
-            # メアドからsup_idを取得または新規作成
+            # sup_idが入力されていればDB確認して優先使用、なければメアドから取得/作成
             try:
-                final_sup_id, _is_new_sup = get_or_create_supporter_by_email(support_email, sup_display_name)
+                _input_sid = opt_sup_id.strip() if opt_sup_id and opt_sup_id.strip().startswith("sup_") else ""
+                if _input_sid:
+                    _sid_chk = get_db().table("supporters").select("supporter_id").eq("supporter_id", _input_sid).maybe_single().execute()
+                    if _sid_chk.data:
+                        final_sup_id = _input_sid
+                        # メアドを紐付け（未設定の場合のみ）
+                        get_db().table("supporters").update({"email": support_email.strip().lower()}).eq("supporter_id", final_sup_id).is_("email", "null").execute()
+                    else:
+                        st.error(f"サポーターID `{_input_sid}` はDBに存在しません。空欄にするか正しいIDを入力してください。")
+                        st.stop()
+                else:
+                    final_sup_id, _is_new_sup = get_or_create_supporter_by_email(support_email, sup_display_name)
+            except st.StopException:
+                raise
             except Exception as _se:
-                st.error(f"サポーターID作成エラー: {_se}")
+                st.error(f"サポーターID取得エラー: {_se}")
                 st.stop()
             _email_enc = urllib.parse.quote(support_email.strip().lower())
             try:
@@ -1834,7 +1851,17 @@ if page == "support" and support_user:
                 st.stop()
             try:
                 _pend_email_lc = support_email.strip().lower()
-                _pend_sup_id, _ = get_or_create_supporter_by_email(_pend_email_lc, sup_display_name)
+                _input_sid_p = opt_sup_id.strip() if opt_sup_id and opt_sup_id.strip().startswith("sup_") else ""
+                if _input_sid_p:
+                    _sid_chk_p = get_db().table("supporters").select("supporter_id").eq("supporter_id", _input_sid_p).maybe_single().execute()
+                    if _sid_chk_p.data:
+                        _pend_sup_id = _input_sid_p
+                        get_db().table("supporters").update({"email": _pend_email_lc}).eq("supporter_id", _pend_sup_id).is_("email", "null").execute()
+                    else:
+                        st.error(f"サポーターID `{_input_sid_p}` はDBに存在しません。")
+                        st.stop()
+                else:
+                    _pend_sup_id, _ = get_or_create_supporter_by_email(_pend_email_lc, sup_display_name)
                 _pend_row = {
                     "creator_acct": connect_acct,
                     "amount": int(st.session_state.amt),
