@@ -1905,103 +1905,106 @@ elif page == "supporter_dashboard":
                 pass
 
         # ── フォームのモード決定 ──
-        # A: IDあり＋メール登録済み → パスワードのみ
-        # B: IDあり＋メール未登録   → 「このIDを登録しましょう」メール＋PW入力
-        # C: IDなし                 → タブ形式（新規登録優先）
+        # A : IDあり＋メール登録済み＋PW設定済み → パスワードのみ
+        # A2: IDあり＋メール登録済み＋PW未設定  → Stripe初回ユーザ → OTP+PW設定
+        # B : IDあり＋メール未登録              → ブロック（Stripe経由でのみ登録可）
+        # C : IDなし                            → タブ形式（新規登録優先）
 
         if _prefill_sid and _sid_db_row and _sid_has_email:
-            # ── モードA: パスワードのみ ──
-            st.success(f"✅ サポーターID `{_prefill_sid}` が確認できました。パスワードを入力してください。")
-            a_pass = st.text_input("パスワード", type="password", key="a_pass")
-            if st.button("ログイン", use_container_width=True, type="primary"):
-                if _sid_db_row.get("password_hash") == hash_password(a_pass):
-                    _disp = _sid_db_row.get("display_name") or _sid_db_row["email"].split("@")[0]
-                    st.session_state["supporter_auth"] = {
-                        "supporter_id": _prefill_sid,
-                        "display_name": _disp,
-                        "email": _sid_db_row["email"]
-                    }
-                    st.rerun()
-                else:
-                    st.error("パスワードが違います。")
-            with st.expander("🔓 パスワードを忘れた"):
-                if st.button("仮パスワードを発行", key="a_forgot"):
-                    _temp = uuid.uuid4().hex[:8]
-                    get_db().table("supporters").update({"password_hash": hash_password(_temp)}).eq("supporter_id", _prefill_sid).execute()
-                    try:
-                        get_db().table("supporter_accounts").update({"password_hash": hash_password(_temp)}).eq("supporter_id", _prefill_sid).execute()
-                    except Exception:
-                        pass
-                    st.success(f"仮パスワード: `{_temp}`")
+            _a_has_pw = bool(_sid_db_row.get("password_hash"))
 
-        elif _prefill_sid and _sid_db_row and not _sid_has_email:
-            # ── モードB: IDは確認済み・メール未登録 → OTP付き登録促進 ──
-            st.info(f"🎉 サポーターID `{_prefill_sid}` が見つかりました！メールアドレスとパスワードを登録すると、応援履歴をまとめて管理できます。")
-            if not st.session_state.get("_reg_b_otp_sent"):
-                b_email = st.text_input("メールアドレス", key="b_email", placeholder="you@example.com")
-                b_name  = st.text_input("表示名（任意）", key="b_name", placeholder=_sid_db_row.get("display_name") or "例: たろう")
-                b_pass  = st.text_input("パスワード", type="password", key="b_pass")
-                if st.button("確認コードを送信", use_container_width=True, type="primary"):
-                    if b_email and b_pass:
-                        _email_lc = b_email.strip().lower()
-                        _existing = get_db().table("supporter_accounts").select("supporter_id").eq("email", _email_lc).limit(1).execute()
-                        if _existing.data:
-                            st.error("このメールアドレスは既に使用されています。")
-                        else:
+            if _a_has_pw:
+                # ── モードA: パスワードのみ ──
+                st.success(f"✅ サポーターID `{_prefill_sid}` が確認できました。パスワードを入力してください。")
+                a_pass = st.text_input("パスワード", type="password", key="a_pass")
+                if st.button("ログイン", use_container_width=True, type="primary"):
+                    if _sid_db_row.get("password_hash") == hash_password(a_pass):
+                        _disp = _sid_db_row.get("display_name") or _sid_db_row["email"].split("@")[0]
+                        st.session_state["supporter_auth"] = {
+                            "supporter_id": _prefill_sid,
+                            "display_name": _disp,
+                            "email": _sid_db_row["email"]
+                        }
+                        st.rerun()
+                    else:
+                        st.error("パスワードが違います。")
+                with st.expander("🔓 パスワードを忘れた"):
+                    if st.button("仮パスワードを発行", key="a_forgot"):
+                        _temp = uuid.uuid4().hex[:8]
+                        get_db().table("supporters").update({"password_hash": hash_password(_temp)}).eq("supporter_id", _prefill_sid).execute()
+                        try:
+                            get_db().table("supporter_accounts").update({"password_hash": hash_password(_temp)}).eq("supporter_id", _prefill_sid).execute()
+                        except Exception:
+                            pass
+                        st.success(f"仮パスワード: `{_temp}`")
+
+            else:
+                # ── モードA2: Stripe経由初回ユーザ（メールあり・PW未設定）──
+                _a2_email = _sid_db_row["email"]
+                st.info(f"🎉 サポーターID `{_prefill_sid}` が確認できました！パスワードを設定して登録を完了してください。")
+                st.caption(f"登録メールアドレス: {_a2_email[:3]}***（変更不可）")
+                if not st.session_state.get("_reg_a2_otp_sent"):
+                    a2_name = st.text_input("表示名（任意・公開されます）", key="a2_name", placeholder="例: たろう")
+                    a2_pass = st.text_input("パスワード", type="password", key="a2_pass")
+                    if st.button("確認コードを送信", use_container_width=True, type="primary", key="a2_send"):
+                        if a2_pass:
                             import random, time as _time
                             _otp = f"{random.randint(0, 999999):06d}"
-                            _ok, _err = send_registration_otp_email(_email_lc, _otp)
+                            _ok, _err = send_registration_otp_email(_a2_email, _otp)
                             if _ok:
-                                st.session_state["_reg_b_email"] = _email_lc
-                                st.session_state["_reg_b_name"] = b_name.strip() or _sid_db_row.get("display_name") or _email_lc.split("@")[0]
-                                st.session_state["_reg_b_pass"] = b_pass
-                                st.session_state["_reg_b_otp"] = _otp
-                                st.session_state["_reg_b_otp_time"] = _time.time()
-                                st.session_state["_reg_b_otp_sent"] = True
+                                st.session_state["_reg_a2_name"]     = a2_name.strip() or _a2_email.split("@")[0]
+                                st.session_state["_reg_a2_pass"]     = a2_pass
+                                st.session_state["_reg_a2_otp"]      = _otp
+                                st.session_state["_reg_a2_otp_time"] = _time.time()
+                                st.session_state["_reg_a2_otp_sent"] = True
                                 st.rerun()
                             else:
                                 st.error(f"メール送信失敗: {_err}")
-                    else:
-                        st.warning("メールアドレスとパスワードを入力してください。")
-            else:
-                import time as _time
-                _b_elapsed = _time.time() - st.session_state.get("_reg_b_otp_time", 0)
-                if _b_elapsed > 300:
-                    st.error("⏱️ 有効期限（5分）が切れました。もう一度やり直してください。")
-                    for _k in ["_reg_b_email","_reg_b_name","_reg_b_pass","_reg_b_otp","_reg_b_otp_time","_reg_b_otp_sent"]:
-                        st.session_state.pop(_k, None)
-                    st.rerun()
-                _b_email = st.session_state.get("_reg_b_email", "")
-                st.success(f"📧 {_b_email[:3]}*** に確認コードを送信しました。（残り約 {max(0, 300-int(_b_elapsed))} 秒）")
-                b_otp_input = st.text_input("6桁の確認コード", key="b_otp_input", placeholder="123456", max_chars=6)
-                _bc1, _bc2 = st.columns(2)
-                with _bc1:
-                    if st.button("登録を完了する", use_container_width=True, type="primary", key="b_reg_done"):
-                        if b_otp_input.strip() == st.session_state.get("_reg_b_otp"):
-                            _disp = st.session_state["_reg_b_name"]
-                            _el   = st.session_state["_reg_b_email"]
-                            _pw   = st.session_state["_reg_b_pass"]
-                            get_db().table("supporters").update({
-                                "email": _el, "display_name": _disp, "password_hash": hash_password(_pw)
-                            }).eq("supporter_id", _prefill_sid).execute()
-                            try:
-                                get_db().table("supporter_accounts").insert({
-                                    "supporter_id": _prefill_sid, "email": _el, "password_hash": hash_password(_pw)
-                                }).execute()
-                            except Exception:
-                                pass
-                            for _k in ["_reg_b_email","_reg_b_name","_reg_b_pass","_reg_b_otp","_reg_b_otp_time","_reg_b_otp_sent"]:
-                                st.session_state.pop(_k, None)
-                            st.session_state["supporter_auth"] = {"supporter_id": _prefill_sid, "display_name": _disp, "email": _el}
-                            send_welcome_email(_el, _disp, _prefill_sid)
-                            st.rerun()
                         else:
-                            st.error("❌ コードが一致しません。")
-                with _bc2:
-                    if st.button("キャンセル", key="b_reg_cancel"):
-                        for _k in ["_reg_b_email","_reg_b_name","_reg_b_pass","_reg_b_otp","_reg_b_otp_time","_reg_b_otp_sent"]:
+                            st.warning("パスワードを入力してください。")
+                else:
+                    import time as _time
+                    _a2_elapsed = _time.time() - st.session_state.get("_reg_a2_otp_time", 0)
+                    if _a2_elapsed > 300:
+                        st.error("⏱️ 有効期限（5分）が切れました。もう一度やり直してください。")
+                        for _k in ["_reg_a2_name","_reg_a2_pass","_reg_a2_otp","_reg_a2_otp_time","_reg_a2_otp_sent"]:
                             st.session_state.pop(_k, None)
                         st.rerun()
+                    st.success(f"📧 {_a2_email[:3]}*** に確認コードを送信しました。（残り約 {max(0, 300-int(_a2_elapsed))} 秒）")
+                    a2_otp_input = st.text_input("6桁の確認コード", key="a2_otp_input", placeholder="123456", max_chars=6)
+                    _ac1, _ac2 = st.columns(2)
+                    with _ac1:
+                        if st.button("登録を完了する", use_container_width=True, type="primary", key="a2_reg_done"):
+                            if a2_otp_input.strip() == st.session_state.get("_reg_a2_otp"):
+                                _disp = st.session_state["_reg_a2_name"]
+                                _pw   = st.session_state["_reg_a2_pass"]
+                                get_db().table("supporters").update({
+                                    "display_name": _disp, "password_hash": hash_password(_pw)
+                                }).eq("supporter_id", _prefill_sid).execute()
+                                try:
+                                    get_db().table("supporter_accounts").upsert({
+                                        "supporter_id": _prefill_sid, "email": _a2_email, "password_hash": hash_password(_pw)
+                                    }).execute()
+                                except Exception:
+                                    pass
+                                for _k in ["_reg_a2_name","_reg_a2_pass","_reg_a2_otp","_reg_a2_otp_time","_reg_a2_otp_sent"]:
+                                    st.session_state.pop(_k, None)
+                                st.session_state["supporter_auth"] = {"supporter_id": _prefill_sid, "display_name": _disp, "email": _a2_email}
+                                send_welcome_email(_a2_email, _disp, _prefill_sid)
+                                st.rerun()
+                            else:
+                                st.error("❌ コードが一致しません。")
+                    with _ac2:
+                        if st.button("キャンセル", key="a2_cancel"):
+                            for _k in ["_reg_a2_name","_reg_a2_pass","_reg_a2_otp","_reg_a2_otp_time","_reg_a2_otp_sent"]:
+                                st.session_state.pop(_k, None)
+                            st.rerun()
+
+        elif _prefill_sid and _sid_db_row and not _sid_has_email:
+            # ── モードB: IDは確認済み・メール未登録 → ブロック ──
+            st.info(f"サポーターID `{_prefill_sid}` が確認できました。")
+            st.warning("⚠️ このIDにはメールアドレスが登録されていません。\nQRコードからお支払いいただくと、お支払い時のメールアドレスで自動的にアカウントが発行されます。")
+            st.caption("Apple Pay・Google Pay・クレジットカードでお支払いいただくと、そのメールアドレスが自動的に登録されます。")
 
         else:
             # ── モードC: IDなし or 不明 → タブ（新規登録優先）──
