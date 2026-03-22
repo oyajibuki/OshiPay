@@ -1629,10 +1629,11 @@ support_photo = ""
 # 新URL形式: ?page=support&creator={slug or acct_id}
 _creator_param = params.get("creator", "")
 _creator_stripe_acct = ""  # Stripe Connect用アカウントID
+_creator_payout_enabled = False  # 口座登録完了フラグ（スライダー上限判定用）
 if _creator_param and not support_user:
     try:
         _cr_resp = get_db().table("creators").select(
-            "acct_id,display_name,name,photo_url,stripe_acct_id"
+            "acct_id,display_name,name,photo_url,stripe_acct_id,payout_enabled"
         ).or_(f"slug.eq.{_creator_param},acct_id.eq.{_creator_param}").maybe_single().execute()
         if _cr_resp.data:
             _cr = _cr_resp.data
@@ -1641,17 +1642,19 @@ if _creator_param and not support_user:
             support_name  = _cr.get("display_name") or _cr.get("name") or _creator_param
             support_photo = _cr.get("photo_url") or ""
             _creator_stripe_acct = _cr.get("stripe_acct_id") or ""
+            _creator_payout_enabled = bool(_cr.get("payout_enabled"))
         else:
             support_user = None
     except Exception:
         support_user = None
 elif support_user:
     try:
-        _cr_resp2 = get_db().table("creators").select("photo_url,stripe_acct_id").or_(
+        _cr_resp2 = get_db().table("creators").select("photo_url,stripe_acct_id,payout_enabled").or_(
             f"slug.eq.{support_user},acct_id.eq.{support_user}"
         ).maybe_single().execute()
         support_photo = (_cr_resp2.data or {}).get("photo_url") or ""
         _creator_stripe_acct = (_cr_resp2.data or {}).get("stripe_acct_id") or ""
+        _creator_payout_enabled = bool((_cr_resp2.data or {}).get("payout_enabled"))
     except Exception:
         pass
 
@@ -1666,6 +1669,8 @@ elif connect_acct and connect_acct.startswith("acct_"):
 else:
     _stripe_connect_acct = ""
 _creator_has_stripe = bool(_stripe_connect_acct)
+# スライダー上限・表示文言は payout_enabled で判定（stripe_acct_idがあっても口座未完了はNG）
+_creator_bank_ready = _creator_payout_enabled
 
 if page == "support" and _creator_param and not support_user:
     st.markdown('<div class="oshi-logo"><span class="text">oshipay</span></div>', unsafe_allow_html=True)
@@ -1724,19 +1729,19 @@ if page == "support" and support_user:
     st.markdown('<div class="section-subtitle">応援する金額を選んで、メッセージを送ろう</div>', unsafe_allow_html=True)
 
     # ── 口座未登録クリエイターへの注意書き ──
-    if not _creator_has_stripe:
+    if not _creator_bank_ready:
         st.markdown("""
         <div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.4);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.7;color:rgba(240,240,245,0.85);">
             ⚠️ <b style="color:#fbbf24;">このクリエイターはまだ受取口座を登録していません</b><br>
             ・設定した金額は現在送金できません。クリエイター側が口座登録完了次第、送金可能となります。<br>
             ・クリエイター側が <b>72時間以内</b> に口座登録を完了できない場合、自動的にキャンセルとなります。<br>
-            ・入金可能な状況となり次第ご連絡しますので、LINE ID またはメールアドレスの入力をお願いします。<br>
+            ・入金可能な状況となり次第ご連絡しますので、メールアドレスの入力をお願いします。<br>
             ・メール送付後、<b>72時間以内</b> に入金が確認できない場合は自動的にキャンセルとなります。
         </div>
         """, unsafe_allow_html=True)
 
-    # 金額スライダー（口座未登録は1000円上限）
-    if _creator_has_stripe:
+    # 金額スライダー（口座未登録＝payout_enabled未完了は1000円上限）
+    if _creator_bank_ready:
         slider_options = (
             list(range(100, 1000, 100)) +
             list(range(1000, 10000, 500)) +
@@ -1788,11 +1793,11 @@ if page == "support" and support_user:
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
             <span style="font-size:12px;color:rgba(240,240,245,0.6);">支払時期</span>
-            <span style="font-size:12px;color:#f0f0f5;">{"口座登録完了後にご連絡" if not _creator_has_stripe else "決済手続き完了時"}</span>
+            <span style="font-size:12px;color:#f0f0f5;">{"口座登録完了後にご連絡" if not _creator_bank_ready else "決済手続き完了時"}</span>
         </div>
         <div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,0.1);">
             <div style="font-size:11px;color:rgba(240,240,245,0.5);line-height:1.4;">
-                {"※クリエイターが72時間以内に口座登録しない場合、自動キャンセルとなります。" if not _creator_has_stripe else "※デジタルコンテンツおよび投げ銭の性質上、決済手続き完了後のキャンセル・返金・返品には一切応じられません。"}
+                {"※クリエイターが72時間以内に口座登録しない場合、自動キャンセルとなります。" if not _creator_bank_ready else "※デジタルコンテンツおよび投げ銭の性質上、決済手続き完了後のキャンセル・返金・返品には一切応じられません。"}
             </div>
         </div>
     </div>
@@ -1800,8 +1805,8 @@ if page == "support" and support_user:
 
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
 
-    if _creator_has_stripe:
-        # ── 口座登録済み：通常 Stripe フロー ──
+    if _creator_bank_ready:
+        # ── 口座登録済み（payout_enabled=True）：通常 Stripe フロー ──
         if st.button("🔥 応援する！", disabled=is_disabled):
             # メール必須チェック
             if not support_email or "@" not in support_email:
