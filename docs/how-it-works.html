@@ -1,17 +1,41 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OshiPay - 使い方と機能のご紹介</title>
+    <title>oshipay - 使い方と機能のご紹介</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: {} } }
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            document.addEventListener("DOMContentLoaded", () => {
+                const k = document.getElementById('toggle-knob');
+                if (k) { k.classList.remove('bg-white'); k.classList.add('translate-x-7', 'bg-zinc-300'); }
+            });
+        } else { document.documentElement.classList.remove('dark'); }
+        function toggleTheme() {
+            const html = document.documentElement, k = document.getElementById('toggle-knob');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark'); localStorage.theme = 'light';
+                k.classList.remove('translate-x-7', 'bg-zinc-300'); k.classList.add('bg-white');
+            } else {
+                html.classList.add('dark'); localStorage.theme = 'dark';
+                k.classList.remove('bg-white'); k.classList.add('translate-x-7', 'bg-zinc-300');
+            }
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
         body {
+            background-color: #F8FAFC;
+            color: #1a1a2e;
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+        html.dark body {
             background-color: #0a0a0f;
             color: #f0f0f5;
-            font-family: 'Inter', 'Noto Sans JP', sans-serif;
         }
         .gradient-text {
             background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316);
@@ -72,11 +96,25 @@
 </head>
 <body class="pb-20">
 
+  <!-- テーマトグルバー -->
+  <div class="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-md text-white p-3 shadow-xl border-b border-gray-800">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4">
+      <p class="text-xs text-gray-400 font-bold tracking-wider hidden md:block">THEME PREVIEW</p>
+      <div class="flex items-center gap-3 ml-auto">
+        <i data-lucide="sun" class="w-5 h-5 text-amber-400 dark:text-gray-500 transition-colors"></i>
+        <div class="w-14 h-7 flex items-center bg-gray-700 rounded-full p-1 cursor-pointer" onclick="toggleTheme()">
+          <div id="toggle-knob" class="bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-300"></div>
+        </div>
+        <i data-lucide="moon" class="w-5 h-5 text-gray-500 dark:text-indigo-300 transition-colors"></i>
+      </div>
+    </div>
+  </div>
+
     <!-- Header -->
     <header class="py-8 px-4 text-center">
         <div class="max-w-4xl mx-auto">
             <h1 class="text-4xl md:text-5xl font-black mb-4 gradient-text">APP GUIDE</h1>
-            <p class="text-gray-400 text-lg">OshiPayの機能と使い方を詳しくご紹介します</p>
+            <p class="text-gray-400 text-lg">oshipayの機能と使い方を詳しくご紹介します</p>
         </div>
     </header>
 
@@ -199,7 +237,7 @@
                                     個人情報（氏名・住所・口座等）は、Stripe社の厳格な規定に基づき管理されます。
                                 </p>
                                 <div class="bg-red-600 text-white text-base font-black py-2 px-3 rounded-xl shadow-lg">
-                                    OshiPay運営は、あなたの個人情報を<br>一切確認・取得することができません。
+                                    oshipay運営は、あなたの個人情報を<br>一切確認・取得することができません。
                                 </div>
                             </div>
                             <div class="text-center">
@@ -220,7 +258,7 @@
                         <h3 class="text-2xl font-bold">ログインしてQRコードを生成</h3>
                     </div>
                     <p class="text-gray-400">
-                        手続き完了後、OshiPayに戻ります。①でご自身で設定したパスワードでログインし、<br>必要事項を入力→プロフィールを保存→「ＱＲコードを生成」！
+                        手続き完了後、oshipayに戻ります。①でご自身で設定したパスワードでログインし、<br>必要事項を入力→プロフィールを保存→「ＱＲコードを生成」！
                     </p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -354,7 +392,7 @@
     </main>
 
     <footer class="mt-20 py-10 border-t border-gray-800 text-center text-gray-500 text-sm">
-        <p>© 2026 OshiPay - その感動、今すぐカタチに。</p>
+        <p>© 2026 oshipay - その感動、今すぐカタチに。</p>
         <div class="mt-4 flex justify-center gap-4">
             <a href="index.html" class="hover:text-purple-400">トップページに戻る</a>
         </div>

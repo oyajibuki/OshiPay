@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OshiPay - Support Your Favorite Creator. Right Now.</title>
+  <title>oshipay - Support Your Favorite Creator. Right Now.</title>
   <meta name="description" content="Create your QR code in 1 minute. Accept tips from fans worldwide — no app needed. Powered by Stripe.">
   <link rel="icon" href="https://oyajibuki.github.io/OshiPay/favicon.png?v=2" type="image/png">
   <link rel="apple-touch-icon" href="https://oyajibuki.github.io/OshiPay/favicon.png?v=2">
@@ -12,6 +12,26 @@
 
   <!-- Tailwind CSS (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class', theme: { extend: {} } }
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        document.addEventListener("DOMContentLoaded", () => {
+            const k = document.getElementById('toggle-knob');
+            if (k) { k.classList.remove('bg-white'); k.classList.add('translate-x-7', 'bg-zinc-300'); }
+        });
+    } else { document.documentElement.classList.remove('dark'); }
+    function toggleTheme() {
+        const html = document.documentElement, k = document.getElementById('toggle-knob');
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark'); localStorage.theme = 'light';
+            k.classList.remove('translate-x-7', 'bg-zinc-300'); k.classList.add('bg-white');
+        } else {
+            html.classList.add('dark'); localStorage.theme = 'dark';
+            k.classList.remove('bg-white'); k.classList.add('translate-x-7', 'bg-zinc-300');
+        }
+    }
+  </script>
 
   <!-- Lucide Icons (CDN) -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -35,7 +55,21 @@
   </style>
 </head>
 
-<body class="bg-[#0a0a0f] text-slate-200 selection:bg-purple-500/30 overflow-x-hidden relative">
+<body class="bg-[#F8FAFC] text-slate-800 dark:bg-[#0a0a0f] dark:text-slate-200 selection:bg-purple-500/30 overflow-x-hidden relative transition-colors duration-700">
+
+  <!-- テーマトグルバー -->
+  <div class="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-md text-white p-3 shadow-xl border-b border-gray-800">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4">
+      <p class="text-xs text-gray-400 font-bold tracking-wider hidden md:block">THEME PREVIEW</p>
+      <div class="flex items-center gap-3 ml-auto">
+        <i data-lucide="sun" class="w-5 h-5 text-amber-400 dark:text-gray-500 transition-colors"></i>
+        <div class="w-14 h-7 flex items-center bg-gray-700 rounded-full p-1 cursor-pointer" onclick="toggleTheme()">
+          <div id="toggle-knob" class="bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-300"></div>
+        </div>
+        <i data-lucide="moon" class="w-5 h-5 text-gray-500 dark:text-indigo-300 transition-colors"></i>
+      </div>
+    </div>
+  </div>
 
   <!-- Background effects -->
   <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[500px] bg-gradient-to-b from-purple-900/20 via-orange-900/5 to-transparent blur-3xl pointer-events-none -z-10"></div>
@@ -47,7 +81,7 @@
     <div class="flex items-center gap-2">
       <i data-lucide="flame" class="text-orange-500 w-8 h-8 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]"></i>
       <span class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-purple-500 tracking-tight">
-        OshiPay
+        oshipay
       </span>
     </div>
     <nav class="hidden md:flex gap-8 text-sm font-medium text-slate-400">
@@ -259,7 +293,7 @@
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="w-14 h-14 bg-orange-500/20 rounded-2xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-transform">🌏</div>
             <h4 class="text-xl font-bold mb-3 text-white">Global Fan Support</h4>
-            <p class="text-slate-400 leading-relaxed font-light">Unlike domestic payment apps, OshiPay works across borders. Fans from the US, Southeast Asia, Europe — anyone can support you.</p>
+            <p class="text-slate-400 leading-relaxed font-light">Unlike domestic payment apps, oshipay works across borders. Fans from the US, Southeast Asia, Europe — anyone can support you.</p>
           </div>
         </div>
 
@@ -279,7 +313,7 @@
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="w-14 h-14 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-transform">🔥</div>
             <h4 class="text-xl font-bold mb-3 text-white">Any Creator, Any Project</h4>
-            <p class="text-slate-400 leading-relaxed font-light">Singers, VTubers, cosplayers, dancers, illustrators — if you create, OshiPay is for you. Start in 60 seconds, no setup required.</p>
+            <p class="text-slate-400 leading-relaxed font-light">Singers, VTubers, cosplayers, dancers, illustrators — if you create, oshipay is for you. Start in 60 seconds, no setup required.</p>
           </div>
         </div>
       </div>
@@ -299,7 +333,7 @@
             <h3 class="text-2xl md:text-3xl font-bold mb-4">World-class security. Complete privacy.</h3>
             <p class="text-lg text-slate-400 mb-8 font-light leading-relaxed">
               Payments are processed by <span class="text-white font-medium">Stripe</span> — the global standard for online payments.
-              Personal information, addresses, and messages are <span class="text-white font-medium border-b border-green-500/50 pb-0.5">never seen by OshiPay</span>.<br class="hidden md:block" />
+              Personal information, addresses, and messages are <span class="text-white font-medium border-b border-green-500/50 pb-0.5">never seen by oshipay</span>.<br class="hidden md:block" />
               Creators receive <span class="text-white font-bold text-xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-orange-400">86.4%</span> of every tip — directly.
             </p>
             <div class="flex flex-wrap items-center justify-center gap-4">
@@ -374,7 +408,7 @@
     <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
       <div class="flex items-center gap-2">
         <i data-lucide="flame" class="text-orange-500 w-6 h-6"></i>
-        <span class="text-xl font-bold text-white">OshiPay</span>
+        <span class="text-xl font-bold text-white">oshipay</span>
       </div>
       <div class="flex flex-col items-center md:items-end gap-2">
         <div class="flex gap-4 mb-1">
@@ -386,7 +420,7 @@
             class="text-xs text-slate-500 hover:text-slate-300 transition-colors no-underline">Legal Notice</a>
         </div>
         <p class="text-xs text-slate-600">
-          © 2026 OshiPay. All rights reserved.
+          © 2026 oshipay. All rights reserved.
         </p>
       </div>
     </div>
