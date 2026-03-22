@@ -191,6 +191,36 @@ def send_pending_payment_url_email(to_email: str, creator_name: str, amount: int
     )
     return _send_email(to_email, subject, body)
 
+def send_pending_reservation_supporter_email(to_email: str, creator_name: str, amount: int) -> tuple[bool, str]:
+    """仮予約時にサポーターへ送る確認メール"""
+    subject = f"【oshipay】{creator_name}さんへの応援を受け付けました"
+    body = (
+        f"応援ありがとうございます！\n\n"
+        f"以下の内容で仮予約を受け付けました。\n\n"
+        f"💰 応援金額: {amount:,}円\n"
+        f"👤 クリエイター: {creator_name}\n\n"
+        f"現在、{creator_name}さんはまだ口座登録が完了していません。\n"
+        f"口座登録が完了次第、支払いURLをお送りします。\n\n"
+        f"⏰ クリエイターが72時間以内に口座登録を完了しない場合、\n"
+        f"自動的にキャンセルとなります。\n\n"
+        f"--\noshipay\n{BASE_URL}"
+    )
+    return _send_email(to_email, subject, body)
+
+def send_pending_reservation_creator_email(to_email: str, creator_name: str, amount: int, message: str, dashboard_url: str) -> tuple[bool, str]:
+    """仮予約時にクリエイターへ送る通知メール"""
+    subject = f"【oshipay】応援の仮予約が届きました！口座登録をお急ぎください"
+    body = (
+        f"{creator_name}さん\n\n"
+        f"oshipayに応援の仮予約が届きました！\n\n"
+        f"💰 金額: {amount:,}円\n"
+        f"💬 メッセージ: {message or '（なし）'}\n\n"
+        f"⚠️ 72時間以内に口座登録を完了しないと自動キャンセルになります。\n\n"
+        f"👉 口座登録はこちら:\n{dashboard_url}\n\n"
+        f"--\noshipay\n{BASE_URL}"
+    )
+    return _send_email(to_email, subject, body)
+
 def send_merge_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
     subject = "【oshipay】サポーターIDマージの確認コード"
     body = f"oshipayをご利用いただきありがとうございます。\n\nサポーターIDのマージ操作が行われました。\n以下の6桁のコードを入力してマージを完了させてください。\n\n確認コード: {otp}\n\nこのコードは5分間有効です。\nマージを依頼していない場合は、このメールを無視してください。\n\n--\noshipay\n{BASE_URL}"
@@ -1958,23 +1988,19 @@ if page == "support" and support_user:
                 except Exception as _pe_inner:
                     _pend_row.pop("supporter_email", None)
                     get_db().table("pending_supports").insert(_pend_row).execute()
-                # ③ クリエイターへ通知メール
+                # ── サポーターへ仮予約確認メール ──
+                try:
+                    send_pending_reservation_supporter_email(_pend_email_lc, support_name, int(st.session_state.amt))
+                except Exception:
+                    pass
+                # ── クリエイターへ仮予約通知メール ──
                 try:
                     _notif_cr = get_db().table("creators").select("email,display_name").eq("acct_id", connect_acct).maybe_single().execute()
                     _notif_email = (_notif_cr.data or {}).get("email", "")
                     _notif_name  = (_notif_cr.data or {}).get("display_name", support_name)
                     if _notif_email:
-                        _notif_body = (
-                            f"{_notif_name}さん\n\n"
-                            f"oshipayに送金希望が届きました！\n\n"
-                            f"💰 金額: {int(st.session_state.amt):,}円\n"
-                            f"💬 メッセージ: {msg or '（なし）'}\n"
-                            f"📩 ファンの連絡先: {_pending_contact or '（未入力）'}\n\n"
-                            f"口座登録を完了するとファンに連絡が届き、入金が確定します。\n"
-                            f"⚠️ 72時間以内に口座登録がない場合、自動キャンセルになります。\n\n"
-                            f"👉 口座登録はこちら: {BASE_URL}?page=dashboard&acct={connect_acct}\n\n--\noshipay"
-                        )
-                        send_support_email(_notif_email, _notif_name, int(st.session_state.amt), _notif_body)
+                        _dashboard_url = f"{BASE_URL}?page=dashboard&acct={connect_acct}"
+                        send_pending_reservation_creator_email(_notif_email, _notif_name, int(st.session_state.amt), msg or "", _dashboard_url)
                 except Exception:
                     pass
                 st.success(f"✅ {int(st.session_state.amt):,}円の応援を登録しました！クリエイターが口座登録次第ご連絡します。")
