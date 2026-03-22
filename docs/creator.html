@@ -183,12 +183,11 @@
 
       renderProfile(creator);
 
-      // Stats（show_on_profile=true または NULL（旧データ互換）を表示）
+      // Stats（ランキングと同じく supports テーブルを creator_acct のみでフィルタ）
       const { data: supports } = await db
         .from('supports')
-        .select('amount, supporter_id, message, created_at, show_on_profile')
+        .select('amount, supporter_id, message, created_at')
         .eq('creator_acct', creator.acct_id)
-        .or('show_on_profile.eq.true,show_on_profile.is.null')
         .order('created_at', { ascending: false });
 
       if (supports && supports.length > 0) {
