@@ -1,0 +1,32 @@
+name: oshipay cron job
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # 毎時0分に実行（UTC）
+  workflow_dispatch:       # 手動実行ボタンも有効
+
+jobs:
+  run-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install supabase
+
+      - name: Run cron_job.py
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SMTP_SERVER:          ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT:            ${{ secrets.SMTP_PORT }}
+          SMTP_USER:            ${{ secrets.SMTP_USER }}
+          SMTP_PASS:            ${{ secrets.SMTP_PASS }}
+          APP_URL:              https://oshipay.me
+        run: python cron_job.py
