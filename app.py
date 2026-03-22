@@ -416,6 +416,7 @@ def add_support(support_id: str, creator_acct: str, creator_name: str, amount: i
             "amount": amount,
             "message": message,
             "creator_rank": creator_rank,
+            "show_on_profile": True,  # プロフィールページ（creator.html）に表示
         }
         if supporter_id:
             data["supporter_id"] = supporter_id
