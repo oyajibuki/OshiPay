@@ -94,7 +94,7 @@
       </div>
 
       <h1 id="creator-name" class="text-2xl font-extrabold text-slate-800 dark:text-white mb-1"></h1>
-      <p id="creator-bio" class="text-sm text-slate-400 leading-relaxed max-w-xs mx-auto mt-3 whitespace-pre-line"></p>
+      <p id="creator-bio" class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-xs mx-auto mt-3 whitespace-pre-line"></p>
 
       <!-- SNS links -->
       <div id="sns-links" class="flex flex-wrap justify-center gap-2 mt-4"></div>
@@ -102,18 +102,18 @@
 
     <!-- Stats -->
     <div id="stats-row" class="grid grid-cols-2 gap-3 mb-8 hidden">
-      <div class="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
-        <div id="stat-total" class="text-xl font-black text-amber-400">—</div>
+      <div class="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-3 text-center shadow-sm dark:shadow-none">
+        <div id="stat-total" class="text-xl font-black text-amber-500 dark:text-amber-400">—</div>
         <div class="text-xs text-slate-500 mt-0.5">累計応援額</div>
       </div>
-      <div class="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
-        <div id="stat-supporters" class="text-xl font-black text-purple-400">—</div>
+      <div class="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-3 text-center shadow-sm dark:shadow-none">
+        <div id="stat-supporters" class="text-xl font-black text-purple-600 dark:text-purple-400">—</div>
         <div class="text-xs text-slate-500 mt-0.5">サポーター数</div>
       </div>
     </div>
 
     <!-- QR -->
-    <div class="bg-white/[0.04] border border-white/10 rounded-3xl p-6 mb-5 text-center">
+    <div class="bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-3xl p-6 mb-5 text-center shadow-sm dark:shadow-none">
       <p class="text-xs text-slate-500 uppercase tracking-widest mb-4 font-bold">スキャンして応援</p>
       <div class="float inline-block mb-4">
         <div class="bg-white p-3 rounded-2xl shadow-2xl inline-block relative">
@@ -136,14 +136,14 @@
 
     <!-- Share -->
     <button onclick="shareOrCopy()"
-      class="w-full py-3 border border-white/10 rounded-full text-slate-400 text-sm font-medium hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+      class="w-full py-3 border border-slate-200 dark:border-white/10 rounded-full text-slate-500 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
       <i data-lucide="share-2" class="w-4 h-4"></i>
       このページをシェア
     </button>
 
     <!-- Login -->
     <a id="login-btn" href="https://oshipay.me/?page=dashboard"
-      class="block w-full py-3 mt-2 border border-purple-500/30 rounded-full text-purple-400 text-sm font-medium text-center hover:bg-purple-500/10 transition-colors">
+      class="block w-full py-3 mt-2 border border-purple-400/50 dark:border-purple-500/30 rounded-full text-purple-600 dark:text-purple-400 text-sm font-medium text-center hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors">
       🔑 クリエイターログイン
     </a>
 
@@ -249,7 +249,7 @@
         if (!url) return;
         const a = document.createElement('a');
         a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = title;
-        a.className = 'bg-white/[0.06] border border-white/10 w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/[0.12] transition-colors';
+        a.className = 'bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/[0.12] transition-colors';
         a.innerHTML = svg;
         snsContainer.appendChild(a);
       });
