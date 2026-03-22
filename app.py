@@ -163,6 +163,45 @@ def send_acct_id_email(to_email: str, acct_id: str) -> tuple[bool, str]:
         return True, "送信成功"
     except Exception as e: return False, str(e)
 
+def get_or_create_supporter_by_email(email: str, display_name: str = "") -> tuple[str, bool]:
+    """メアドからsup_idを取得または新規作成。(sup_id, is_new) を返す"""
+    email_lc = email.strip().lower()
+    try:
+        _ex = get_db().table("supporters").select("supporter_id").eq("email", email_lc).limit(1).execute()
+        if _ex.data:
+            return _ex.data[0]["supporter_id"], False
+    except Exception:
+        pass
+    new_sid = "sup_" + uuid.uuid4().hex[:12]
+    _disp = display_name.strip() or email_lc.split("@")[0]
+    get_db().table("supporters").insert({"supporter_id": new_sid, "email": email_lc, "display_name": _disp}).execute()
+    return new_sid, True
+
+def send_support_complete_email(to_email: str, creator_name: str, amount: int, sup_id: str) -> tuple[bool, str]:
+    """支払い完了後にサポーターへ送る応援証明メール"""
+    try:
+        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
+        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
+        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
+        subject = f"【oshipay】{creator_name}さんへの応援が完了しました！"
+        dashboard_url = f"{BASE_URL}?page=supporter_dashboard&sid={sup_id}"
+        body = (
+            f"応援ありがとうございます！\n\n"
+            f"✅ 応援内容\n"
+            f"  クリエーター: {creator_name}\n"
+            f"  応援金額: {amount:,}円\n\n"
+            f"🪙 あなたのサポーターID: {sup_id}\n\n"
+            f"以下のURLからダッシュボードにアクセスすると、応援履歴の確認やアカウント登録ができます。\n"
+            f"{dashboard_url}\n\n"
+            f"--\noshipay\n{BASE_URL}"
+        )
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
+        return True, "送信成功"
+    except Exception as e: return False, str(e)
+
 def send_registration_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
     try:
         smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
@@ -674,6 +713,7 @@ if page == "success":
     s_sid = params.get("s_sid", "")
     s_sup_id   = params.get("s_sup_id", "")
     s_sup_name = params.get("s_sup_name", "")
+    s_email    = params.get("s_email", "")
     s_session_id = params.get("s_session", "")
 
     # ── 応援金額のパース ──
@@ -682,28 +722,43 @@ if page == "success":
     except ValueError:
         s_amt = 0
 
-    # ── Stripeセッションからメアドを取得してDB保存 ──
-    if s_session_id and s_sup_id and s_stripe_acct:
+    # ── ① sup_idは常に作成（匿名でも必ず記録）──
+    if s_sup_id:
+        try:
+            get_db().table("supporters").insert({
+                "supporter_id": s_sup_id,
+                "display_name": s_sup_name or "",
+                "email": s_email.strip().lower() if s_email else None
+            }).execute()
+        except Exception:
+            # 既存レコードの場合は display_name / email だけ更新
+            try:
+                _upd = {}
+                if s_sup_name: _upd["display_name"] = s_sup_name
+                if s_email:    _upd["email"] = s_email.strip().lower()
+                if _upd:
+                    get_db().table("supporters").update(_upd).eq("supporter_id", s_sup_id).execute()
+            except Exception:
+                pass
+
+    # ── 応援完了メールをサポーターへ送信 ──
+    if s_email and s_sup_id and s_name and s_amt > 0:
+        try:
+            send_support_complete_email(s_email.strip().lower(), s_name, s_amt, s_sup_id)
+        except Exception:
+            pass
+
+    # ── Stripeセッションからメアドも補完（Apple Pay等でs_emailがない場合のフォールバック）──
+    if s_session_id and s_sup_id and s_stripe_acct and not s_email:
         try:
             _stripe_sess = stripe.checkout.Session.retrieve(s_session_id, stripe_account=s_stripe_acct)
             _stripe_email = (_stripe_sess.customer_details.email if _stripe_sess.customer_details else None)
             if _stripe_email:
                 _stripe_email = _stripe_email.strip().lower()
-                # メアド未登録のサポーターIDにのみ保存（上書きしない）
-                _cur = get_db().table("supporters").select("email").eq("supporter_id", s_sup_id).maybe_single().execute()
-                if _cur.data and not _cur.data.get("email"):
-                    get_db().table("supporters").update({"email": _stripe_email}).eq("supporter_id", s_sup_id).execute()
+                get_db().table("supporters").update({"email": _stripe_email}).eq("supporter_id", s_sup_id).is_("email", "null").execute()
+                send_support_complete_email(_stripe_email, s_name, s_amt, s_sup_id)
         except Exception:
             pass
-
-    # ── 名前入力からの軽量サポーターレコード作成 ──
-    if s_sup_id and s_sup_name:
-        try:
-            get_db().table("supporters").insert(
-                {"supporter_id": s_sup_id, "display_name": s_sup_name}
-            ).execute()
-        except Exception:
-            pass  # UNIQUE制約違反（リロード時の重複）は無視
 
     # ── 応援記録を Supabase に保存（冪等: s_sid があれば1回のみ） ──
     if s_sid and s_acct and s_amt > 0:
@@ -1707,22 +1762,13 @@ if page == "support" and support_user:
     st.markdown(f'<div class="selected-amount-display">{int(st.session_state.amt):,}</div>', unsafe_allow_html=True)
     msg = st.text_area("応援メッセージ（オプション）", max_chars=140)
 
-    st.markdown('<div class="section-subtitle" style="text-align:left;margin-bottom:4px;">👤 お名前（任意）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:8px;">入力するとランキングにお名前が表示されます</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-subtitle" style="text-align:left;margin-bottom:4px;">📧 メールアドレス（必須）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:8px;">応援証明書・サポーターIDをお届けします。アカウント登録にも使用します。</div>', unsafe_allow_html=True)
+    _default_email = st.session_state.get("supporter_auth", {}).get("email", "")
+    support_email = st.text_input("メールアドレス", value=_default_email, placeholder="you@example.com", label_visibility="collapsed", key="support_email_input")
+
+    st.markdown('<div class="section-subtitle" style="text-align:left;margin-bottom:4px;margin-top:12px;">👤 お名前（任意）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:8px;">入力するとランキングにお名前が表示されます</div>', unsafe_allow_html=True)
     _default_name = st.session_state.get("supporter_auth", {}).get("display_name", "")
     sup_display_name = st.text_input("お名前", value=_default_name, placeholder="例: たろう", label_visibility="collapsed")
-
-    # 口座未登録クリエイター向け：連絡先入力
-    _pending_contact   = ""
-    _pending_email     = ""
-    _pending_sup_id    = ""
-    if not _creator_has_stripe:
-        st.markdown('<div style="font-size:12px;color:rgba(240,240,245,0.6);margin-top:12px;margin-bottom:4px;">📩 入金可能時の連絡先（LINE IDなど）</div>', unsafe_allow_html=True)
-        _pending_contact = st.text_input("連絡先", placeholder="例: line_id_here", label_visibility="collapsed")
-        st.markdown('<div style="font-size:12px;color:rgba(240,240,245,0.6);margin-top:8px;margin-bottom:4px;">🎫 サポーターID または メールアドレス（任意・応援者ダッシュボードで予約チケット確認可能）</div>', unsafe_allow_html=True)
-        _pre_sup_id = st.session_state.get("supporter_auth", {}).get("supporter_id", "")
-        _pre_email  = st.session_state.get("supporter_auth", {}).get("email", "")
-        _pending_sup_id = st.text_input("サポーターID", value=_pre_sup_id, placeholder="sup_xxxx（任意）", label_visibility="collapsed", key="pending_sup_id_input")
-        _pending_email  = st.text_input("またはメールアドレス", value=_pre_email, placeholder="you@example.com（任意）", label_visibility="collapsed", key="pending_email_input")
 
     is_disabled = st.session_state.amt < 100
     if is_disabled:
@@ -1752,21 +1798,27 @@ if page == "support" and support_user:
 
     if _creator_has_stripe:
         # ── 口座登録済み：通常 Stripe フロー ──
-        st.markdown('<div class="section-subtitle" style="text-align:left;margin-bottom:5px;">🎫 あなたのサポーターID（任意）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:10px;">IDを入れると実績が自動でアカウントに紐づきます。</div>', unsafe_allow_html=True)
-        _default_sup_id = st.session_state.get("supporter_auth", {}).get("supporter_id", "")
-        opt_sup_id = st.text_input("サポーターID", value=_default_sup_id, placeholder="sup_xxxxxxxx", label_visibility="collapsed")
-
         if st.button("🔥 応援する！", disabled=is_disabled):
+            # メール必須チェック
+            if not support_email or "@" not in support_email:
+                st.error("📧 メールアドレスを入力してください。応援証明書をお届けするために必要です。")
+                st.stop()
             amt = st.session_state.amt
             support_id = str(uuid.uuid4())
-            final_sup_id = opt_sup_id or ("sup_" + uuid.uuid4().hex[:8] if sup_display_name else "")
+            # メアドからsup_idを取得または新規作成
+            try:
+                final_sup_id, _is_new_sup = get_or_create_supporter_by_email(support_email, sup_display_name)
+            except Exception as _se:
+                st.error(f"サポーターID作成エラー: {_se}")
+                st.stop()
+            _email_enc = urllib.parse.quote(support_email.strip().lower())
             try:
                 checkout_params = {
                     "payment_method_types": ["card"], "mode": "payment",
                     "line_items": [{"price_data": {"currency": "jpy", "product_data": {"name": f"{support_name}への応援"}, "unit_amount": amt}, "quantity": 1}],
-                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(support_name)}&s_amt={amt}&s_acct={connect_acct}&s_stripe_acct={_stripe_connect_acct}&s_msg={urllib.parse.quote(msg or '')}&s_sid={support_id}&s_sup_id={final_sup_id}&s_sup_name={urllib.parse.quote(sup_display_name or '')}&s_session={{CHECKOUT_SESSION_ID}}",
+                    "success_url": f"{BASE_URL}?page=success&s_name={urllib.parse.quote(support_name)}&s_amt={amt}&s_acct={connect_acct}&s_stripe_acct={_stripe_connect_acct}&s_msg={urllib.parse.quote(msg or '')}&s_sid={support_id}&s_sup_id={final_sup_id}&s_sup_name={urllib.parse.quote(sup_display_name or '')}&s_email={_email_enc}&s_session={{CHECKOUT_SESSION_ID}}",
                     "cancel_url": f"{BASE_URL}?page=cancel",
-                    "metadata": {"user_id": support_user, "message": msg, "support_id": support_id, "supporter_id": opt_sup_id}
+                    "metadata": {"support_id": support_id, "supporter_id": final_sup_id, "supporter_email": support_email.strip().lower()}
                 }
                 checkout_params["payment_intent_data"] = {"application_fee_amount": int(amt * 0.1)}
                 session = stripe.checkout.Session.create(**checkout_params, stripe_account=_stripe_connect_acct)
@@ -1777,24 +1829,26 @@ if page == "support" and support_user:
     else:
         # ── 口座未登録：pending_supports に保存（Stripe不使用）──
         if st.button("💜 応援を登録する", disabled=is_disabled, type="primary"):
+            if not support_email or "@" not in support_email:
+                st.error("📧 メールアドレスを入力してください。口座登録完了時にご連絡します。")
+                st.stop()
             try:
+                _pend_email_lc = support_email.strip().lower()
+                _pend_sup_id, _ = get_or_create_supporter_by_email(_pend_email_lc, sup_display_name)
                 _pend_row = {
                     "creator_acct": connect_acct,
                     "amount": int(st.session_state.amt),
                     "message": msg or "",
-                    "contact_info": _pending_contact or "",
+                    "contact_info": "",
+                    "supporter_id": _pend_sup_id,
                 }
-                if _pending_sup_id and _pending_sup_id.startswith("sup_"):
-                    _pend_row["supporter_id"] = _pending_sup_id.strip()
-                if _pending_email and "@" in _pending_email:
-                    try:
-                        _pend_row["supporter_email"] = _pending_email.strip().lower()
-                    except Exception:
-                        pass
+                try:
+                    _pend_row["supporter_email"] = _pend_email_lc
+                except Exception:
+                    pass
                 try:
                     get_db().table("pending_supports").insert(_pend_row).execute()
                 except Exception as _pe_inner:
-                    # supporter_email列がキャッシュにない場合はそれなしで再試行
                     _pend_row.pop("supporter_email", None)
                     get_db().table("pending_supports").insert(_pend_row).execute()
                 # ③ クリエイターへ通知メール
