@@ -216,6 +216,30 @@ def send_registration_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
         return True, "送信成功"
     except Exception as e: return False, str(e)
 
+def send_pending_payment_url_email(to_email: str, creator_name: str, amount: int, pay_url: str, expires_str: str) -> tuple[bool, str]:
+    """口座登録完了時にサポーターへ送る支払いURLメール"""
+    try:
+        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
+        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
+        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
+        subject = f"【oshipay】{creator_name}さんへの応援の支払いが可能になりました"
+        body = (
+            f"お待たせしました！\n\n"
+            f"{creator_name}さんが口座登録を完了しました。\n"
+            f"以下のURLから応援金額をお支払いください。\n\n"
+            f"💰 応援金額: {amount:,}円\n\n"
+            f"🔗 支払いURL:\n{pay_url}\n\n"
+            f"⏰ 有効期限: {expires_str}\n"
+            f"期限を過ぎると自動的にキャンセルとなります。\n\n"
+            f"--\noshipay\n{BASE_URL}"
+        )
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
+        return True, "送信成功"
+    except Exception as e: return False, str(e)
+
 def send_merge_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
     try:
         smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
@@ -700,6 +724,106 @@ if page == "lp":
     """, height=0)
     st.stop()
 
+# ── 72時間予約 支払いページ ──
+if page == "pay_pending":
+    st.markdown('<div class="oshi-logo"><span class="text">oshipay</span></div>', unsafe_allow_html=True)
+    _pid  = params.get("pid", "")
+    _p_email = params.get("email", "")
+
+    if not _pid:
+        st.error("支払い情報が見つかりません。"); st.stop()
+
+    # pending_supports を取得
+    try:
+        _pr = get_db().table("pending_supports").select("*").eq("id", _pid).maybe_single().execute()
+        _prow = _pr.data
+    except Exception:
+        _prow = None
+
+    if not _prow:
+        st.error("支払い情報が見つかりません。"); st.stop()
+
+    if _prow.get("status") == "paid":
+        st.success("✅ この応援はすでに支払い完了しています。")
+        st.stop()
+
+    if _prow.get("status") == "cancelled":
+        st.error("❌ この応援はキャンセルされました。"); st.stop()
+
+    # 有効期限チェック
+    _pp_exp_at = _prow.get("expires_at", "")
+    _pp_exp_str = "72時間以内"
+    if _pp_exp_at:
+        try:
+            _pp_exp_dt = datetime.datetime.fromisoformat(_pp_exp_at.replace("Z", "+00:00"))
+            if datetime.datetime.now(datetime.timezone.utc) > _pp_exp_dt:
+                st.error("⏰ 支払い期限が過ぎています。このチケットは無効です。"); st.stop()
+            _pp_exp_jst = _pp_exp_dt.astimezone(datetime.timezone(datetime.timedelta(hours=9)))
+            _pp_exp_str = _pp_exp_jst.strftime("%Y/%m/%d %H:%M（JST）")
+        except Exception:
+            pass
+
+    _pp_creator_acct = _prow.get("creator_acct", "")
+    _pp_amount       = _prow.get("amount", 0)
+    _pp_message      = _prow.get("message", "")
+    _pp_sup_id       = _prow.get("supporter_id", "")
+
+    # クリエイター情報取得
+    try:
+        _ppc = get_db().table("creators").select("display_name,name,stripe_acct_id,payout_enabled").eq("acct_id", _pp_creator_acct).maybe_single().execute()
+        _ppc_data = _ppc.data or {}
+    except Exception:
+        _ppc_data = {}
+
+    _ppc_name   = _ppc_data.get("display_name") or _ppc_data.get("name") or "クリエイター"
+    _ppc_stripe = _ppc_data.get("stripe_acct_id", "")
+
+    if not _ppc_stripe or not _ppc_data.get("payout_enabled"):
+        st.error("クリエイターの口座情報が確認できません。"); st.stop()
+
+    st.markdown(f'<div class="section-title">💜 {_ppc_name} への応援</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:24px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:6px;">応援金額</div>
+        <div style="font-size:40px;font-weight:900;color:#f97316;">{_pp_amount:,}円</div>
+        {"<div style='font-size:13px;color:rgba(240,240,245,0.6);margin-top:10px;'>💬 " + _pp_message + "</div>" if _pp_message else ""}
+    </div>
+    <div style="text-align:center;font-size:11px;color:#fbbf24;margin-bottom:20px;">⏰ 有効期限: {_pp_exp_str}</div>
+    """, unsafe_allow_html=True)
+
+    if st.button("💳 Stripeで支払う", type="primary", use_container_width=True):
+        try:
+            _pp_email_enc = urllib.parse.quote(_p_email) if _p_email else ""
+            _pp_success_url = (
+                f"{BASE_URL}?page=success"
+                f"&s_name={urllib.parse.quote(_ppc_name)}"
+                f"&s_amt={_pp_amount}"
+                f"&s_acct={_pp_creator_acct}"
+                f"&s_stripe_acct={_ppc_stripe}"
+                f"&s_msg={urllib.parse.quote(_pp_message or '')}"
+                f"&s_sid={uuid.uuid4()}"
+                f"&s_sup_id={_pp_sup_id}"
+                f"&s_email={_pp_email_enc}"
+                f"&s_pid={_pid}"
+                f"&s_session={{CHECKOUT_SESSION_ID}}"
+            )
+            _pp_checkout = stripe.checkout.Session.create(
+                payment_method_types=["card"], mode="payment",
+                line_items=[{"price_data": {"currency": "jpy", "product_data": {"name": f"{_ppc_name}への応援"}, "unit_amount": _pp_amount}, "quantity": 1}],
+                success_url=_pp_success_url,
+                cancel_url=f"{BASE_URL}?page=cancel",
+                payment_intent_data={"application_fee_amount": int(_pp_amount * 0.1)},
+                metadata={"pending_id": _pid, "supporter_id": _pp_sup_id},
+                stripe_account=_ppc_stripe
+            )
+            st.markdown(f'<script>window.top.location.href = "{_pp_checkout.url}";</script>', unsafe_allow_html=True)
+            st.link_button("💳 決済ページへ", _pp_checkout.url)
+        except Exception as _ppe:
+            st.error(f"エラー: {_ppe}")
+
+    st.markdown(f'<div class="oshi-footer">Powered by <a href="https://oshipay.me/index.html">oshipay</a></div>', unsafe_allow_html=True)
+    st.stop()
+
 # ── 成功ページ ──
 if page == "success":
     st.markdown('<div class="oshi-logo"><span class="text">oshipay</span></div>', unsafe_allow_html=True)
@@ -716,6 +840,7 @@ if page == "success":
     s_sup_name = params.get("s_sup_name", "")
     s_email    = params.get("s_email", "")
     s_session_id = params.get("s_session", "")
+    s_pid      = params.get("s_pid", "")  # pending_supports.id（72時間予約経由の場合）
 
     # ── 応援金額のパース ──
     try:
@@ -741,6 +866,13 @@ if page == "success":
                     get_db().table("supporters").update(_upd).eq("supporter_id", s_sup_id).execute()
             except Exception:
                 pass
+
+    # ── 72時間予約経由の場合: pending_supports を paid に更新 ──
+    if s_pid:
+        try:
+            get_db().table("pending_supports").update({"status": "paid"}).eq("id", s_pid).execute()
+        except Exception:
+            pass
 
     # ── 応援完了メールをサポーターへ送信 ──
     if s_email and s_sup_id and s_name and s_amt > 0:
@@ -2797,10 +2929,38 @@ else: # Dashboard
                 _stripe_incomplete = not _stripe_payouts_ok  # acctはあるが未完了
                 # 完了確認できたらDBのpayout_enabledを更新
                 if _stripe_payouts_ok:
+                    _prev_payout = _cr_data.get("payout_enabled", False)
                     try:
                         get_db().table("creators").update({"payout_enabled": True}).eq("acct_id", acct_id).execute()
                     except Exception:
                         pass
+                    # ── 初めてpayout_enabledになった瞬間: pending全件に支払いURLメール送信 ──
+                    if not _prev_payout:
+                        try:
+                            _pend_notify = get_db().table("pending_supports").select("*").eq("creator_acct", acct_id).eq("status", "pending").execute()
+                            _pend_list = _pend_notify.data or []
+                            _sent_count = 0
+                            _creator_display = _cr_data.get("display_name") or _cr_data.get("name") or acct_id
+                            for _pn in _pend_list:
+                                _pn_email = _pn.get("supporter_email", "")
+                                if not _pn_email:
+                                    continue
+                                _pn_pid = str(_pn.get("id", ""))
+                                _pay_url = f"{BASE_URL}?page=pay_pending&pid={_pn_pid}&email={urllib.parse.quote(_pn_email)}"
+                                # 有効期限を JST で整形
+                                _exp_at = _pn.get("expires_at", "")
+                                try:
+                                    _exp_dt = datetime.datetime.fromisoformat(_exp_at.replace("Z", "+00:00"))
+                                    _exp_jst = _exp_dt.astimezone(datetime.timezone(datetime.timedelta(hours=9)))
+                                    _exp_str = _exp_jst.strftime("%Y/%m/%d %H:%M（JST）")
+                                except Exception:
+                                    _exp_str = "72時間以内"
+                                send_pending_payment_url_email(_pn_email, _creator_display, _pn["amount"], _pay_url, _exp_str)
+                                _sent_count += 1
+                            if _sent_count > 0:
+                                st.toast(f"📧 {_sent_count}名のサポーターに支払いURLを送信しました", icon="✅")
+                        except Exception:
+                            pass
             else:
                 _stripe_incomplete = True  # 取得失敗＝未完了扱い
         _has_stripe = _stripe_payouts_ok
