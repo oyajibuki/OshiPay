@@ -88,14 +88,14 @@ def create_connect_account():
         business_type="individual",
         business_profile={
             "mcc": "7922", 
-            "product_description": "OshiPay - 投げ銭サービス",
+            "product_description": "oshipay - 投げ銭サービス",
             "url": BASE_URL
         },
     )
     return account.id
 
 def create_account_link(account_id, creator_acct_id=None, return_params=""):
-    # return_url は OshiPay の内部 acct_id（usr_XXX など）を使う
+    # return_url は oshipay の内部 acct_id（usr_XXX など）を使う
     _ret_acct = creator_acct_id or account_id
     return_url  = f"{BASE_URL}?page=dashboard&acct={_ret_acct}{return_params}"
     refresh_url = f"{BASE_URL}?page=dashboard&acct={_ret_acct}&refresh=1{return_params}"
@@ -109,8 +109,8 @@ def send_support_email(to_email, creator_name, amount, message):
         smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
         smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
         if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = f"{creator_name}さんに応援が届きました！ (OshiPay)"
-        body = f"{creator_name}さん\n\nOshiPayを通じて応援が届きました！\n\n💰 応援金額: {amount:,}円\n💬 メッセージ:\n{message if message else '（なし）'}\n\n--\nOshiPay\n{BASE_URL}"
+        subject = f"{creator_name}さんに応援が届きました！ (oshipay)"
+        body = f"{creator_name}さん\n\noshipayを通じて応援が届きました！\n\n💰 応援金額: {amount:,}円\n💬 メッセージ:\n{message if message else '（なし）'}\n\n--\noshipay\n{BASE_URL}"
         msg = MIMEText(body); msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
@@ -122,8 +122,8 @@ def send_qr_email(to_email: str, acct_id: str, support_url: str, qr_bytes: bytes
         smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
         smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
         if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = "【OshiPay】QRコード・応援URLをお送りします"
-        body = f"OshiPayをご利用いただきありがとうございます。\n\nQRコードと応援URLをお送りします。\nSNSやイベントでファンに共有してください！\n\n📎 応援URL:\n{support_url}\n\nQRコードは添付ファイルをご確認ください。\n\n--\nOshiPay\n{BASE_URL}"
+        subject = "【oshipay】QRコード・応援URLをお送りします"
+        body = f"oshipayをご利用いただきありがとうございます。\n\nQRコードと応援URLをお送りします。\nSNSやイベントでファンに共有してください！\n\n📎 応援URL:\n{support_url}\n\nQRコードは添付ファイルをご確認ください。\n\n--\noshipay\n{BASE_URL}"
         msg = MIMEMultipart()
         msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
         msg.attach(MIMEText(body, "plain", "utf-8"))
@@ -140,8 +140,8 @@ def send_welcome_email(to_email: str, display_name: str, supporter_id: str) -> t
         smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
         smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
         if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = "【OshiPay】ご登録ありがとうございます"
-        body = f"{display_name} さん\n\nOshiPayへのご登録ありがとうございます！\n\n🎫 サポーターID: {supporter_id}\n\nこのIDはログイン時に必要です。大切に保管してください。\n\nこれからも推し活をお楽しみください！\n\n--\nOshiPay\n{BASE_URL}"
+        subject = "【oshipay】ご登録ありがとうございます"
+        body = f"{display_name} さん\n\noshipayへのご登録ありがとうございます！\n\n🎫 サポーターID: {supporter_id}\n\nこのIDはログイン時に必要です。大切に保管してください。\n\nこれからも推し活をお楽しみください！\n\n--\noshipay\n{BASE_URL}"
         msg = MIMEText(body, "plain", "utf-8")
         msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
         with smtplib.SMTP(smtp_server, smtp_port) as server:
@@ -154,8 +154,8 @@ def send_acct_id_email(to_email: str, acct_id: str) -> tuple[bool, str]:
         smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
         smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
         if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = "【OshiPay】クリエイターIDのご確認"
-        body = f"OshiPayをご利用いただきありがとうございます。\n\nダッシュボードへのログインに必要なIDをお送りします。\n\n🔑 クリエイターID: {acct_id}\n\nこのIDは大切に保管してください。\n\nダッシュボードURL:\n{BASE_URL}?page=dashboard&acct={acct_id}\n\n--\nOshiPay\n{BASE_URL}"
+        subject = "【oshipay】クリエイターIDのご確認"
+        body = f"oshipayをご利用いただきありがとうございます。\n\nダッシュボードへのログインに必要なIDをお送りします。\n\n🔑 クリエイターID: {acct_id}\n\nこのIDは大切に保管してください。\n\nダッシュボードURL:\n{BASE_URL}?page=dashboard&acct={acct_id}\n\n--\noshipay\n{BASE_URL}"
         msg = MIMEText(body, "plain", "utf-8")
         msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
         with smtplib.SMTP(smtp_server, smtp_port) as server:
@@ -740,7 +740,7 @@ if page == "success":
             unsafe_allow_html=True
         )
     portfolio_url = f"{BASE_URL}?page=portfolio&id={s_sup_id}" if s_sup_id else BASE_URL
-    share_text = f"{s_name}にoshipayで応援したよ！\n#OshiPay\n{portfolio_url}"
+    share_text = f"{s_name}にoshipayで応援したよ！\n#oshipay\n{portfolio_url}"
     st.link_button("𝕏 でシェア", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
 
     # ── プロフィールに戻る / 閉じるボタン ──
@@ -1454,7 +1454,7 @@ if page == "ranking":
             st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
             st.stop()
 
-    # フッター（OshiPay宣伝）
+    # フッター（oshipay宣伝）
     footer_html = (
         f'<div style="margin-top:40px;padding:20px 24px 12px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:16px;text-align:center;">'
         f'<div style="font-size:20px;font-weight:900;color:#f97316;margin-bottom:6px;">oshipayで推しを応援しよう</div>'
@@ -1762,13 +1762,13 @@ if page == "support" and support_user:
                     if _notif_email:
                         _notif_body = (
                             f"{_notif_name}さん\n\n"
-                            f"OshiPayに送金希望が届きました！\n\n"
+                            f"oshipayに送金希望が届きました！\n\n"
                             f"💰 金額: {int(st.session_state.amt):,}円\n"
                             f"💬 メッセージ: {msg or '（なし）'}\n"
                             f"📩 ファンの連絡先: {_pending_contact or '（未入力）'}\n\n"
                             f"口座登録を完了するとファンに連絡が届き、入金が確定します。\n"
                             f"⚠️ 72時間以内に口座登録がない場合、自動キャンセルになります。\n\n"
-                            f"👉 口座登録はこちら: {BASE_URL}?page=dashboard&acct={connect_acct}\n\n--\nOshiPay"
+                            f"👉 口座登録はこちら: {BASE_URL}?page=dashboard&acct={connect_acct}\n\n--\noshipay"
                         )
                         send_support_email(_notif_email, _notif_name, int(st.session_state.amt), _notif_body)
                 except Exception:
@@ -1836,7 +1836,7 @@ elif page == "portfolio":
         st.query_params["sid"]  = p_id
         st.rerun()
 
-    share_text = f"私のoshipay応援実績はこちら！総額 {total_amount:,}\n#OshiPay\n{BASE_URL}?page=portfolio&id={p_id}"
+    share_text = f"私のoshipay応援実績はこちら！総額 {total_amount:,}\n#oshipay\n{BASE_URL}?page=portfolio&id={p_id}"
     st.link_button("𝕏 で公開する", f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_text)}", use_container_width=True)
     st.link_button("あなたもoshipayを始めよう", f"{BASE_URL}?page=lp", use_container_width=True)
     st.stop()
@@ -2692,7 +2692,7 @@ else: # Dashboard
                         "type": "express", "country": "JP",
                         "capabilities": {"card_payments": {"requested": True}, "transfers": {"requested": True}},
                         "business_type": "individual",
-                        "business_profile": {"mcc": "7922", "product_description": "OshiPay - 投げ銭サービス", "url": BASE_URL},
+                        "business_profile": {"mcc": "7922", "product_description": "oshipay - 投げ銭サービス", "url": BASE_URL},
                     }
                     if _cr_email:
                         _new_stripe_kwargs["email"] = _cr_email
