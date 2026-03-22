@@ -104,64 +104,44 @@ def create_account_link(account_id, creator_acct_id=None, return_params=""):
     )
     return link.url
 
-def send_support_email(to_email, creator_name, amount, message):
+# ── メール送信共通ヘルパー（Resend API）──────────────────────────────
+RESEND_FROM = "noreply@oshipay.me"
+
+def _send_email(to_email: str, subject: str, body: str, attachments: list = None) -> tuple[bool, str]:
+    """Resend API でメール送信する共通関数"""
     try:
-        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
-        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
-        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = f"{creator_name}さんに応援が届きました！ (oshipay)"
-        body = f"{creator_name}さん\n\noshipayを通じて応援が届きました！\n\n💰 応援金額: {amount:,}円\n💬 メッセージ:\n{message if message else '（なし）'}\n\n--\noshipay\n{BASE_URL}"
-        msg = MIMEText(body); msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
+        import resend as _resend
+        _resend.api_key = st.secrets.get("RESEND_API_KEY", os.environ.get("RESEND_API_KEY", ""))
+        if not _resend.api_key:
+            return False, "RESEND_API_KEY未設定"
+        params = {"from": RESEND_FROM, "to": [to_email], "subject": subject, "text": body}
+        if attachments:
+            params["attachments"] = attachments
+        _resend.Emails.send(params)
         return True, "送信成功"
-    except Exception as e: return False, str(e)
+    except Exception as e:
+        return False, str(e)
+
+def send_support_email(to_email, creator_name, amount, message):
+    subject = f"{creator_name}さんに応援が届きました！ (oshipay)"
+    body = f"{creator_name}さん\n\noshipayを通じて応援が届きました！\n\n💰 応援金額: {amount:,}円\n💬 メッセージ:\n{message if message else '（なし）'}\n\n--\noshipay\n{BASE_URL}"
+    return _send_email(to_email, subject, body)
 
 def send_qr_email(to_email: str, acct_id: str, support_url: str, qr_bytes: bytes) -> tuple[bool, str]:
-    try:
-        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
-        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
-        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = "【oshipay】QRコード・応援URLをお送りします"
-        body = f"oshipayをご利用いただきありがとうございます。\n\nQRコードと応援URLをお送りします。\nSNSやイベントでファンに共有してください！\n\n📎 応援URL:\n{support_url}\n\nQRコードは添付ファイルをご確認ください。\n\n--\noshipay\n{BASE_URL}"
-        msg = MIMEMultipart()
-        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
-        msg.attach(MIMEText(body, "plain", "utf-8"))
-        img_part = MIMEImage(qr_bytes, name=f"oshipay_qr_{acct_id}.png")
-        img_part.add_header("Content-Disposition", "attachment", filename=f"oshipay_qr_{acct_id}.png")
-        msg.attach(img_part)
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
-        return True, "送信成功"
-    except Exception as e: return False, str(e)
+    subject = "【oshipay】QRコード・応援URLをお送りします"
+    body = f"oshipayをご利用いただきありがとうございます。\n\nQRコードと応援URLをお送りします。\nSNSやイベントでファンに共有してください！\n\n📎 応援URL:\n{support_url}\n\nQRコードは添付ファイルをご確認ください。\n\n--\noshipay\n{BASE_URL}"
+    attachments = [{"filename": f"oshipay_qr_{acct_id}.png", "content": list(qr_bytes)}]
+    return _send_email(to_email, subject, body, attachments)
 
 def send_welcome_email(to_email: str, display_name: str, supporter_id: str) -> tuple[bool, str]:
-    try:
-        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
-        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
-        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = "【oshipay】ご登録ありがとうございます"
-        body = f"{display_name} さん\n\noshipayへのご登録ありがとうございます！\n\n🎫 サポーターID: {supporter_id}\n\nこのIDはログイン時に必要です。大切に保管してください。\n\nこれからも推し活をお楽しみください！\n\n--\noshipay\n{BASE_URL}"
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
-        return True, "送信成功"
-    except Exception as e: return False, str(e)
+    subject = "【oshipay】ご登録ありがとうございます"
+    body = f"{display_name} さん\n\noshipayへのご登録ありがとうございます！\n\n🎫 サポーターID: {supporter_id}\n\nこのIDはログイン時に必要です。大切に保管してください。\n\nこれからも推し活をお楽しみください！\n\n--\noshipay\n{BASE_URL}"
+    return _send_email(to_email, subject, body)
 
 def send_acct_id_email(to_email: str, acct_id: str) -> tuple[bool, str]:
-    try:
-        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
-        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
-        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = "【oshipay】クリエイターIDのご確認"
-        body = f"oshipayをご利用いただきありがとうございます。\n\nダッシュボードへのログインに必要なIDをお送りします。\n\n🔑 クリエイターID: {acct_id}\n\nこのIDは大切に保管してください。\n\nダッシュボードURL:\n{BASE_URL}?page=dashboard&acct={acct_id}\n\n--\noshipay\n{BASE_URL}"
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
-        return True, "送信成功"
-    except Exception as e: return False, str(e)
+    subject = "【oshipay】クリエイターIDのご確認"
+    body = f"oshipayをご利用いただきありがとうございます。\n\nダッシュボードへのログインに必要なIDをお送りします。\n\n🔑 クリエイターID: {acct_id}\n\nこのIDは大切に保管してください。\n\nダッシュボードURL:\n{BASE_URL}?page=dashboard&acct={acct_id}\n\n--\noshipay\n{BASE_URL}"
+    return _send_email(to_email, subject, body)
 
 def get_or_create_supporter_by_email(email: str, display_name: str = "") -> tuple[str, bool]:
     """メアドからsup_idを取得または新規作成。(sup_id, is_new) を返す"""
@@ -178,81 +158,43 @@ def get_or_create_supporter_by_email(email: str, display_name: str = "") -> tupl
     return new_sid, True
 
 def send_support_complete_email(to_email: str, creator_name: str, amount: int, sup_id: str) -> tuple[bool, str]:
-    """支払い完了後にサポーターへ送る応援証明メール"""
-    try:
-        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
-        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
-        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = f"【oshipay】{creator_name}さんへの応援が完了しました！"
-        dashboard_url = f"{BASE_URL}?page=supporter_dashboard&sid={sup_id}"
-        body = (
-            f"応援ありがとうございます！\n\n"
-            f"✅ 応援内容\n"
-            f"  クリエーター: {creator_name}\n"
-            f"  応援金額: {amount:,}円\n\n"
-            f"🪙 あなたのサポーターID: {sup_id}\n\n"
-            f"以下のURLからダッシュボードにアクセスすると、応援履歴の確認やアカウント登録ができます。\n"
-            f"{dashboard_url}\n\n"
-            f"--\noshipay\n{BASE_URL}"
-        )
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
-        return True, "送信成功"
-    except Exception as e: return False, str(e)
+    subject = f"【oshipay】{creator_name}さんへの応援が完了しました！"
+    dashboard_url = f"{BASE_URL}?page=supporter_dashboard&sid={sup_id}"
+    body = (
+        f"応援ありがとうございます！\n\n"
+        f"✅ 応援内容\n"
+        f"  クリエーター: {creator_name}\n"
+        f"  応援金額: {amount:,}円\n\n"
+        f"🪙 あなたのサポーターID: {sup_id}\n\n"
+        f"以下のURLからダッシュボードにアクセスすると、応援履歴の確認やアカウント登録ができます。\n"
+        f"{dashboard_url}\n\n"
+        f"--\noshipay\n{BASE_URL}"
+    )
+    return _send_email(to_email, subject, body)
 
 def send_registration_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
-    try:
-        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
-        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
-        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = "【oshipay】メールアドレスの確認コード"
-        body = f"oshipayへようこそ！\n\n以下の6桁のコードを入力して、メールアドレスを確認してください。\n\n確認コード: {otp}\n\nこのコードは5分間有効です。\n登録を依頼していない場合は、このメールを無視してください。\n\n--\noshipay\n{BASE_URL}"
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
-        return True, "送信成功"
-    except Exception as e: return False, str(e)
+    subject = "【oshipay】メールアドレスの確認コード"
+    body = f"oshipayへようこそ！\n\n以下の6桁のコードを入力して、メールアドレスを確認してください。\n\n確認コード: {otp}\n\nこのコードは5分間有効です。\n登録を依頼していない場合は、このメールを無視してください。\n\n--\noshipay\n{BASE_URL}"
+    return _send_email(to_email, subject, body)
 
 def send_pending_payment_url_email(to_email: str, creator_name: str, amount: int, pay_url: str, expires_str: str) -> tuple[bool, str]:
-    """口座登録完了時にサポーターへ送る支払いURLメール"""
-    try:
-        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
-        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
-        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = f"【oshipay】{creator_name}さんへの応援の支払いが可能になりました"
-        body = (
-            f"お待たせしました！\n\n"
-            f"{creator_name}さんが口座登録を完了しました。\n"
-            f"以下のURLから応援金額をお支払いください。\n\n"
-            f"💰 応援金額: {amount:,}円\n\n"
-            f"🔗 支払いURL:\n{pay_url}\n\n"
-            f"⏰ 有効期限: {expires_str}\n"
-            f"期限を過ぎると自動的にキャンセルとなります。\n\n"
-            f"--\noshipay\n{BASE_URL}"
-        )
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
-        return True, "送信成功"
-    except Exception as e: return False, str(e)
+    subject = f"【oshipay】{creator_name}さんへの応援の支払いが可能になりました"
+    body = (
+        f"お待たせしました！\n\n"
+        f"{creator_name}さんが口座登録を完了しました。\n"
+        f"以下のURLから応援金額をお支払いください。\n\n"
+        f"💰 応援金額: {amount:,}円\n\n"
+        f"🔗 支払いURL:\n{pay_url}\n\n"
+        f"⏰ 有効期限: {expires_str}\n"
+        f"期限を過ぎると自動的にキャンセルとなります。\n\n"
+        f"--\noshipay\n{BASE_URL}"
+    )
+    return _send_email(to_email, subject, body)
 
 def send_merge_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
-    try:
-        smtp_server = st.secrets.get("SMTP_SERVER"); smtp_port = st.secrets.get("SMTP_PORT", 587)
-        smtp_user = st.secrets.get("SMTP_USER"); smtp_pass = st.secrets.get("SMTP_PASS")
-        if not all([smtp_server, smtp_user, smtp_pass]): return False, "SMTP設定不足"
-        subject = "【oshipay】サポーターIDマージの確認コード"
-        body = f"oshipayをご利用いただきありがとうございます。\n\nサポーターIDのマージ操作が行われました。\n以下の6桁のコードを入力してマージを完了させてください。\n\n確認コード: {otp}\n\nこのコードは5分間有効です。\nマージを依頼していない場合は、このメールを無視してください。\n\n--\noshipay\n{BASE_URL}"
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = subject; msg["From"] = smtp_user; msg["To"] = to_email; msg["Date"] = formatdate(localtime=True)
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls(); server.login(smtp_user, smtp_pass); server.send_message(msg)
-        return True, "送信成功"
-    except Exception as e: return False, str(e)
+    subject = "【oshipay】サポーターIDマージの確認コード"
+    body = f"oshipayをご利用いただきありがとうございます。\n\nサポーターIDのマージ操作が行われました。\n以下の6桁のコードを入力してマージを完了させてください。\n\n確認コード: {otp}\n\nこのコードは5分間有効です。\nマージを依頼していない場合は、このメールを無視してください。\n\n--\noshipay\n{BASE_URL}"
+    return _send_email(to_email, subject, body)
 
 def check_account_status(account_id):
     try:

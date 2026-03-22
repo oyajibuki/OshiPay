@@ -3,3 +3,4 @@ stripe
 qrcode
 pillow
 supabase
+resend

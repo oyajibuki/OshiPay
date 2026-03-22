@@ -9,36 +9,25 @@ GitHub Actions から毎時実行される。
 
 import os
 import datetime
-import smtplib
 import urllib.parse
-from email.mime.text import MIMEText
-from email.utils import formatdate
+import resend
 
 from supabase import create_client
 
 # ── 環境変数 ──────────────────────────────────────────
 SUPABASE_URL     = os.environ["SUPABASE_URL"]
 SUPABASE_KEY     = os.environ["SUPABASE_SERVICE_KEY"]   # service_role キー
-SMTP_SERVER      = os.environ["SMTP_SERVER"]
-SMTP_PORT        = int(os.environ.get("SMTP_PORT", 587))
-SMTP_USER        = os.environ["SMTP_USER"]
-SMTP_PASS        = os.environ["SMTP_PASS"]
+RESEND_API_KEY   = os.environ["RESEND_API_KEY"]
 BASE_URL         = os.environ.get("APP_URL", "https://oshipay.me").rstrip("/") + "/"
+RESEND_FROM      = "noreply@oshipay.me"
 
+resend.api_key = RESEND_API_KEY
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 now = datetime.datetime.now(datetime.timezone.utc)
 
 # ── メール送信ヘルパー ─────────────────────────────────
 def send_email(to_email: str, subject: str, body: str):
-    msg = MIMEText(body, "plain", "utf-8")
-    msg["Subject"] = subject
-    msg["From"]    = SMTP_USER
-    msg["To"]      = to_email
-    msg["Date"]    = formatdate(localtime=True)
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as s:
-        s.starttls()
-        s.login(SMTP_USER, SMTP_PASS)
-        s.send_message(msg)
+    resend.Emails.send({"from": RESEND_FROM, "to": [to_email], "subject": subject, "text": body})
 
 def jst_str(dt: datetime.datetime) -> str:
     jst = dt.astimezone(datetime.timezone(datetime.timedelta(hours=9)))
