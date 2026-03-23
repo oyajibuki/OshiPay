@@ -147,12 +147,12 @@ for row in expired_targets:
     # サポーターへキャンセルメール
     if sup_email:
         try:
-            subject = f"【oshipay】{creator_name}さんへの応援がキャンセルされました"
+            subject = f"【oshipay】{creator_name}さんへの応援金がキャンセルされました"
             body = (
                 f"お知らせです。\n\n"
-                f"{creator_name}さんへの以下の応援が期限切れによりキャンセルされました。\n\n"
+                f"{creator_name}さんへの応援金について、期限内にお支払いが完了しなかったため、キャンセルとなりました。\n\n"
                 f"💰 応援金額: {amount:,}円\n\n"
-                f"またの機会にぜひ応援よろしくお願いします！\n\n"
+                f"もし引き続き応援いただける場合は、再度 oshipay.me からお手続きいただけますと幸いです。\n\n"
                 f"--\noshipay\n{BASE_URL}"
             )
             send_email(sup_email, subject, body)
@@ -163,12 +163,12 @@ for row in expired_targets:
     # クリエイターへキャンセルメール
     if creator_email:
         try:
-            subject = f"【oshipay】応援チケットが期限切れキャンセルになりました"
+            subject = f"【oshipay】応援チケットがキャンセルになりました"
             body = (
                 f"{creator_name}さん\n\n"
-                f"以下の応援チケットが支払い期限切れによりキャンセルとなりました。\n\n"
+                f"サポーターから期限内に応援金が支払われなかったため、以下の応援チケットがキャンセルとなりました。\n\n"
                 f"💰 金額: {amount:,}円\n\n"
-                f"口座登録済みのため、今後は応援が即時決済されます。\n\n"
+                f"今後サポーターから新たに応援金が届いた場合には、口座へ入金されます。\n引き続きよろしくお願いします！\n\n"
                 f"--\noshipay\n{BASE_URL}"
             )
             send_email(creator_email, subject, body)
