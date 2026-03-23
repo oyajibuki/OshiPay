@@ -108,7 +108,9 @@ ALTER TABLE public.creators ADD COLUMN IF NOT EXISTS payout_enabled BOOLEAN DEFA
 -- ========================================
 -- 5. インデックス
 -- ========================================
-ALTER TABLE public.pending_supports ADD COLUMN IF NOT EXISTS reminded_at TIMESTAMPTZ;
+ALTER TABLE public.pending_supports ADD COLUMN IF NOT EXISTS reminded_at    TIMESTAMPTZ;
+ALTER TABLE public.pending_supports ADD COLUMN IF NOT EXISTS reservation_no INTEGER;
+ALTER TABLE public.pending_supports ADD COLUMN IF NOT EXISTS locked_rank    INTEGER;
 
 CREATE INDEX IF NOT EXISTS idx_supports_supporter_id ON public.supports(supporter_id);
 CREATE INDEX IF NOT EXISTS idx_creators_slug         ON public.creators(slug);

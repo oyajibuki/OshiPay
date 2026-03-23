@@ -397,15 +397,18 @@ def get_db() -> Client:
         st.secrets["SUPABASE_KEY"],
     )
 
-def add_support(support_id: str, creator_acct: str, creator_name: str, amount: int, message: str, supporter_id: str = None) -> None:
+def add_support(support_id: str, creator_acct: str, creator_name: str, amount: int, message: str, supporter_id: str = None, locked_rank: int = None) -> None:
     """応援記録を追加（support_idのUNIQUE制約で重複は自動無視）"""
     try:
-        # このクリエイターへの何番目の応援かを計算
-        try:
-            rank_resp = get_db().table("supports").select("id").eq("creator_acct", creator_acct).execute()
-            creator_rank = len(rank_resp.data) + 1
-        except Exception:
-            creator_rank = 1
+        # creator_rank: locked_rank（72時間予約経由）があればそれを使う。なければ動的計算
+        if locked_rank and int(locked_rank) > 0:
+            creator_rank = int(locked_rank)
+        else:
+            try:
+                rank_resp = get_db().table("supports").select("id").eq("creator_acct", creator_acct).execute()
+                creator_rank = len(rank_resp.data) + 1
+            except Exception:
+                creator_rank = 1
         data = {
             "support_id": support_id,
             "creator_acct": creator_acct,
@@ -736,10 +739,12 @@ if page == "pay_pending":
         except Exception:
             pass
 
-    _pp_creator_acct = _prow.get("creator_acct", "")
-    _pp_amount       = _prow.get("amount", 0)
-    _pp_message      = _prow.get("message", "")
-    _pp_sup_id       = _prow.get("supporter_id", "")
+    _pp_creator_acct  = _prow.get("creator_acct", "")
+    _pp_amount        = _prow.get("amount", 0)
+    _pp_message       = _prow.get("message", "")
+    _pp_sup_id        = _prow.get("supporter_id", "")
+    _pp_locked_rank   = _prow.get("locked_rank") or ""
+    _pp_res_no        = _prow.get("reservation_no") or ""
 
     # クリエイター情報取得
     try:
@@ -778,6 +783,8 @@ if page == "pay_pending":
                 f"&s_sup_id={_pp_sup_id}"
                 f"&s_email={_pp_email_enc}"
                 f"&s_pid={_pid}"
+                f"&s_locked_rank={_pp_locked_rank}"
+                f"&s_res_no={_pp_res_no}"
                 f"&s_session={{CHECKOUT_SESSION_ID}}"
             )
             _pp_checkout = stripe.checkout.Session.create(
@@ -813,7 +820,9 @@ if page == "success":
     s_sup_name = params.get("s_sup_name", "")
     s_email    = params.get("s_email", "")
     s_session_id = params.get("s_session", "")
-    s_pid      = params.get("s_pid", "")  # pending_supports.id（72時間予約経由の場合）
+    s_pid         = params.get("s_pid", "")          # pending_supports.id（72時間予約経由の場合）
+    s_locked_rank = params.get("s_locked_rank", "")  # 予約順メダル保証用ランク
+    s_res_no      = params.get("s_res_no", "")       # 仮番号（表示用）
 
     # ── 応援金額のパース ──
     try:
@@ -868,7 +877,8 @@ if page == "success":
 
     # ── 応援記録を Supabase に保存（冪等: s_sid があれば1回のみ） ──
     if s_sid and s_acct and s_amt > 0:
-        add_support(s_sid, s_acct, s_name, s_amt, s_msg, s_sup_id)
+        _locked_rank_int = int(s_locked_rank) if s_locked_rank and str(s_locked_rank).isdigit() else None
+        add_support(s_sid, s_acct, s_name, s_amt, s_msg, s_sup_id, locked_rank=_locked_rank_int)
 
     # ── support_id を localStorage の履歴に追記 ＋ 名前・IDを保存 ──
     if s_sid:
@@ -1973,12 +1983,19 @@ if page == "support" and support_user:
                         st.stop()
                 else:
                     _pend_sup_id, _ = get_or_create_supporter_by_email(_pend_email_lc, sup_display_name)
+                # このクリエイターへの通算予約番号を計算（キャンセル済み含む全件）
+                try:
+                    _res_cnt = get_db().table("pending_supports").select("id", count="exact").eq("creator_acct", connect_acct).execute()
+                    _res_no = (_res_cnt.count or 0) + 1
+                except Exception:
+                    _res_no = 1
                 _pend_row = {
                     "creator_acct": connect_acct,
                     "amount": int(st.session_state.amt),
                     "message": msg or "",
                     "contact_info": "",
                     "supporter_id": _pend_sup_id,
+                    "reservation_no": _res_no,
                 }
                 try:
                     _pend_row["supporter_email"] = _pend_email_lc
@@ -2004,7 +2021,16 @@ if page == "support" and support_user:
                         send_pending_reservation_creator_email(_notif_email, _notif_name, int(st.session_state.amt), msg or "", _dashboard_url)
                 except Exception:
                     pass
-                st.success(f"✅ {int(st.session_state.amt):,}円の応援を登録しました！クリエイターが口座登録次第ご連絡します。")
+                st.markdown(f"""
+                <div style="background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.4);border-radius:14px;padding:20px;text-align:center;margin-top:12px;">
+                    <div style="font-size:13px;color:rgba(240,240,245,0.6);margin-bottom:4px;">応援予約を受け付けました 🎫</div>
+                    <div style="font-size:38px;font-weight:900;color:#c4b5fd;">予約 #{_res_no}番</div>
+                    <div style="font-size:13px;color:rgba(240,240,245,0.65);margin-top:8px;">
+                        クリエイターが口座登録を完了次第、お支払いURLをメールでお送りします。<br>
+                        <span style="color:#fbbf24;font-weight:700;">72時間以内にお支払いください。</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
                 st.balloons()
             except Exception as _pe:
                 st.error(f"エラー: {_pe}")
@@ -2906,6 +2932,14 @@ else: # Dashboard
                     # ── 初めてpayout_enabledになった瞬間: pending全件に支払いURLメール送信 ──
                     if not _prev_payout:
                         try:
+                            # ── locked_rank を確定（既存support数 + 予約順で固定）──
+                            _exist_cnt = len(get_db().table("supports").select("id").eq("creator_acct", acct_id).execute().data or [])
+                            _pend_for_rank = get_db().table("pending_supports").select("id,reservation_no").eq("creator_acct", acct_id).eq("status", "pending").order("reservation_no").execute().data or []
+                            for _ri, _rp in enumerate(_pend_for_rank):
+                                try:
+                                    get_db().table("pending_supports").update({"locked_rank": _exist_cnt + _ri + 1}).eq("id", _rp["id"]).execute()
+                                except Exception:
+                                    pass
                             _pend_notify = get_db().table("pending_supports").select("*").eq("creator_acct", acct_id).eq("status", "pending").execute()
                             _pend_list = _pend_notify.data or []
                             _sent_count = 0
