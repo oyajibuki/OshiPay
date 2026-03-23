@@ -195,7 +195,7 @@ def send_pending_payment_url_email(to_email: str, creator_name: str, amount: int
         f"💰 応援金額: {amount:,}円\n\n"
         f"🔗 支払いURL:\n{pay_url}\n\n"
         f"⏰ 有効期限: {expires_str}\n"
-        f"72時間以内に支払いが完了しない場合には予約キャンセルとなります。\n\n"
+        f"期限を過ぎると自動的にキャンセルとなります。\n\n"
         f"--\noshipay\n{BASE_URL}"
     )
     return _send_email(to_email, subject, body)
@@ -218,15 +218,17 @@ def send_pending_reservation_supporter_email(to_email: str, creator_name: str, a
     )
     return _send_email(to_email, subject, body)
 
-def send_pending_reservation_creator_email(to_email: str, creator_name: str, amount: int, message: str, dashboard_url: str) -> tuple[bool, str]:
+def send_pending_reservation_creator_email(to_email: str, creator_name: str, amount: int, message: str, dashboard_url: str, expires_str: str = "") -> tuple[bool, str]:
     """仮予約時にクリエイターへ送る通知メール（メッセージ内容は口座登録完了後に開放）"""
     subject = f"【oshipay】応援の仮予約が届きました！口座登録をお急ぎください"
     msg_hint = "応援メッセージ: あり（口座登録完了後に内容を確認できます）" if message else "応援メッセージ: なし"
+    exp_line = f"⏰ 支払い期限: {expires_str}\n" if expires_str else ""
     body = (
         f"{creator_name}さん\n\n"
         f"oshipayに応援の仮予約が届きました！\n\n"
         f"💰 金額: {amount:,}円\n"
-        f"💬 {msg_hint}\n\n"
+        f"💬 {msg_hint}\n"
+        f"{exp_line}\n"
         f"⚠️ 72時間以内に口座登録を完了しないと自動キャンセルになります。\n\n"
         f"👉 口座登録はこちら:\n{dashboard_url}\n\n"
         f"--\noshipay\n{BASE_URL}"
@@ -2029,7 +2031,9 @@ if page == "support" and support_user:
                     _notif_name  = (_notif_cr.data or {}).get("display_name", support_name)
                     if _notif_email:
                         _dashboard_url = f"{BASE_URL}?page=dashboard&acct={connect_acct}"
-                        send_pending_reservation_creator_email(_notif_email, _notif_name, int(st.session_state.amt), msg or "", _dashboard_url)
+                        _pend_exp_jst = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=72)).astimezone(datetime.timezone(datetime.timedelta(hours=9)))
+                        _pend_exp_str = _pend_exp_jst.strftime("%Y/%m/%d %H:%M（JST）")
+                        send_pending_reservation_creator_email(_notif_email, _notif_name, int(st.session_state.amt), msg or "", _dashboard_url, _pend_exp_str)
                 except Exception:
                     pass
                 st.markdown(f"""
