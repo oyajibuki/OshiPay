@@ -122,9 +122,16 @@ def _send_email(to_email: str, subject: str, body: str, attachments: list = None
     except Exception as e:
         return False, str(e)
 
-def send_support_email(to_email, creator_name, amount, message):
+def send_support_email(to_email, creator_name, amount, message, supporter_name=""):
     subject = f"{creator_name}さんに応援が届きました！ (oshipay)"
-    body = f"{creator_name}さん\n\noshipayを通じて応援が届きました！\n\n💰 応援金額: {amount:,}円\n💬 メッセージ:\n{message if message else '（なし）'}\n\n--\noshipay\n{BASE_URL}"
+    sup_disp = supporter_name.strip() or "匿名"
+    body = (
+        f"{creator_name}さん\n\n"
+        f"{sup_disp}さんからoshipayを通じて応援が届きました！\n\n"
+        f"💰 応援金額: {amount:,}円\n"
+        f"💬 メッセージ:\n{message if message else '（なし）'}\n\n"
+        f"--\noshipay\n{BASE_URL}"
+    )
     return _send_email(to_email, subject, body)
 
 def send_qr_email(to_email: str, acct_id: str, support_url: str, qr_bytes: bytes) -> tuple[bool, str]:
@@ -147,9 +154,18 @@ def send_welcome_email(to_email: str, display_name: str, supporter_id: str) -> t
     )
     return _send_email(to_email, subject, body)
 
-def send_acct_id_email(to_email: str, acct_id: str) -> tuple[bool, str]:
+def send_acct_id_email(to_email: str, acct_id: str, display_name: str = "") -> tuple[bool, str]:
     subject = "【oshipay】クリエイターIDのご確認"
-    body = f"oshipayをご利用いただきありがとうございます。\n\nダッシュボードへのログインに必要なIDをお送りします。\n\n🔑 クリエイターID: {acct_id}\n\nこのIDは大切に保管してください。\n\nダッシュボードURL:\n{BASE_URL}?page=dashboard&acct={acct_id}\n\n--\noshipay\n{BASE_URL}"
+    name_line = f"{display_name.strip()}さん\n\n" if display_name.strip() else ""
+    body = (
+        f"{name_line}"
+        f"oshipayをご利用いただきありがとうございます。\n\n"
+        f"ダッシュボードへのログインに必要なIDをお送りします。\n\n"
+        f"🔑 クリエイターID: {acct_id}\n\n"
+        f"このIDは大切に保管してください。\n\n"
+        f"ダッシュボードURL:\n{BASE_URL}?page=dashboard&acct={acct_id}\n\n"
+        f"--\noshipay\n{BASE_URL}"
+    )
     return _send_email(to_email, subject, body)
 
 def get_or_create_supporter_by_email(email: str, display_name: str = "") -> tuple[str, bool]:
@@ -166,10 +182,12 @@ def get_or_create_supporter_by_email(email: str, display_name: str = "") -> tupl
     get_db().table("supporters").insert({"supporter_id": new_sid, "email": email_lc, "display_name": _disp}).execute()
     return new_sid, True
 
-def send_support_complete_email(to_email: str, creator_name: str, amount: int, sup_id: str) -> tuple[bool, str]:
+def send_support_complete_email(to_email: str, creator_name: str, amount: int, sup_id: str, display_name: str = "") -> tuple[bool, str]:
     subject = f"【oshipay】{creator_name}さんへの応援が完了しました！"
     dashboard_url = f"{BASE_URL}?page=supporter_dashboard&sid={sup_id}"
+    sup_disp = display_name.strip() or "匿名"
     body = (
+        f"{sup_disp}さん\n\n"
         f"応援ありがとうございます！\n\n"
         f"✅ 応援内容\n"
         f"  クリエーター: {creator_name}\n"
@@ -186,9 +204,11 @@ def send_registration_otp_email(to_email: str, otp: str) -> tuple[bool, str]:
     body = f"oshipayへようこそ！\n\n以下の6桁のコードを入力して、メールアドレスを確認してください。\n\n確認コード: {otp}\n\nこのコードは5分間有効です。\n登録を依頼していない場合は、このメールを無視してください。\n\n--\noshipay\n{BASE_URL}"
     return _send_email(to_email, subject, body)
 
-def send_pending_payment_url_email(to_email: str, creator_name: str, amount: int, pay_url: str, expires_str: str) -> tuple[bool, str]:
+def send_pending_payment_url_email(to_email: str, creator_name: str, amount: int, pay_url: str, expires_str: str, display_name: str = "") -> tuple[bool, str]:
     subject = f"【oshipay】{creator_name}さんへの応援の支払いが可能になりました"
+    sup_disp = display_name.strip() or "匿名"
     body = (
+        f"{sup_disp}さん\n\n"
         f"お待たせしました！\n\n"
         f"{creator_name}さんが口座登録を完了しました。\n"
         f"以下のURLから応援金額をお支払いください。\n\n"
@@ -200,11 +220,13 @@ def send_pending_payment_url_email(to_email: str, creator_name: str, amount: int
     )
     return _send_email(to_email, subject, body)
 
-def send_pending_reservation_supporter_email(to_email: str, creator_name: str, amount: int, reservation_no: int = None) -> tuple[bool, str]:
+def send_pending_reservation_supporter_email(to_email: str, creator_name: str, amount: int, reservation_no: int = None, display_name: str = "") -> tuple[bool, str]:
     """仮予約時にサポーターへ送る確認メール"""
     subject = f"【oshipay】{creator_name}さんへの応援を受け付けました"
     res_line = f"🎫 予約番号: #{reservation_no}\n" if reservation_no else ""
+    sup_disp = display_name.strip() or "匿名"
     body = (
+        f"{sup_disp}さん\n\n"
         f"応援ありがとうございます！\n\n"
         f"以下の内容で仮予約を受け付けました。\n\n"
         f"{res_line}"
@@ -218,14 +240,15 @@ def send_pending_reservation_supporter_email(to_email: str, creator_name: str, a
     )
     return _send_email(to_email, subject, body)
 
-def send_pending_reservation_creator_email(to_email: str, creator_name: str, amount: int, message: str, dashboard_url: str, expires_str: str = "") -> tuple[bool, str]:
+def send_pending_reservation_creator_email(to_email: str, creator_name: str, amount: int, message: str, dashboard_url: str, expires_str: str = "", supporter_name: str = "") -> tuple[bool, str]:
     """仮予約時にクリエイターへ送る通知メール（メッセージ内容は口座登録完了後に開放）"""
     subject = f"【oshipay】応援の仮予約が届きました！口座登録をお急ぎください"
     msg_hint = "応援メッセージ: あり（口座登録完了後に内容を確認できます）" if message else "応援メッセージ: なし"
     exp_line = f"⏰ 口座登録期限: {expires_str}\n" if expires_str else ""
+    sup_disp = supporter_name.strip() or "匿名"
     body = (
         f"{creator_name}さん\n\n"
-        f"oshipayに応援の仮予約が届きました！\n\n"
+        f"{sup_disp}さんからoshipayに応援の仮予約が届きました！\n\n"
         f"💰 金額: {amount:,}円\n"
         f"💬 {msg_hint}\n"
         f"{exp_line}\n"
@@ -872,7 +895,7 @@ if page == "success":
     # ── 応援完了メールをサポーターへ送信 ──
     if s_email and s_sup_id and s_name and s_amt > 0:
         try:
-            send_support_complete_email(s_email.strip().lower(), s_name, s_amt, s_sup_id)
+            send_support_complete_email(s_email.strip().lower(), s_name, s_amt, s_sup_id, display_name=s_sup_name)
         except Exception:
             pass
 
@@ -884,7 +907,7 @@ if page == "success":
             if _stripe_email:
                 _stripe_email = _stripe_email.strip().lower()
                 get_db().table("supporters").update({"email": _stripe_email}).eq("supporter_id", s_sup_id).is_("email", "null").execute()
-                send_support_complete_email(_stripe_email, s_name, s_amt, s_sup_id)
+                send_support_complete_email(_stripe_email, s_name, s_amt, s_sup_id, display_name=s_sup_name)
         except Exception:
             pass
 
@@ -941,7 +964,7 @@ if page == "success":
             acct_info = stripe.Account.retrieve(s_stripe_acct)
             creator_email = acct_info.get("email", "")
             if creator_email:
-                ok, err = send_support_email(creator_email, s_name, s_amt, s_msg)
+                ok, err = send_support_email(creator_email, s_name, s_amt, s_msg, supporter_name=s_sup_name)
                 if not ok:
                     st.error(f"⚠️ 通知メールの送信に失敗しました。\nエラー内容: {err}")
         except Exception:
@@ -1156,7 +1179,7 @@ if page == "reply_view":
         </div>
         """, unsafe_allow_html=True)
         rv_pass = st.text_input("パスワード", type="password", key="rv_pass")
-        if st.button("🔓 ロックを解除", type="primary", use_container_width=True):
+        if st.button("🔓 ログイン", type="primary", use_container_width=True):
             if verify_creator(rv_acct, rv_pass):
                 st.session_state["reply_auth"] = rv_acct
                 st.rerun()
@@ -1180,6 +1203,10 @@ if page == "reply_view":
         st.rerun()
 
     supports = get_supports_for_creator(rv_acct)
+
+    # supporter display_name マップを事前取得
+    _rv_all_sup_ids = list({s["supporter_id"] for s in supports if s.get("supporter_id")})
+    _rv_sup_name_map = get_supporters_map(_rv_all_sup_ids) if _rv_all_sup_ids else {}
 
     # pending_supports も取得（口座登録済みなら全内容開放）
     _rv_pending = []
@@ -1247,21 +1274,26 @@ if page == "reply_view":
         has_reply = bool(record["reply_emoji"] or record["reply_text"])
         badge_color = "#22c55e" if has_reply else "#f97316"
         badge_text = "✅ 返信済" if has_reply else "⏳ 未返信"
+        _rv_sup_id = record.get("supporter_id", "")
+        _rv_sup_disp = (_rv_sup_name_map.get(_rv_sup_id) or "").strip() or "匿名"
 
         st.markdown(f"""
         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
                     border-radius:14px;padding:18px;margin-bottom:14px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                 <div style="font-size:22px;font-weight:900;
                             background:linear-gradient(135deg,#8b5cf6,#ec4899);
                             -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-                    {amt_disp}
+                    {amt_disp}円
                 </div>
                 <span style="font-size:11px;font-weight:700;color:{badge_color};
                              background:rgba(255,255,255,0.06);border-radius:9999px;
                              padding:3px 10px;border:1px solid {badge_color}40;">
                     {badge_text}
                 </span>
+            </div>
+            <div style="font-size:14px;font-weight:700;color:#c4b5fd;margin-bottom:8px;">
+                👤 {_rv_sup_disp}さん
             </div>
             <div style="font-size:13px;color:rgba(240,240,245,0.75);margin-bottom:6px;">
                 💬 {msg_disp}
@@ -2021,7 +2053,7 @@ if page == "support" and support_user:
                     get_db().table("pending_supports").insert(_pend_row).execute()
                 # ── サポーターへ仮予約確認メール ──
                 try:
-                    send_pending_reservation_supporter_email(_pend_email_lc, support_name, int(st.session_state.amt), _res_no)
+                    send_pending_reservation_supporter_email(_pend_email_lc, support_name, int(st.session_state.amt), _res_no, display_name=sup_display_name)
                 except Exception:
                     pass
                 # ── クリエイターへ仮予約通知メール ──
@@ -2033,7 +2065,7 @@ if page == "support" and support_user:
                         _dashboard_url = f"{BASE_URL}?page=dashboard&acct={connect_acct}"
                         _pend_exp_jst = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=72)).astimezone(datetime.timezone(datetime.timedelta(hours=9)))
                         _pend_exp_str = _pend_exp_jst.strftime("%Y/%m/%d %H:%M（JST）")
-                        send_pending_reservation_creator_email(_notif_email, _notif_name, int(st.session_state.amt), msg or "", _dashboard_url, _pend_exp_str)
+                        send_pending_reservation_creator_email(_notif_email, _notif_name, int(st.session_state.amt), msg or "", _dashboard_url, _pend_exp_str, supporter_name=sup_display_name)
                 except Exception:
                     pass
                 st.markdown(f"""
@@ -2959,6 +2991,9 @@ else: # Dashboard
                             _pend_list = _pend_notify.data or []
                             _sent_count = 0
                             _creator_display = _cr_data.get("display_name") or _cr_data.get("name") or acct_id
+                            # supporter display_name をバッチ取得
+                            _pn_sup_ids = [_pn.get("supporter_id") for _pn in _pend_list if _pn.get("supporter_id")]
+                            _pn_sup_map = get_supporters_map(_pn_sup_ids) if _pn_sup_ids else {}
                             for _pn in _pend_list:
                                 _pn_email = _pn.get("supporter_email", "")
                                 if not _pn_email:
@@ -2973,7 +3008,8 @@ else: # Dashboard
                                     _exp_str = _exp_jst.strftime("%Y/%m/%d %H:%M（JST）")
                                 except Exception:
                                     _exp_str = "72時間以内"
-                                send_pending_payment_url_email(_pn_email, _creator_display, _pn["amount"], _pay_url, _exp_str)
+                                _pn_disp_name = _pn_sup_map.get(_pn.get("supporter_id", ""), "") or ""
+                                send_pending_payment_url_email(_pn_email, _creator_display, _pn["amount"], _pay_url, _exp_str, display_name=_pn_disp_name)
                                 _sent_count += 1
                             if _sent_count > 0:
                                 st.toast(f"📧 {_sent_count}名のサポーターに支払いURLを送信しました", icon="✅")

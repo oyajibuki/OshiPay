@@ -40,6 +40,16 @@ def get_creator_info(creator_acct: str) -> dict:
     except Exception:
         return {}
 
+def get_supporter_display_name(supporter_id: str) -> str:
+    """supporter_id から display_name を取得。なければ '匿名' を返す"""
+    if not supporter_id:
+        return "匿名"
+    try:
+        r = db.table("supporters").select("display_name").eq("supporter_id", supporter_id).maybe_single().execute()
+        return (r.data or {}).get("display_name", "") or "匿名"
+    except Exception:
+        return "匿名"
+
 # ══════════════════════════════════════════════════════
 # ④ 24時間前リマインドメール
 # ══════════════════════════════════════════════════════
@@ -80,12 +90,14 @@ for row in remind_targets:
     cr = get_creator_info(creator_acct)
     creator_name = cr.get("display_name") or cr.get("name") or "クリエイター"
     pay_url = f"{BASE_URL}?page=pay_pending&pid={pid}&email={urllib.parse.quote(sup_email)}"
+    sup_disp = get_supporter_display_name(sup_id)
 
     # サポーターへリマインドメール
     if sup_email:
         try:
             subject = f"【oshipay】⏰ {creator_name}さんへの応援 支払い期限まで24時間を切りました"
             body = (
+                f"{sup_disp}さん\n\n"
                 f"応援ありがとうございます！\n\n"
                 f"{creator_name}さんへの応援の支払い期限まで24時間を切りました。\n\n"
                 f"💰 応援金額: {amount:,}円\n"
@@ -136,6 +148,8 @@ for row in expired_targets:
     cr = get_creator_info(creator_acct)
     creator_name  = cr.get("display_name") or cr.get("name") or "クリエイター"
     creator_email = cr.get("email", "")
+    _cancel_sup_id = row.get("supporter_id", "")
+    _cancel_sup_disp = get_supporter_display_name(_cancel_sup_id)
 
     # status を cancelled に更新
     try:
@@ -149,6 +163,7 @@ for row in expired_targets:
         try:
             subject = f"【oshipay】{creator_name}さんへの応援金がキャンセルされました"
             body = (
+                f"{_cancel_sup_disp}さん\n\n"
                 f"お知らせです。\n\n"
                 f"{creator_name}さんへの応援金について、期限内にお支払いが完了しなかったため、キャンセルとなりました。\n\n"
                 f"💰 応援金額: {amount:,}円\n\n"
@@ -166,7 +181,7 @@ for row in expired_targets:
             subject = f"【oshipay】応援チケットがキャンセルになりました"
             body = (
                 f"{creator_name}さん\n\n"
-                f"サポーターから期限内に応援金が支払われなかったため、以下の応援チケットがキャンセルとなりました。\n\n"
+                f"{_cancel_sup_disp}さんから期限内に応援金が支払われなかったため、以下の応援チケットがキャンセルとなりました。\n\n"
                 f"💰 金額: {amount:,}円\n\n"
                 f"今後サポーターから新たに応援金が届いた場合には、口座へ入金されます。\n引き続きよろしくお願いします！\n\n"
                 f"--\noshipay\n{BASE_URL}"
