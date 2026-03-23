@@ -2923,7 +2923,7 @@ else: # Dashboard
         if st.session_state.get("creator_auth") != acct_id:
             st.warning("このダッシュボードを開くにはパスワードが必要です。")
             auth_pass = st.text_input("パスワードを入力", type="password", key="auth_pass")
-            if st.button("ロックを解除", type="primary"):
+            if st.button("🔓 ログイン", type="primary"):
                 try:
                     resp = get_db().table("creators").select("*").eq("acct_id", acct_id).execute()
                 except Exception:
