@@ -18,6 +18,10 @@ import io
 import asyncio
 import qrcode
 import discord
+from dotenv import load_dotenv
+
+# .envファイルを自動読み込み
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 from discord import app_commands
 from discord.ext import tasks
 from supabase import create_client
