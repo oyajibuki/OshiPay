@@ -191,12 +191,14 @@ def send_pending_payment_url_email(to_email: str, creator_name: str, amount: int
     )
     return _send_email(to_email, subject, body)
 
-def send_pending_reservation_supporter_email(to_email: str, creator_name: str, amount: int) -> tuple[bool, str]:
+def send_pending_reservation_supporter_email(to_email: str, creator_name: str, amount: int, reservation_no: int = None) -> tuple[bool, str]:
     """仮予約時にサポーターへ送る確認メール"""
     subject = f"【oshipay】{creator_name}さんへの応援を受け付けました"
+    res_line = f"🎫 予約番号: #{reservation_no}\n" if reservation_no else ""
     body = (
         f"応援ありがとうございます！\n\n"
         f"以下の内容で仮予約を受け付けました。\n\n"
+        f"{res_line}"
         f"💰 応援金額: {amount:,}円\n"
         f"👤 クリエイター: {creator_name}\n\n"
         f"現在、{creator_name}さんはまだ口座登録が完了していません。\n"
@@ -2008,7 +2010,7 @@ if page == "support" and support_user:
                     get_db().table("pending_supports").insert(_pend_row).execute()
                 # ── サポーターへ仮予約確認メール ──
                 try:
-                    send_pending_reservation_supporter_email(_pend_email_lc, support_name, int(st.session_state.amt))
+                    send_pending_reservation_supporter_email(_pend_email_lc, support_name, int(st.session_state.amt), _res_no)
                 except Exception:
                     pass
                 # ── クリエイターへ仮予約通知メール ──
