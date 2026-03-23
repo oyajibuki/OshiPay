@@ -135,7 +135,16 @@ def send_qr_email(to_email: str, acct_id: str, support_url: str, qr_bytes: bytes
 
 def send_welcome_email(to_email: str, display_name: str, supporter_id: str) -> tuple[bool, str]:
     subject = "【oshipay】ご登録ありがとうございます"
-    body = f"{display_name} さん\n\noshipayへのご登録ありがとうございます！\n\n🎫 サポーターID: {supporter_id}\n\nこのIDはログイン時に必要です。大切に保管してください。\n\nこれからも推し活をお楽しみください！\n\n--\noshipay\n{BASE_URL}"
+    dashboard_url = f"{BASE_URL}?page=supporter_dashboard&sid={supporter_id}"
+    body = (
+        f"{display_name} さん\n\n"
+        f"oshipayへのご登録ありがとうございます！\n\n"
+        f"🎫 サポーターID: {supporter_id}\n\n"
+        f"このIDはログイン時に必要です。大切に保管してください。\n\n"
+        f"📊 ダッシュボード（応援履歴・アカウント管理）:\n{dashboard_url}\n\n"
+        f"これからも推し活をお楽しみください！\n\n"
+        f"--\noshipay\n{BASE_URL}"
+    )
     return _send_email(to_email, subject, body)
 
 def send_acct_id_email(to_email: str, acct_id: str) -> tuple[bool, str]:
@@ -186,7 +195,7 @@ def send_pending_payment_url_email(to_email: str, creator_name: str, amount: int
         f"💰 応援金額: {amount:,}円\n\n"
         f"🔗 支払いURL:\n{pay_url}\n\n"
         f"⏰ 有効期限: {expires_str}\n"
-        f"期限を過ぎると自動的にキャンセルとなります。\n\n"
+        f"72時間以内に支払いが完了しない場合には予約キャンセルとなります。\n\n"
         f"--\noshipay\n{BASE_URL}"
     )
     return _send_email(to_email, subject, body)
