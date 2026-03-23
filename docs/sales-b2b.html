@@ -11,27 +11,29 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .tab-btn.active { background: #7c3aed; color: white; }
+    .logo-gradient { background: linear-gradient(to right, #9333ea, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .tagline-gradient { background: linear-gradient(to right, #9333ea, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     @media print {
       .no-print { display: none !important; }
       .print-page { page-break-after: always; }
     }
   </style>
 </head>
-<body class="bg-gray-950 text-white min-h-screen">
+<body class="bg-[#fce4ef] text-slate-800 min-h-screen">
 
   <!-- ナビ -->
-  <div class="no-print sticky top-0 z-50 bg-gray-900 border-b border-gray-800 px-4 py-3">
+  <div class="no-print sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-purple-200/50 px-4 py-3">
     <div class="max-w-4xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <span class="text-pink-400 font-black text-lg">OshiPay</span>
-        <span class="text-gray-500 text-sm">営業キット</span>
+        <span class="logo-gradient font-black text-lg">oshipay</span>
+        <span class="text-slate-400 text-sm">営業キット</span>
       </div>
       <div class="flex gap-2 flex-wrap">
-        <button onclick="showTab('pamphlet')" class="tab-btn active px-3 py-1.5 rounded-lg text-sm font-bold border border-purple-600 text-purple-300 transition-all">📄 パンフレット</button>
-        <button onclick="showTab('script-tel')" class="tab-btn px-3 py-1.5 rounded-lg text-sm font-bold border border-gray-600 text-gray-300 transition-all">📞 電話スクリプト</button>
-        <button onclick="showTab('script-sns')" class="tab-btn px-3 py-1.5 rounded-lg text-sm font-bold border border-gray-600 text-gray-300 transition-all">📱 SNS DM</button>
-        <button onclick="showTab('script-email')" class="tab-btn px-3 py-1.5 rounded-lg text-sm font-bold border border-gray-600 text-gray-300 transition-all">✉️ メール</button>
-        <button onclick="showTab('faq')" class="tab-btn px-3 py-1.5 rounded-lg text-sm font-bold border border-gray-600 text-gray-300 transition-all">❓ FAQ</button>
+        <button onclick="showTab('pamphlet')" class="tab-btn active px-3 py-1.5 rounded-lg text-sm font-bold border border-purple-400 text-purple-700 transition-all">📄 パンフレット</button>
+        <button onclick="showTab('script-tel')" class="tab-btn px-3 py-1.5 rounded-lg text-sm font-bold border border-slate-300 text-slate-600 transition-all">📞 電話スクリプト</button>
+        <button onclick="showTab('script-sns')" class="tab-btn px-3 py-1.5 rounded-lg text-sm font-bold border border-slate-300 text-slate-600 transition-all">📱 SNS DM</button>
+        <button onclick="showTab('script-email')" class="tab-btn px-3 py-1.5 rounded-lg text-sm font-bold border border-slate-300 text-slate-600 transition-all">✉️ メール</button>
+        <button onclick="showTab('faq')" class="tab-btn px-3 py-1.5 rounded-lg text-sm font-bold border border-slate-300 text-slate-600 transition-all">❓ FAQ</button>
       </div>
     </div>
   </div>
@@ -40,106 +42,106 @@
 
     <!-- ========== パンフレット ========== -->
     <div id="pamphlet" class="tab-content active print-page">
-      <div class="bg-gradient-to-br from-purple-900 via-slate-900 to-pink-900 rounded-3xl p-8 border border-purple-700/50 mb-6">
+      <div class="bg-white rounded-3xl p-8 border border-purple-100 shadow-xl mb-6">
         <!-- ヘッダー -->
-        <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center justify-between mb-6">
           <div>
-            <div class="text-3xl font-black text-white mb-1">oshipay</div>
-            <div class="text-pink-300 text-sm font-bold">推し活専用 デジタル投げ銭サービス</div>
+            <div class="text-3xl font-black logo-gradient mb-0.5">oshipay</div>
+            <div class="text-sm font-bold tagline-gradient">その感動、今すぐカタチに。</div>
           </div>
           <div class="text-right">
-            <div class="text-xs text-gray-400">oshipay.me</div>
-            <div class="text-xs text-gray-400">導入相談：あさぎり</div>
+            <div class="text-xs text-slate-400">oshipay.me</div>
+            <div class="text-xs text-slate-400">導入相談：あさぎり</div>
           </div>
         </div>
 
         <!-- キャッチ -->
-        <div class="text-center mb-8">
-          <h2 class="text-2xl md:text-3xl font-black text-white leading-tight mb-3">
-            スタッフへの<span class="text-pink-400">投げ銭</span>を<br>
+        <div class="text-center mb-8 py-6 bg-[#fce4ef] rounded-2xl">
+          <h2 class="text-2xl md:text-3xl font-black text-slate-800 leading-tight mb-3">
+            スタッフへの<span class="tagline-gradient">投げ銭</span>を<br>
             スマホ1つで受け取れる時代へ。
           </h2>
-          <p class="text-gray-300 text-sm">現金を持ち歩かないお客様が増えています。<br>OshiPayなら、QRコードを置くだけでファンからの応援が届きます。</p>
+          <p class="text-slate-500 text-sm">現金を持ち歩かないお客様が増えています。<br>OshiPayなら、QRコードを置くだけでファンからの応援が届きます。</p>
         </div>
 
         <!-- 3つのメリット -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div class="bg-white/10 rounded-2xl p-5 text-center border border-white/10">
+          <div class="bg-[#fce4ef] rounded-2xl p-5 text-center border border-purple-100">
             <div class="text-3xl mb-3">💰</div>
-            <h3 class="font-black text-white text-lg mb-2">スタッフ収入UP</h3>
-            <p class="text-sm text-gray-300">応援金額の<span class="text-green-400 font-black">86.4%</span>が<br>スタッフの手元に直接入ります。<br>モチベーション・定着率が向上。</p>
+            <h3 class="font-black text-slate-800 text-lg mb-2">スタッフ収入UP</h3>
+            <p class="text-sm text-slate-600">応援金額の<span class="text-green-600 font-black">86.4%</span>が<br>スタッフの手元に直接入ります。<br>モチベーション・定着率が向上。</p>
           </div>
-          <div class="bg-white/10 rounded-2xl p-5 text-center border border-white/10">
+          <div class="bg-[#fce4ef] rounded-2xl p-5 text-center border border-purple-100">
             <div class="text-3xl mb-3">📱</div>
-            <h3 class="font-black text-white text-lg mb-2">導入コスト0円</h3>
-            <p class="text-sm text-gray-300">専用機器・アプリ不要。<br>QRコードを印刷するだけ。<br><span class="text-yellow-400 font-bold">初期費用・月額料金なし。</span></p>
+            <h3 class="font-black text-slate-800 text-lg mb-2">導入コスト0円</h3>
+            <p class="text-sm text-slate-600">専用機器・アプリ不要。<br>QRコードを印刷するだけ。<br><span class="text-orange-500 font-bold">初期費用・月額料金なし。</span></p>
           </div>
-          <div class="bg-white/10 rounded-2xl p-5 text-center border border-white/10">
+          <div class="bg-[#fce4ef] rounded-2xl p-5 text-center border border-purple-100">
             <div class="text-3xl mb-3">🔒</div>
-            <h3 class="font-black text-white text-lg mb-2">安全・安心</h3>
-            <p class="text-sm text-gray-300">決済はStripe（世界最大）。<br>Amazonや楽天も採用する<br>信頼のインフラです。</p>
+            <h3 class="font-black text-slate-800 text-lg mb-2">安全・安心</h3>
+            <p class="text-sm text-slate-600">決済はStripe（世界最大）。<br>Amazonや楽天も採用する<br>信頼のインフラです。</p>
           </div>
         </div>
 
         <!-- 仕組み -->
-        <div class="bg-black/30 rounded-2xl p-6 mb-8 border border-white/10">
-          <h3 class="text-center font-black text-white text-lg mb-5">📖 使い方はたった3ステップ</h3>
+        <div class="bg-[#fce4ef] rounded-2xl p-6 mb-8 border border-purple-100">
+          <h3 class="text-center font-black text-slate-800 text-lg mb-5">📖 使い方はたった3ステップ</h3>
           <div class="flex flex-col md:flex-row items-center gap-4">
             <div class="flex-1 text-center">
-              <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-black text-white mx-auto mb-2">1</div>
-              <div class="font-bold text-white text-sm mb-1">スタッフがQRを準備</div>
-              <div class="text-xs text-gray-400">oshipay.meで1分で発行。<br>名刺・POPに印刷して置くだけ。</div>
+              <div class="w-10 h-10 bg-gradient-to-r from-purple-600 to-orange-500 rounded-full flex items-center justify-center font-black text-white mx-auto mb-2">1</div>
+              <div class="font-bold text-slate-800 text-sm mb-1">スタッフがQRを準備</div>
+              <div class="text-xs text-slate-500">oshipay.meで1分で発行。<br>名刺・POPに印刷して置くだけ。</div>
             </div>
-            <div class="text-gray-600 text-2xl hidden md:block">→</div>
+            <div class="text-purple-300 text-2xl hidden md:block">→</div>
             <div class="flex-1 text-center">
-              <div class="w-10 h-10 bg-pink-600 rounded-full flex items-center justify-center font-black text-white mx-auto mb-2">2</div>
-              <div class="font-bold text-white text-sm mb-1">お客様がスキャン</div>
-              <div class="text-xs text-gray-400">スマホカメラで読み込み。<br>アプリ不要・数秒で完了。</div>
+              <div class="w-10 h-10 bg-gradient-to-r from-purple-600 to-orange-500 rounded-full flex items-center justify-center font-black text-white mx-auto mb-2">2</div>
+              <div class="font-bold text-slate-800 text-sm mb-1">お客様がスキャン</div>
+              <div class="text-xs text-slate-500">スマホカメラで読み込み。<br>アプリ不要・数秒で完了。</div>
             </div>
-            <div class="text-gray-600 text-2xl hidden md:block">→</div>
+            <div class="text-purple-300 text-2xl hidden md:block">→</div>
             <div class="flex-1 text-center">
-              <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center font-black text-white mx-auto mb-2">3</div>
-              <div class="font-bold text-white text-sm mb-1">スタッフに直接入金</div>
-              <div class="text-xs text-gray-400">Apple Pay/クレカで即決済。<br>86.4%がスタッフへ自動振込。</div>
+              <div class="w-10 h-10 bg-gradient-to-r from-purple-600 to-orange-500 rounded-full flex items-center justify-center font-black text-white mx-auto mb-2">3</div>
+              <div class="font-bold text-slate-800 text-sm mb-1">スタッフに直接入金</div>
+              <div class="text-xs text-slate-500">Apple Pay/クレカで即決済。<br>86.4%がスタッフへ自動振込。</div>
             </div>
           </div>
         </div>
 
         <!-- 競合比較 -->
         <div class="mb-8">
-          <h3 class="text-center font-black text-white text-lg mb-4">💡 既存サービスとの違い</h3>
+          <h3 class="text-center font-black text-slate-800 text-lg mb-4">💡 既存サービスとの違い</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
-                <tr class="border-b border-white/20">
-                  <th class="text-left py-2 px-3 text-gray-400">サービス</th>
-                  <th class="text-center py-2 px-3 text-gray-400">手数料</th>
-                  <th class="text-center py-2 px-3 text-gray-400">個人への直接支払</th>
-                  <th class="text-center py-2 px-3 text-gray-400">機器不要</th>
+                <tr class="border-b border-purple-100">
+                  <th class="text-left py-2 px-3 text-slate-500">サービス</th>
+                  <th class="text-center py-2 px-3 text-slate-500">手数料</th>
+                  <th class="text-center py-2 px-3 text-slate-500">個人への直接支払</th>
+                  <th class="text-center py-2 px-3 text-slate-500">機器不要</th>
                 </tr>
               </thead>
               <tbody>
-                <tr class="border-b border-white/10">
-                  <td class="py-2 px-3 font-bold text-white">🌸 OshiPay</td>
-                  <td class="text-center py-2 px-3 text-green-400 font-black">13.6%</td>
+                <tr class="border-b border-purple-100 bg-purple-50">
+                  <td class="py-2 px-3 font-black tagline-gradient">🌸 OshiPay</td>
+                  <td class="text-center py-2 px-3 text-green-600 font-black">13.6%</td>
                   <td class="text-center py-2 px-3">✅</td>
                   <td class="text-center py-2 px-3">✅</td>
                 </tr>
-                <tr class="border-b border-white/10">
-                  <td class="py-2 px-3 text-gray-300">SuperChat</td>
-                  <td class="text-center py-2 px-3 text-red-400">30〜50%</td>
-                  <td class="text-center py-2 px-3 text-gray-500">配信限定</td>
-                  <td class="text-center py-2 px-3">❌ アカウント必要</td>
+                <tr class="border-b border-slate-100">
+                  <td class="py-2 px-3 text-slate-600">SuperChat</td>
+                  <td class="text-center py-2 px-3 text-red-500">30〜50%</td>
+                  <td class="text-center py-2 px-3 text-slate-400">配信限定</td>
+                  <td class="text-center py-2 px-3 text-slate-400">❌ アカウント必要</td>
                 </tr>
-                <tr class="border-b border-white/10">
-                  <td class="py-2 px-3 text-gray-300">PayPay送金</td>
-                  <td class="text-center py-2 px-3 text-gray-300">0%</td>
+                <tr class="border-b border-slate-100">
+                  <td class="py-2 px-3 text-slate-600">PayPay送金</td>
+                  <td class="text-center py-2 px-3 text-slate-600">0%</td>
                   <td class="text-center py-2 px-3">✅</td>
-                  <td class="text-center py-2 px-3">❌ 双方アカウント必要</td>
+                  <td class="text-center py-2 px-3 text-slate-400">❌ 双方アカウント必要</td>
                 </tr>
                 <tr>
-                  <td class="py-2 px-3 text-gray-300">現金チップ</td>
-                  <td class="text-center py-2 px-3 text-gray-300">0%</td>
+                  <td class="py-2 px-3 text-slate-600">現金チップ</td>
+                  <td class="text-center py-2 px-3 text-slate-600">0%</td>
                   <td class="text-center py-2 px-3">✅</td>
                   <td class="text-center py-2 px-3 text-red-400">❌ 現金持ち歩き必要</td>
                 </tr>
@@ -150,23 +152,23 @@
 
         <!-- CTAと担当者 -->
         <div class="grid md:grid-cols-2 gap-4">
-          <div class="bg-pink-600/20 border border-pink-500/50 rounded-2xl p-5">
-            <h3 class="font-black text-white mb-3">🚀 まずは無料デモ体験</h3>
-            <p class="text-sm text-gray-300 mb-3">このカードのQRコードを今すぐスキャンしてみてください。実際の投げ銭体験ができます。</p>
-            <div class="bg-white rounded-xl p-3 text-center">
-              <div class="text-gray-800 text-xs font-bold mb-1">▼ スキャンして体験</div>
+          <div class="bg-[#fce4ef] border border-purple-200 rounded-2xl p-5">
+            <h3 class="font-black text-slate-800 mb-3">🚀 まずは無料デモ体験</h3>
+            <p class="text-sm text-slate-600 mb-3">このカードのQRコードを今すぐスキャンしてみてください。実際の投げ銭体験ができます。</p>
+            <div class="bg-white rounded-xl p-3 text-center border border-purple-100">
+              <div class="text-slate-500 text-xs font-bold mb-1">▼ スキャンして体験</div>
               <div class="text-4xl">📱</div>
-              <div class="text-gray-500 text-xs mt-1">oshipay.me</div>
+              <div class="text-slate-400 text-xs mt-1">oshipay.me</div>
             </div>
           </div>
-          <div class="bg-purple-600/20 border border-purple-500/50 rounded-2xl p-5">
-            <h3 class="font-black text-white mb-3">📞 お問い合わせ</h3>
+          <div class="bg-[#fce4ef] border border-purple-200 rounded-2xl p-5">
+            <h3 class="font-black text-slate-800 mb-3">📞 お問い合わせ</h3>
             <div class="space-y-2 text-sm">
-              <div class="flex items-center gap-2"><span class="text-purple-300">担当：</span><span class="text-white font-bold">あさぎり（OshiPay開発者）</span></div>
-              <div class="flex items-center gap-2"><span class="text-purple-300">Web：</span><span class="text-white">oshipay.me</span></div>
-              <div class="flex items-center gap-2"><span class="text-purple-300">X：</span><span class="text-white">@oshipay_jp（予定）</span></div>
+              <div class="flex items-center gap-2"><span class="text-purple-500">担当：</span><span class="text-slate-800 font-bold">あさぎり（OshiPay開発者）</span></div>
+              <div class="flex items-center gap-2"><span class="text-purple-500">Web：</span><span class="text-slate-700">oshipay.me</span></div>
+              <div class="flex items-center gap-2"><span class="text-purple-500">X：</span><span class="text-slate-700">@oshipay_jp（予定）</span></div>
             </div>
-            <div class="mt-4 bg-white/10 rounded-lg p-3 text-xs text-gray-300">
+            <div class="mt-4 bg-white/70 rounded-lg p-3 text-xs text-slate-500">
               💬 「導入について聞きたい」とDM・メッセージください。<br>翌日中にご返信します。
             </div>
           </div>
