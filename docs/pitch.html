@@ -2,15 +2,17 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>oshipay - Product Pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     html, body {
       height: 100%;
       margin: 0;
       background-color: #f8fafc;
-      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+      font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
     }
     .slide-container {
       display: flex;
@@ -25,7 +27,8 @@
     .slide {
       min-width: 100vw;
       width: 100vw;
-      height: 100vh;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
       flex-shrink: 0;
       scroll-snap-align: start;
       display: flex;
@@ -33,6 +36,10 @@
       justify-content: center;
       overflow-y: auto;
       padding: 2rem;
+      padding-top: max(2rem, env(safe-area-inset-top));
+      padding-bottom: max(3rem, env(safe-area-inset-bottom));
+      padding-left: max(2rem, env(safe-area-inset-left));
+      padding-right: max(2rem, env(safe-area-inset-right));
       position: relative;
       box-sizing: border-box;
     }
@@ -260,9 +267,10 @@
           </tbody>
         </table>
       </div>
-      <p class="mt-4 text-gray-600 font-bold text-center">
-        「手数料が高くても、規約違反に怯えず、ファンと安全に盛り上がれる場所」を提供します。
-      </p>
+      <div class="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200 text-sm text-gray-700 leading-relaxed">
+        <span class="font-bold text-purple-700">※ 比較対象はPayPayではなく、Patreon・FANBOXなど投げ銭専門サービスです。</span><br>
+        そこと比べると oshipay の<span class="font-bold text-green-700">86.4%還元は業界最高水準</span>。さらに規約クリア・匿名性・演出UXを兼ね備えた、クリエイター専用インフラです。
+      </div>
     </div>
     <div class="slide-number">5 / 11</div>
   </section>
@@ -319,8 +327,8 @@
             <div class="text-xs text-gray-400">完了予定</div>
           </div>
           <div class="flex-1">
-            <h3 class="font-bold text-lg mb-1">① SNS 202アカウントへのDM営業</h3>
-            <p class="text-gray-600 text-sm leading-relaxed mb-2">フリーランスに外注済み（¥23,210）。X：新人VTuber・歌い手 101件 ／ Instagram：インディーズアーティスト 101件。</p>
+            <h3 class="font-bold text-lg mb-1">① SNS 200アカウントへのDM営業</h3>
+            <p class="text-gray-600 text-sm leading-relaxed mb-2">フリーランスに外注済み（¥23,210）。X：新人VTuber・歌い手 100件 ／ Instagram：インディーズアーティスト 100件。</p>
             <div class="flex gap-3 flex-wrap">
               <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">返信率・登録率を計測中</span>
               <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">note第2話（3/29）でレポート予定</span>
@@ -336,7 +344,7 @@
             <div class="text-xs text-gray-400">〜3/31</div>
           </div>
           <div class="flex-1">
-            <h3 class="font-bold text-lg mb-1">② 秋葉原 メイドカフェ・ライブハウス B2B営業</h3>
+            <h3 class="font-bold text-lg mb-1">② 秋葉原 メイドカフェ・ライブハウス B2B営業（検討中）</h3>
             <p class="text-gray-600 text-sm leading-relaxed mb-2">個別クリエイターではなく<span class="font-bold text-gray-800">店長・オーナーへの一括提案</span>。1アポ獲得でスタッフ数人〜十数人に波及するため効率的。<br>事前アポ取得→デモ提示→導入合意の流れ。</p>
             <div class="flex gap-3 flex-wrap">
               <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">目標：5〜8店舗訪問</span>
@@ -354,7 +362,7 @@
           </div>
           <div class="flex-1">
             <h3 class="font-bold text-lg mb-1">③ note ドキュメンタリー連載（開発者視点）</h3>
-            <p class="text-gray-600 text-sm leading-relaxed mb-2">「不器用なオヤジ開発者がゼロから推し活決済を作る」という実録連載。第1話公開済み。DM200件の結果もリアルタイムでレポートし、<span class="font-bold text-gray-800">透明性とストーリーでファン・クリエイター双方を引きつける</span>。</p>
+            <p class="text-gray-600 text-sm leading-relaxed mb-2">「OshiPay開発者がゼロから推し活を事業にする」という実録連載。第1話公開済み。DM200件の結果もリアルタイムでレポートし、<span class="font-bold text-gray-800">透明性とストーリーでファン・クリエイター双方を引きつける</span>。</p>
             <div class="flex gap-3 flex-wrap">
               <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">第1話：3/22公開済み</span>
               <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">第2話：3/29予定（DM結果レポート）</span>
@@ -421,24 +429,24 @@
         <div class="bg-slate-800 p-8 rounded-xl border border-red-500/30 relative">
           <div class="absolute top-0 right-0 bg-red-500 text-white font-bold px-3 py-1 rounded-bl-lg rounded-tr-xl text-sm">BEFORE</div>
           <h3 class="font-bold text-2xl text-red-400 mb-4 flex items-center"><span class="mr-2">❌</span> 初期仮説の崩壊</h3>
-          <ul class="space-y-4 text-gray-300">
-            <li class="flex items-start"><span class="text-red-400 mr-2">・</span>知人5名、SNSのDM200名に利用を打診するも<strong>ほぼ全滅</strong>。</li>
-            <li class="flex items-start"><span class="text-red-400 mr-2">・</span>理由：「いきなり銀行口座やStripeの登録を求められても怖いし面倒」</li>
+          <ul class="space-y-4 text-gray-300 text-sm">
+            <li class="flex items-start"><span class="text-red-400 mr-2 mt-0.5 flex-shrink-0">・</span><span>知人5名、SNSのDM200名に利用を打診するも<strong>ほぼ全滅</strong></span></li>
+            <li class="flex items-start"><span class="text-red-400 mr-2 mt-0.5 flex-shrink-0">・</span><span>理由：「いきなり銀行口座やStripeの登録を求められても怖いし面倒」</span></li>
           </ul>
           <div class="mt-6 p-3 bg-red-900/30 rounded border border-red-800/50 text-sm text-red-200">
-            <strong>学び：</strong> クリエイター都合の「先払い（事前登録）」オンボーディングは機能しない。
+            <strong>学び：</strong>クリエイター都合の「先払い（事前登録）」オンボーディングは機能しない
           </div>
         </div>
         <div class="bg-slate-800 p-8 rounded-xl border border-green-500/50 relative shadow-[0_0_20px_rgba(34,197,94,0.1)]">
           <div class="absolute top-0 right-0 bg-green-500 text-white font-bold px-3 py-1 rounded-bl-lg rounded-tr-xl text-sm">AFTER</div>
           <h3 class="font-bold text-2xl text-green-400 mb-4 flex items-center"><span class="mr-2">💡</span> ピボット：仮想予約</h3>
-          <ul class="space-y-4 text-gray-300">
-            <li class="flex items-start"><span class="text-green-400 mr-2">・</span>登録はメールのみ。<strong>1分でQRを発行</strong>可能に。</li>
-            <li class="flex items-start"><span class="text-green-400 mr-2">・</span>ファンは未登録の相手にも「投げ銭の予約（保留）」が可能。</li>
-            <li class="flex items-start"><span class="text-green-400 mr-2">・</span><strong>「お金（熱量）が貯まってからStripe登録する」</strong>動線へ改修。</li>
+          <ul class="space-y-4 text-gray-300 text-sm">
+            <li class="flex items-start"><span class="text-green-400 mr-2 mt-0.5 flex-shrink-0">・</span><span>登録はメールのみ。<strong>1分でQRを発行</strong>可能に</span></li>
+            <li class="flex items-start"><span class="text-green-400 mr-2 mt-0.5 flex-shrink-0">・</span><span>ファンは未登録の相手にも「投げ銭の予約（保留）」が可能</span></li>
+            <li class="flex items-start"><span class="text-green-400 mr-2 mt-0.5 flex-shrink-0">・</span><span><strong>「お金（熱量）が貯まってからStripe登録」</strong>する動線へ改修</span></li>
           </ul>
           <div class="mt-6 p-3 bg-green-900/30 rounded border border-green-800/50 text-sm text-green-200">
-            <strong>成果：</strong> ハードルをゼロにし、人間の「もったいない」という欲をトリガーにする設計を獲得。
+            <strong>成果：</strong>ハードルをゼロにし、「もったいない」という欲をトリガーにする設計を獲得
           </div>
         </div>
       </div>
@@ -453,7 +461,7 @@
           <div class="text-xs text-gray-400 mt-1">口座登録完了</div>
         </div>
         <div class="bg-slate-800 rounded-xl p-4 text-center border border-pink-500/40">
-          <div class="text-3xl font-black text-pink-400">202</div>
+          <div class="text-3xl font-black text-pink-400">200</div>
           <div class="text-xs text-gray-400 mt-1">DM営業（3/31完了予定）</div>
         </div>
         <div class="bg-slate-800 rounded-xl p-4 text-center border border-blue-500/40">
@@ -461,9 +469,11 @@
           <div class="text-xs text-gray-400 mt-1">連載開始 3/22〜</div>
         </div>
       </div>
-      <p class="text-center text-lg md:text-xl font-bold text-yellow-400 tracking-wide mt-6">
-        「作ってすぐ試し、壁にぶつかり、即座に仕組みを変える」<br>
-        <span class="text-base text-yellow-200">この仮説検証スピードこそが、私たちの強みです。</span>
+      <p class="text-center text-lg font-bold text-yellow-400 tracking-wide mt-6">
+        「作ってすぐ試し、壁にぶつかり、即座に仕組みを変える」
+      </p>
+      <p class="text-center text-sm text-yellow-200 mt-1">
+        この仮説検証スピードこそが、私たちの強みです。
       </p>
     </div>
     <div class="slide-number">9 / 11</div>
