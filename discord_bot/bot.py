@@ -567,32 +567,6 @@ SERVER_STRUCTURE = [
     },
 ]
 
-@tree.command(name="reset_server", description="全チャンネルを削除してOshiPay構成で作り直します（管理者専用・要注意）")
-@app_commands.checks.has_permissions(administrator=True)
-async def cmd_reset_server(interaction: discord.Interaction):
-    await interaction.response.send_message("⏳ 全チャンネルを削除して作り直しています...", ephemeral=True)
-    guild = interaction.guild
-
-    # 既存チャンネル・カテゴリをすべて削除
-    for channel in guild.channels:
-        try:
-            await channel.delete()
-        except Exception:
-            pass
-
-    # SERVER_STRUCTUREに従って再作成
-    created = []
-    for section in SERVER_STRUCTURE:
-        cat_name = section["category"]
-        cat = await guild.create_category(cat_name)
-        created.append(f"📁 {cat_name}")
-        for ch_name, topic in section["channels"]:
-            await guild.create_text_channel(ch_name, category=cat, topic=topic)
-            created.append(f"　#{ch_name}")
-
-    result = "✅ **作成完了！**\n" + "\n".join(created)
-    await interaction.followup.send(result, ephemeral=True)
-
 
 @tree.command(name="setup_server", description="OshiPay用のチャンネル構成を自動作成します（管理者専用）")
 @app_commands.checks.has_permissions(administrator=True)
