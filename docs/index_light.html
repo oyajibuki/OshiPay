@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>oshipay - その感動、今すぐカタチに。</title>
+  <link rel="icon" href="https://oyajibuki.github.io/OshiPay/favicon.png?v=2" type="image/png">
+  <link rel="apple-touch-icon" href="https://oyajibuki.github.io/OshiPay/favicon.png?v=2">
+  <link rel="shortcut icon" href="https://oyajibuki.github.io/OshiPay/favicon.ico?v=2">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Tailwind 設定 & テーマ初期化 -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          animation: { shimmer: 'shimmer 1.5s infinite' },
+          keyframes: { shimmer: { '100%': { transform: 'translateX(200%) skewX(-12deg)' } } }
+        }
+      }
+    }
+    // ダークモード初期化
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+      document.addEventListener("DOMContentLoaded", () => {
+        const knob = document.getElementById('toggle-knob');
+        if(knob) {
+          knob.classList.remove('bg-white');
+          knob.classList.add('translate-x-7', 'bg-zinc-300');
+        }
+      });
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    function toggleTheme() {
+      const html = document.documentElement;
+      const knob = document.getElementById('toggle-knob');
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        localStorage.theme = 'light';
+        knob.classList.remove('translate-x-7', 'bg-zinc-300');
+        knob.classList.add('bg-white');
+      } else {
+        html.classList.add('dark');
+        localStorage.theme = 'dark';
+        knob.classList.remove('bg-white');
+        knob.classList.add('translate-x-7', 'bg-zinc-300');
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; }
+    .fade-in-section { opacity: 0; transform: translateY(40px); transition: opacity 1s ease-out, transform 1s ease-out; will-change: opacity, visibility; }
+    .fade-in-section.is-visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body class="bg-[#fce4ef] text-slate-800 dark:bg-[#18181B] dark:text-zinc-200 transition-colors duration-700 selection:bg-purple-500/30 overflow-x-hidden relative">
+  <!-- SVG グラデーション定義 -->
+  <svg width="0" height="0" class="absolute">
+    <defs>
+      <linearGradient id="purple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#a855f7"/>
+        <stop offset="100%" stopColor="#fce4ef"/>
+      </linearGradient>
+    </defs>
+  </svg>
+  <!-- 上部：テーマプレビューコントローラー -->
+  <div class="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-md text-white p-3 shadow-xl border-b border-gray-800 transition-colors duration-700">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4">
+      <p class="text-xs text-gray-400 font-bold tracking-wider hidden md:block">THEME PREVIEW</p>
+      <div class="flex items-center gap-3 ml-auto">
+        <i data-lucide="sun" class="w-5 h-5 text-amber-400 dark:text-gray-500 transition-colors"></i>
+        <div class="w-14 h-7 flex items-center bg-gray-700 rounded-full p-1 cursor-pointer" onclick="toggleTheme()">
+          <div id="toggle-knob" class="bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-300"></div>
+        </div>
+        <i data-lucide="moon" class="w-5 h-5 text-gray-500 dark:text-indigo-300 transition-colors"></i>
+      </div>
+    </div>
+  </div>
+  <!-- ヘッダー -->
+  <header class="sticky top-[52px] z-40 bg-white/80 dark:bg-[#18181B]/80 backdrop-blur-xl border-b border-purple-200/50 dark:border-white/5 transition-all duration-700">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-20 md:h-24 flex items-center justify-between">
+      <div class="flex items-center gap-2 group cursor-pointer" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+        <div class="transform group-hover:scale-110 group-hover:rotate-6 transition-transform">
+          <svg class="w-8 h-8 md:w-10 md:h-10 stroke-transparent dark:stroke-white/80 stroke-[1.5px] dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" viewBox="0 0 24 24" fill="url(#purple-grad)">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+          </svg>
+        </div>
+        <div class="text-4xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-orange-500 dark:from-purple-400 dark:to-orange-400">oshipay</div>
+      </div>
+      <nav class="hidden md:flex gap-10 text-base font-bold opacity-80">
+        <a href="#how-it-works" class="hover:opacity-60 transition-opacity text-slate-800 dark:text-zinc-200">機能紹介</a>
+        <a href="contact.html" class="hover:opacity-60 transition-opacity text-slate-800 dark:text-zinc-200">お問い合わせ</a>
+        <a href="en/index.html" class="hover:opacity-60 transition-opacity text-slate-800 dark:text-zinc-200">🇬🇧 EN</a>
+      </nav>
+      <div class="flex items-center gap-4">
+        <a href="https://oshipay.streamlit.app/?page=dashboard" class="hidden sm:block font-bold py-2 px-4 rounded-lg hover:bg-gray-500/10 transition-colors text-lg text-slate-800 dark:text-zinc-200">ログイン</a>
+        <a href="https://oshipay.streamlit.app/?page=dashboard&tab=new" class="bg-white dark:bg-zinc-800 text-purple-600 dark:text-purple-400 rounded-full shadow-sm hover:bg-purple-50 dark:hover:bg-zinc-700 font-bold px-8 py-3 transition-all border border-purple-200 dark:border-purple-500/30 tracking-wide text-lg md:text-xl">新規登録</a>
+      </div>
+    </div>
+  </header>
+  <!-- ヒーローセクション -->
+  <section class="relative bg-[#fce4ef] dark:bg-[#18181B] py-20 md:py-32 px-4 transition-colors duration-700 min-h-[80vh] flex items-center overflow-hidden">
+    <!-- 装飾背景 -->
+    <div class="absolute top-0 inset-x-0 h-[600px] bg-gradient-to-b from-purple-100/40 via-orange-50/30 to-transparent dark:hidden pointer-events-none z-0"></div>
+    <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-200/30 dark:bg-purple-500/10 rounded-full blur-[80px] pointer-events-none z-0"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-orange-200/30 dark:bg-orange-500/10 rounded-full blur-[80px] pointer-events-none z-0"></div>
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16 relative z-10">
+      <div class="flex-1 text-center md:text-left fade-in-section">
+        <span class="inline-block mb-8 px-5 py-2 rounded-full text-base font-bold backdrop-blur-sm border border-purple-200 text-purple-600 bg-white/60 dark:border-gray-500/30 dark:text-zinc-300 dark:bg-white/5 tracking-wider">
+          ✨ 登録・維持費はずっと無料
+        </span>
+        <h1 class="text-[2.6rem] sm:text-5xl md:text-[5.5rem] font-black leading-[1.1] mb-8 tracking-tighter">
+          その感動、<br/>
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-orange-500 dark:from-purple-400 dark:to-orange-400 whitespace-nowrap">今すぐカタチに。</span>
+        </h1>
+        <p class="text-xl md:text-2xl mb-12 leading-relaxed font-bold max-w-xl mx-auto md:mx-0 text-slate-600 dark:text-zinc-300">
+          アカウントを作ってQRコードを表示するだけ。<br class="hidden lg:block"/>
+          頑張るあなたへ、応援したい人の温かい気持ちを<br class="hidden sm:block"/>ダイレクトに届けます。
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-6">
+          <a href="https://oshipay.streamlit.app/?page=dashboard&tab=new" class="relative overflow-hidden group bg-[#1C1C1E] dark:bg-gradient-to-r dark:from-purple-600 dark:to-orange-500 text-white rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_15px_rgba(168,85,247,0.3)] hover:scale-105 hover:shadow-[0_8px_25px_rgba(0,0,0,0.2)] dark:hover:shadow-[0_8px_25px_rgba(168,85,247,0.5)] font-bold transition-all duration-300 py-5 px-10 text-xl md:text-2xl flex items-center justify-center gap-2 whitespace-nowrap">
+            <span class="relative z-10 flex items-center gap-2 whitespace-nowrap">
+              🚀 今すぐはじめる
+              <i data-lucide="arrow-right" class="w-6 h-6 group-hover:translate-x-1 transition-transform"></i>
+            </span>
+            <div class="hidden dark:block absolute inset-0 -translate-x-full group-hover:animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 pointer-events-none"></div>
+          </a>
+          <a href="#how-it-works" class="flex items-center gap-2 text-lg font-bold opacity-70 hover:opacity-100 transition-opacity text-slate-800 dark:text-zinc-200">
+            詳しい使い方を見る
+            <i data-lucide="arrow-right" class="w-6 h-6"></i>
+          </a>
+        </div>
+      </div>
+      <div class="flex-1 w-full max-w-md relative fade-in-section" style="transition-delay: 200ms;">
+        <div class="absolute top-4 -right-4 md:top-10 md:-right-10 w-full h-full rounded-[2.5rem] -z-10 bg-white border border-slate-100 shadow-xl dark:bg-[#27272A] dark:border-zinc-700 dark:shadow-2xl transition-colors duration-700"></div>
+        <div class="group bg-white border border-slate-100 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.06)] dark:bg-[#27272A] dark:border-zinc-700/50 dark:shadow-lg dark:hover:bg-zinc-800 transition-all duration-300 hover:-translate-y-1 p-8 relative z-10">
+          <div class="flex items-center gap-4 mb-8">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold bg-purple-50 text-purple-600 dark:bg-zinc-800 dark:text-zinc-300">
+              QR
+            </div>
+            <div>
+              <div class="font-extrabold text-2xl mb-1 text-slate-800 dark:text-zinc-200">推しクリエイター</div>
+              <div class="text-base font-bold tracking-wide text-slate-500 dark:text-zinc-400">@oshi_creator</div>
+            </div>
+          </div>
+          <div class="rounded-2xl p-6 mb-8 text-center border-2 border-dashed bg-slate-50 border-transparent dark:bg-[#18181B] dark:border-zinc-700">
+            <p class="font-bold opacity-80 mb-3 text-sm tracking-widest uppercase text-slate-500 dark:text-zinc-400">Support Amount</p>
+            <p class="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-orange-500 dark:from-purple-400 dark:to-orange-400">¥ 1,000</p>
+          </div>
+          <div class="flex justify-center mb-8 relative">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 drop-shadow-sm stroke-transparent dark:stroke-white/80 stroke-[1.5px] dark:drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] transform group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="url(#purple-grad)">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </div>
+          <button class="w-full py-5 rounded-2xl font-bold text-center text-2xl transition-transform active:scale-95 bg-gradient-to-r from-purple-600 to-orange-500 dark:from-purple-500 dark:to-orange-500 text-white shadow-lg shadow-purple-500/20 dark:shadow-none">
+            想いを送信する
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- なぜoshipayが選ばれるのか (Features) -->
+  <section class="py-32 px-4 relative z-20 transition-colors duration-700">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-24 fade-in-section">
+        <h2 class="text-sm font-bold tracking-widest uppercase mb-4 opacity-60 text-slate-500 dark:text-zinc-400">Security & Value</h2>
+        <h3 class="text-4xl md:text-6xl font-black mb-6 tracking-tight text-slate-900 dark:text-white">なぜoshipayが選ばれるのか</h3>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8 md:gap-12">
+        <div class="bg-white border border-slate-100 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.06)] dark:bg-[#27272A] dark:border-zinc-700/50 dark:shadow-lg dark:hover:bg-zinc-800 transition-all duration-300 hover:-translate-y-1 p-10 flex flex-col items-center text-center group fade-in-section" style="transition-delay: 100ms;">
+          <div class="w-20 h-20 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 bg-purple-50 border border-purple-100 text-purple-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-purple-400">
+            <i data-lucide="gift" class="w-10 h-10"></i>
+          </div>
+          <h4 class="text-2xl md:text-3xl font-black mb-5 tracking-tight text-slate-800 dark:text-zinc-200 whitespace-nowrap">還元率 トップクラス</h4>
+          <p class="opacity-80 leading-relaxed font-bold text-lg text-slate-600 dark:text-zinc-400">システム手数料を最小限に抑え、応援された金額の大部分が<br/>ダイレクトに手元に届きます。</p>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.06)] dark:bg-[#27272A] dark:border-zinc-700/50 dark:shadow-lg dark:hover:bg-zinc-800 transition-all duration-300 hover:-translate-y-1 p-10 flex flex-col items-center text-center group fade-in-section" style="transition-delay: 200ms;">
+          <div class="w-20 h-20 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 bg-purple-50 border border-purple-100 text-purple-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-purple-400">
+            <i data-lucide="shield-check" class="w-10 h-10"></i>
+          </div>
+          <h4 class="text-2xl md:text-3xl font-black mb-5 tracking-tight text-slate-800 dark:text-zinc-200">完全匿名で<br/>安心・安全</h4>
+          <p class="opacity-80 leading-relaxed font-bold text-lg text-slate-600 dark:text-zinc-400">Stripe決済を利用。本名や住所を一切公開することなく、お互いのプライバシーを完全に守ります。</p>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.06)] dark:bg-[#27272A] dark:border-zinc-700/50 dark:shadow-lg dark:hover:bg-zinc-800 transition-all duration-300 hover:-translate-y-1 p-10 flex flex-col items-center text-center group fade-in-section" style="transition-delay: 300ms;">
+          <div class="w-20 h-20 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 bg-purple-50 border border-purple-100 text-purple-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-purple-400">
+            <i data-lucide="message-circle" class="w-10 h-10"></i>
+          </div>
+          <h4 class="text-2xl md:text-3xl font-black mb-5 tracking-tight text-slate-800 dark:text-zinc-200">想いが伝わるレター</h4>
+          <p class="opacity-80 leading-relaxed font-bold text-lg text-slate-600 dark:text-zinc-400">支援金と一緒に、あなたの熱いメッセージを特別な<br/>デザインのレターとして直接届けられます。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 使い方セクション -->
+  <section id="how-it-works" class="py-24 relative z-10 transition-colors duration-700">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="fade-in-section text-center mb-16">
+        <h2 class="text-sm font-bold tracking-widest text-orange-500 dark:text-orange-400 uppercase mb-3">How it works</h2>
+        <h3 class="text-3xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">応援が届くまで、わずか3ステップ</h3>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
+        <!-- 応援を受けたい人 -->
+        <div class="relative">
+          <h4 class="text-xl md:text-2xl font-bold mb-10 flex items-center justify-center lg:justify-start gap-3 text-slate-800 dark:text-zinc-200">
+            <span class="bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 p-2.5 rounded-xl">
+              <i data-lucide="mic" class="w-6 h-6"></i>
+            </span>
+            応援を受けたい人
+          </h4>
+          <div class="space-y-8 relative before:absolute before:inset-0 before:ml-[1.15rem] before:-translate-x-px md:before:ml-[1.15rem] before:h-full before:w-0.5 before:bg-gradient-to-b before:from-purple-400 before:to-transparent dark:before:from-purple-500/50">
+            <div class="fade-in-section relative flex items-center group" style="transition-delay: 100ms;">
+              <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-[#fce4ef] dark:border-[#18181B] bg-purple-500 text-white font-bold z-10 shrink-0">1</div>
+              <div class="ml-6 p-6 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm hover:shadow-md dark:shadow-none hover:bg-slate-50 dark:hover:bg-white/10 w-full transition-all hover:-translate-y-1">
+                <h5 class="font-bold text-lg mb-2 text-slate-800 dark:text-zinc-200">新規登録・プロフィール生成</h5>
+                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-bold">アカウントを作成してプロフィールを設定し、あなた専用のQRコードを発行します。</p>
+              </div>
+            </div>
+            <div class="fade-in-section relative flex items-center group" style="transition-delay: 200ms;">
+              <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-[#fce4ef] dark:border-[#18181B] bg-purple-500 text-white font-bold z-10 shrink-0">2</div>
+              <div class="ml-6 p-6 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm hover:shadow-md dark:shadow-none hover:bg-slate-50 dark:hover:bg-white/10 w-full transition-all hover:-translate-y-1">
+                <h5 class="font-bold text-lg mb-2 text-slate-800 dark:text-zinc-200">QRをさりげなく公開</h5>
+                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-bold">発行されたQRコードをファンが見える場所に公開して、応援（投げ銭）を受け取ります。</p>
+              </div>
+            </div>
+            <div class="fade-in-section relative flex items-center group" style="transition-delay: 300ms;">
+              <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-[#fce4ef] dark:border-[#18181B] bg-purple-500 text-white font-bold z-10 shrink-0">3</div>
+              <div class="ml-6 p-6 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm hover:shadow-md dark:shadow-none hover:bg-slate-50 dark:hover:bg-white/10 w-full transition-all hover:-translate-y-1">
+                <h5 class="font-bold text-lg mb-2 text-slate-800 dark:text-zinc-200">口座登録（収益化）</h5>
+                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-bold">収益化する場合は、世界基準のセキュリティを持つStripe経由で安全に口座情報を登録します。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 応援したい人 -->
+        <div class="relative">
+          <h4 class="text-xl md:text-2xl font-bold mb-10 flex items-center justify-center lg:justify-start gap-3 text-slate-800 dark:text-zinc-200">
+            <span class="bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 p-2.5 rounded-xl">
+              <i data-lucide="heart" class="w-6 h-6"></i>
+            </span>
+            応援したい人
+          </h4>
+          <div class="space-y-8 relative before:absolute before:inset-0 before:ml-[1.15rem] before:-translate-x-px md:before:ml-[1.15rem] before:h-full before:w-0.5 before:bg-gradient-to-b before:from-orange-400 before:to-transparent dark:before:from-orange-500/50">
+            <div class="fade-in-section relative flex items-center group" style="transition-delay: 200ms;">
+              <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-[#fce4ef] dark:border-[#18181B] bg-orange-500 text-white font-bold z-10 shrink-0">
+                <i data-lucide="smartphone" class="w-4 h-4"></i>
+              </div>
+              <div class="ml-6 p-6 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm hover:shadow-md dark:shadow-none hover:bg-slate-50 dark:hover:bg-white/10 w-full transition-all hover:-translate-y-1">
+                <h5 class="font-bold text-lg mb-2 text-slate-800 dark:text-zinc-200">QRコードをスキャン</h5>
+                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-bold">専用アプリは不要。スマホの標準カメラでサッと読み取るだけ。</p>
+              </div>
+            </div>
+            <div class="fade-in-section relative flex items-center group" style="transition-delay: 300ms;">
+              <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-[#fce4ef] dark:border-[#18181B] bg-orange-500 text-white font-bold z-10 shrink-0">
+                <i data-lucide="credit-card" class="w-4 h-4"></i>
+              </div>
+              <div class="ml-6 p-6 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm hover:shadow-md dark:shadow-none hover:bg-slate-50 dark:hover:bg-white/10 w-full transition-all hover:-translate-y-1">
+                <h5 class="font-bold text-lg mb-2 text-slate-800 dark:text-zinc-200">スタンプ／メッセージ／投げ銭で応援</h5>
+                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-bold">Apple PayやGoogle Payで、わずか数秒でスマートに支払いが完了。温かい応援メッセージも一緒に送れます。</p>
+                <p class="text-xs text-orange-500 dark:text-orange-400 mt-2 font-bold">※応援を受けたい人が72時間以内に口座登録しないとリセットされます。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- ユースケースセクション -->
+  <section id="usecases" class="py-24 relative z-10">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="fade-in-section text-center mb-16">
+        <h2 class="text-sm font-bold tracking-widest text-purple-500 dark:text-purple-400 uppercase mb-3">Use Cases</h2>
+        <h3 class="text-3xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">いろんなシーンで応援を</h3>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="fade-in-section" style="transition-delay: 100ms;">
+          <div class="group bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-3xl p-8 hover:bg-slate-50 dark:hover:bg-white/[0.06] transition-all duration-300 hover:-translate-y-1 shadow-sm dark:shadow-none hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-purple-500/10 h-full backdrop-blur-sm relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="w-14 h-14 bg-purple-100 dark:bg-purple-500/20 rounded-2xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-transform">🎤</div>
+            <h4 class="text-xl font-bold mb-3 text-slate-800 dark:text-white">ストリートパフォーマンス</h4>
+            <p class="text-slate-600 dark:text-slate-400 leading-relaxed font-bold">QRコードを貼るだけで、聴衆から直接応援が届きます。小銭を持ち歩かない時代に最適な、新しい投げ銭のカタチです。</p>
+          </div>
+        </div>
+        <div class="fade-in-section" style="transition-delay: 200ms;">
+          <div class="group bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-3xl p-8 hover:bg-slate-50 dark:hover:bg-white/[0.06] transition-all duration-300 hover:-translate-y-1 shadow-sm dark:shadow-none hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-orange-500/10 h-full backdrop-blur-sm relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="w-14 h-14 bg-orange-100 dark:bg-orange-500/20 rounded-2xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-transform">☕</div>
+            <h4 class="text-xl font-bold mb-3 text-slate-800 dark:text-white">カフェ・飲食店</h4>
+            <p class="text-slate-600 dark:text-slate-400 leading-relaxed font-bold">素晴らしい接客やサービスへの感謝をチップとして。店員さん個人への応援を、スマートかつスムーズに実現します。</p>
+          </div>
+        </div>
+        <div class="fade-in-section" style="transition-delay: 300ms;">
+          <div class="group bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-3xl p-8 hover:bg-slate-50 dark:hover:bg-white/[0.06] transition-all duration-300 hover:-translate-y-1 shadow-sm dark:shadow-none hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-blue-500/10 h-full backdrop-blur-sm relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="w-14 h-14 bg-blue-100 dark:bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-transform">💻</div>
+            <h4 class="text-xl font-bold mb-3 text-slate-800 dark:text-white">VTuber・YouTuber</h4>
+            <p class="text-slate-600 dark:text-slate-400 leading-relaxed font-bold">配信画面にQRコードを投影して、ライブ配信中にさりげなく応援（投げ銭）を受け付けることができます。</p>
+          </div>
+        </div>
+        <div class="fade-in-section" style="transition-delay: 400ms;">
+          <div class="group bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-3xl p-8 hover:bg-slate-50 dark:hover:bg-white/[0.06] transition-all duration-300 hover:-translate-y-1 shadow-sm dark:shadow-none hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-pink-500/10 h-full backdrop-blur-sm relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="w-14 h-14 bg-pink-100 dark:bg-pink-500/20 rounded-2xl flex items-center justify-center mb-6 text-2xl group-hover:scale-110 transition-transform">🔥</div>
+            <h4 class="text-xl font-bold mb-3 text-slate-800 dark:text-white">あらゆるプロジェクト</h4>
+            <p class="text-slate-600 dark:text-slate-400 leading-relaxed font-bold">情熱を持って活動するすべての人に。面倒な登録は不要、最短1分であなた専用の投げ銭受付を開始できます。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- リンク集 -->
+  <div class="flex flex-col items-center gap-6 py-16 px-6 relative z-10 w-full">
+    <a href="https://oshipay.streamlit.app/?page=ranking" target="_blank" rel="noopener noreferrer"
+      class="group relative w-[360px] max-w-[90vw] px-4 py-6 bg-amber-500 rounded-full text-white font-bold text-xl hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all duration-300 hover:scale-105 overflow-hidden text-center no-underline flex items-center justify-center">
+      <div class="absolute inset-0 bg-white/20 group-hover:translate-x-full -translate-x-full skew-x-12 transition-transform duration-500"></div>
+      <span class="relative z-10">🏆 応援ランキングを見る</span>
+    </a>
+    <a href="https://oshipay.streamlit.app/?page=dashboard" target="_blank" rel="noopener noreferrer"
+      class="group relative w-[360px] max-w-[90vw] px-4 py-6 bg-slate-800 dark:bg-zinc-800 border border-slate-700 dark:border-zinc-700 rounded-full text-white font-bold text-xl hover:bg-slate-700 dark:hover:bg-zinc-700 transition-all duration-300 hover:scale-105 overflow-hidden text-center no-underline flex items-center justify-center shadow-lg">
+      <div class="absolute inset-0 bg-white/10 group-hover:translate-x-full -translate-x-full skew-x-12 transition-transform duration-500"></div>
+      <span class="flex flex-col items-center justify-center relative z-10 leading-tight">
+        <span class="text-2xl">💌 応援受けた人</span>
+        <span class="text-sm font-semibold mt-1.5 opacity-80">クリエイターダッシュボードへ</span>
+      </span>
+    </a>
+    <a href="https://oshipay.streamlit.app/?page=supporter_dashboard" target="_blank" rel="noopener noreferrer"
+      class="group relative w-[360px] max-w-[90vw] px-4 py-6 bg-slate-800 dark:bg-zinc-800 border border-slate-700 dark:border-zinc-700 rounded-full text-white font-bold text-xl hover:bg-slate-700 dark:hover:bg-zinc-700 transition-all duration-300 hover:scale-105 overflow-hidden text-center no-underline flex items-center justify-center shadow-lg">
+      <div class="absolute inset-0 bg-white/10 group-hover:translate-x-full -translate-x-full skew-x-12 transition-transform duration-500"></div>
+      <span class="flex flex-col items-center justify-center relative z-10 leading-tight">
+        <span class="text-2xl">🦸 応援した人</span>
+        <span class="text-sm font-semibold mt-1.5 opacity-80">サポーターダッシュボードへ</span>
+      </span>
+    </a>
+  </div>
+  <!-- フッター -->
+  <footer class="bg-white border-t border-slate-200 dark:bg-[#111113] dark:border-zinc-800 pt-24 pb-12 px-4 transition-colors duration-700">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-10 mb-16">
+        <div class="flex items-center gap-3">
+          <svg class="w-8 h-8 md:w-10 md:h-10 stroke-transparent dark:stroke-white/80 stroke-[1.5px] dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" viewBox="0 0 24 24" fill="url(#purple-grad)">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+          </svg>
+          <div class="text-3xl font-black tracking-tighter text-slate-800 dark:text-zinc-200">oshipay</div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-8 text-base font-bold opacity-60 text-slate-600 dark:text-zinc-400">
+          <a href="https://oshipay.me/terms" target="_blank" class="hover:opacity-100 transition-opacity">利用規約</a>
+          <a href="https://oshipay.me/privacy" target="_blank" class="hover:opacity-100 transition-opacity">プライバシーポリシー</a>
+          <a href="https://oshipay.me/tokusho" target="_blank" class="hover:opacity-100 transition-opacity">特定商取引法に基づく表記</a>
+        </div>
+      </div>
+      <div class="text-center text-sm font-bold opacity-40 text-slate-500 dark:text-zinc-500">
+        © 2026 oshipay Inc. All rights reserved.
+      </div>
+    </div>
+  </footer>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+      document.querySelectorAll('.fade-in-section').forEach(el => observer.observe(el));
+    });
+  </script>
+</body>
+</html>
