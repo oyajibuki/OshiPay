@@ -703,18 +703,17 @@ elif page in ["reply_view", "ranking", "profile"]:
 else:
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 460px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
 
-# ── 外部HTMLファイルの表示 ──
-LEGAL_MAP = {
-    "terms": "role/index.html",
-    "privacy": "role/index2.html",
-    "legal": "role/index3v2.html"
+# ── 法的ページは oshipay.me の静的HTMLへリダイレクト ──
+LEGAL_REDIRECT = {
+    "terms":   "https://oshipay.me/terms",
+    "privacy": "https://oshipay.me/privacy",
+    "legal":   "https://oshipay.me/tokusho"
 }
 
-if page in LEGAL_MAP:
-    html_content = read_html_file(LEGAL_MAP[page])
-    # スクロール位置リセット用JSを注入
-    html_content = inject_top_scroll_script(html_content)
-    components.html(html_content, height=900, scrolling=True)
+if page in LEGAL_REDIRECT:
+    target = LEGAL_REDIRECT[page]
+    components.html(f'<script>window.top.location.href="{target}";</script>', height=0)
+    st.markdown(f'<meta http-equiv="refresh" content="0; url={target}">', unsafe_allow_html=True)
     st.stop()
 
 # ── ランディングページ ──
@@ -1010,7 +1009,7 @@ if page == "success":
 
     st.markdown(f'<div style="text-align:center;margin-top:10px;"><a href="{BASE_URL}?page=my_history" target="_top" style="font-size:12px;color:rgba(240,240,245,0.4); text-decoration:underline;">（ブラウザ限定）簡易履歴を見る</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="oshi-footer">Powered by <a href="https://oshipay.me/index.html">oshipay</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="legal-links text-center pt-2"><a href="https://oshipay.me/terms" target="_blank">利用規約</a><a href="https://oshipay.me/privacy" target="_blank">プライバシーポリシー</a><a href="https://oshipay.me/tokusho" target="_blank">特定商取引法</a></div>', unsafe_allow_html=True)
     st.stop()
 
 # ── 応援証明ページ（サポーター向け）──
@@ -1129,7 +1128,7 @@ if page == "my_support":
             st.rerun()
     st.markdown(f'<div style="text-align:center;margin-top:16px;"><a href="{BASE_URL}?page=coin_preview" target="_top" style="font-size:11px;color:rgba(240,240,245,0.3);text-decoration:underline;">🪙 コイン全色プレビューを見る</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="oshi-footer" style="margin-top:12px;">Powered by <a href="https://oshipay.me/index.html">oshipay</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="legal-links text-center pt-2"><a href="https://oshipay.me/terms" target="_blank">利用規約</a><a href="https://oshipay.me/privacy" target="_blank">プライバシーポリシー</a><a href="https://oshipay.me/tokusho" target="_blank">特定商取引法</a></div>', unsafe_allow_html=True)
     st.stop()
 
 # ── 返信ダッシュボードページ（クリエイター向け）──
@@ -1772,9 +1771,9 @@ if page == "nav":
     st.link_button("🛠️ クリエイターDL（QRコード発行）", f"{BASE_URL}?page=dashboard", use_container_width=True)
     _nav_header("📄 法的ページ")
     col1, col2, col3 = st.columns(3)
-    col1.link_button("利用規約", f"{BASE_URL}?page=terms", use_container_width=True)
-    col2.link_button("プライバシー", f"{BASE_URL}?page=privacy", use_container_width=True)
-    col3.link_button("特定商取引法", f"{BASE_URL}?page=legal", use_container_width=True)
+    col1.link_button("利用規約", "https://oshipay.me/terms", use_container_width=True)
+    col2.link_button("プライバシー", "https://oshipay.me/privacy", use_container_width=True)
+    col3.link_button("特定商取引法", "https://oshipay.me/tokusho", use_container_width=True)
     _nav_header("🧪 開発")
     st.link_button("テストシミュレーター（決済スキップ）", f"{BASE_URL}?page=test", use_container_width=True)
     st.markdown('<div style="margin-top:32px;padding:16px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:12px;font-size:12px;color:rgba(240,240,245,0.6);line-height:1.8;">💡 <b style="color:#c4b5fd;">⑤ サポーターID自動入力の確認手順</b><br>① 上の「サポーターDL」でログイン<br>② ログイン後、画面内のリンクから「応援ページ」へ遷移<br>③ サポーターIDが自動入力されているのを確認</div>', unsafe_allow_html=True)
@@ -2083,7 +2082,7 @@ if page == "support" and support_user:
                 st.error(f"エラー: {_pe}")
 
     st.markdown(f'<div class="oshi-footer">Powered by <a href="https://oshipay.me/index.html">oshipay</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="legal-links text-center pt-2"><a href="https://oshipay.me/terms" target="_blank">利用規約</a><a href="https://oshipay.me/privacy" target="_blank">プライバシーポリシー</a><a href="https://oshipay.me/tokusho" target="_blank">特定商取引法</a></div>', unsafe_allow_html=True)
 
 # ── サポーター公開ポートフォリオ ──
 elif page == "portfolio":
@@ -3517,4 +3516,4 @@ else: # Dashboard
                 else:
                     st.warning("メールアドレスを入力してください。")
     st.markdown(f'<div class="oshi-footer">Powered by <a href="https://oshipay.me/index.html">oshipay</a></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="legal-links text-center pt-2"><a href="{BASE_URL}?page=terms" target="_top">利用規約</a><a href="{BASE_URL}?page=privacy" target="_top">プライバシーポリシー</a><a href="{BASE_URL}?page=legal" target="_top">特定商取引法</a></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="legal-links text-center pt-2"><a href="https://oshipay.me/terms" target="_blank">利用規約</a><a href="https://oshipay.me/privacy" target="_blank">プライバシーポリシー</a><a href="https://oshipay.me/tokusho" target="_blank">特定商取引法</a></div>', unsafe_allow_html=True)

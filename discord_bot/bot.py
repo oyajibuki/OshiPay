@@ -7,9 +7,12 @@ OshiPay Discord Bot — MVP
   /qr                        応援用QRコードを画像で表示
   /ranking                   応援ランキングをトップ10表示
   /register                  クリエイター登録案内
+  /ask      question         oshipayについて何でも質問できるAIチャットBot
+  /welcome                   #ようこそ チャンネルに歓迎メッセージを投稿（管理者専用）
 
 自動機能:
   - 新しい応援が届くと設定チャンネルに通知（60秒ポーリング）
+  - 新規メンバー入室時に歓迎DM＋役割選択ボタン（クリエイター/サポーター）
 """
 
 import os
@@ -19,6 +22,7 @@ import asyncio
 import qrcode
 import discord
 from dotenv import load_dotenv
+from matcher import find_answer
 
 # .envファイルを自動読み込み
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
@@ -64,14 +68,125 @@ def get_supporters_map(supporter_ids: list) -> dict:
         return {}
 
 # ── Discordクライアント設定 ───────────────────────────────────
-intents = discord.Intents.default()
-client  = discord.Client(intents=intents)
-tree    = app_commands.CommandTree(client)
+intents         = discord.Intents.default()
+intents.members = True   # on_member_join に必要
+client          = discord.Client(intents=intents)
+tree            = app_commands.CommandTree(client)
 
 # ── ブランドカラー ─────────────────────────────────────────────
 COLOR_PURPLE = 0x8b5cf6
 COLOR_ORANGE = 0xf97316
 COLOR_GREEN  = 0x22c55e
+
+# ══════════════════════════════════════════════════════════════
+# 役割選択ボタン（クリエイター / サポーター）
+# ══════════════════════════════════════════════════════════════
+ROLE_CREATOR   = "🌸 クリエイター"
+ROLE_SUPPORTER = "💜 サポーター"
+
+class RoleSelectView(discord.ui.View):
+    """入室時に表示する役割選択ボタン。タイムアウトなしで永続動作する。"""
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="🌸 クリエイター（応援を受け取りたい）",
+                       style=discord.ButtonStyle.primary,
+                       custom_id="role_creator")
+    async def btn_creator(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await _assign_role(interaction, ROLE_CREATOR)
+
+    @discord.ui.button(label="💜 サポーター（誰かを応援したい）",
+                       style=discord.ButtonStyle.secondary,
+                       custom_id="role_supporter")
+    async def btn_supporter(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await _assign_role(interaction, ROLE_SUPPORTER)
+
+
+async def _assign_role(interaction: discord.Interaction, role_name: str):
+    """指定ロールをメンバーに付与する。なければ作成する。"""
+    guild  = interaction.guild
+    member = interaction.user
+
+    role = discord.utils.get(guild.roles, name=role_name)
+    if not role:
+        # ロールが存在しない場合は自動作成
+        color = discord.Color(0x8b5cf6) if "クリエイター" in role_name else discord.Color(0xa855f7)
+        role  = await guild.create_role(name=role_name, color=color)
+
+    if role in member.roles:
+        await interaction.response.send_message(
+            f"すでに **{role_name}** ロールが付いています！", ephemeral=True
+        )
+    else:
+        await member.add_roles(role)
+        msg = (
+            f"**{role_name}** ロールを付与しました🎉\n\n"
+            + (
+                "**#3分で体験** チャンネルで `/qr` を試してみてください！\n"
+                "**#よくある質問-bot** で `/ask 登録方法` と聞くと詳しく教えます👇"
+                if "クリエイター" in role_name else
+                "**#クリエイターqr広場** でQRコードを見つけて応援してみましょう！\n"
+                "**#よくある質問-bot** で `/ask oshipayとは` と聞くと詳しく教えます👇"
+            )
+        )
+        await interaction.response.send_message(msg, ephemeral=True)
+
+
+def _build_welcome_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🌸 oshipay 公式サーバーへようこそ！",
+        description=(
+            "**oshipay** は推し活専用のチップ・応援金サービスです。\n"
+            "QRコード1枚で、ファンからスマホ直接応援を受け取れます。\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━\n"
+            "**まずあなたはどちら？** 👇\n"
+            "ボタンを押してロールを取得してください！"
+        ),
+        color=COLOR_PURPLE,
+    )
+    embed.add_field(name="🌸 クリエイター",  value="応援を受け取りたい方",        inline=True)
+    embed.add_field(name="💜 サポーター",    value="推しを応援したい方",           inline=True)
+    embed.add_field(
+        name="📌 使い方",
+        value=(
+            "`/ask [質問]` — 何でも聞いてね\n"
+            "`/qr` — 応援QRコードを表示\n"
+            "`/ranking` — 応援ランキング\n"
+            "`/register` — クリエイター登録"
+        ),
+        inline=False,
+    )
+    embed.set_footer(text="oshipay.me — その感動、今すぐカタチに。")
+    return embed
+
+
+# ══════════════════════════════════════════════════════════════
+# on_member_join — 新規入室時の歓迎DM
+# ══════════════════════════════════════════════════════════════
+@client.event
+async def on_member_join(member: discord.Member):
+    try:
+        embed = _build_welcome_embed()
+        await member.send(embed=embed, view=RoleSelectView())
+    except discord.Forbidden:
+        # DM が無効な場合は #ようこそ チャンネルに投稿
+        ch = discord.utils.find(
+            lambda c: "ようこそ" in c.name or "welcome" in c.name.lower(),
+            member.guild.text_channels,
+        )
+        if ch:
+            await ch.send(f"{member.mention} ようこそ！", embed=embed, view=RoleSelectView())
+
+
+# ══════════════════════════════════════════════════════════════
+# /welcome — #ようこそ に歓迎メッセージを手動投稿（管理者専用）
+# ══════════════════════════════════════════════════════════════
+@tree.command(name="welcome", description="#ようこそ チャンネルに歓迎メッセージを投稿します（管理者専用）")
+@app_commands.checks.has_permissions(administrator=True)
+async def cmd_welcome(interaction: discord.Interaction):
+    embed = _build_welcome_embed()
+    await interaction.response.send_message(embed=embed, view=RoleSelectView())
+
 
 # ══════════════════════════════════════════════════════════════
 # /setup — 管理者専用
@@ -307,6 +422,40 @@ async def cmd_register(interaction: discord.Interaction):
 
 
 # ══════════════════════════════════════════════════════════════
+# /ask — Q&Aチャットbot
+# ══════════════════════════════════════════════════════════════
+@tree.command(name="ask", description="oshipayについて何でも聞いてね！")
+@app_commands.describe(question="質問を入力してください（例: 手数料はいくら？）")
+async def cmd_ask(interaction: discord.Interaction, question: str):
+    answer = find_answer(question)
+
+    if answer:
+        embed = discord.Embed(
+            title=f"💬 {question}",
+            description=answer,
+            color=COLOR_PURPLE,
+        )
+        embed.set_footer(text="oshipay.me — その感動、今すぐカタチに。")
+        await interaction.response.send_message(embed=embed)
+    else:
+        embed = discord.Embed(
+            title="🤔 うーん、ちょっとわかりませんでした",
+            description=(
+                f"「**{question}**」についての回答が見つかりませんでした🙏\n\n"
+                "以下からお問い合わせください👇\n"
+                "・X（旧Twitter）: @oshipay_jp\n"
+                "・お問い合わせフォーム: https://oshipay.me\n\n"
+                "**よく聞かれる質問の例:**\n"
+                "`/ask 手数料はいくら？`\n"
+                "`/ask 登録方法を教えて`\n"
+                "`/ask 入金はいつ？`"
+            ),
+            color=COLOR_ORANGE,
+        )
+        await interaction.response.send_message(embed=embed)
+
+
+# ══════════════════════════════════════════════════════════════
 # 自動通知（60秒ポーリング）
 # ══════════════════════════════════════════════════════════════
 @tasks.loop(seconds=60)
@@ -376,6 +525,118 @@ async def notify_new_supports():
 
 
 # ══════════════════════════════════════════════════════════════
+# /setup_server  チャンネル・カテゴリを自動作成
+# ══════════════════════════════════════════════════════════════
+SERVER_STRUCTURE = [
+    {
+        "category": "📌 情報",
+        "channels": [
+            ("ルールと利用規約",   "必ずお読みください。サーバーのルールと利用規約を掲載しています 📋"),
+            ("ようこそ",          "OshiPayへようこそ！🌸 推しへの応援をもっと身近に。まずここを読んでください"),
+            ("お知らせ",          "機能アップデート・キャンペーン・重要情報を投稿します 📣"),
+        ]
+    },
+    {
+        "category": "🎮 体験する",
+        "channels": [
+            ("3分で体験",          "/oshipay や /qr コマンドを試してみよう！3分でoshipayを体験できます ⚡"),
+            ("よくある質問-bot",   "/ask コマンドで何でも聞いてください。例: /ask 手数料はいくら？ 💬"),
+            ("登録してみた",       "oshipayに登録したら報告してください！みんなで応援し合おう 🎉"),
+        ]
+    },
+    {
+        "category": "🌟 活用事例",
+        "channels": [
+            ("みんなの活用事例",   "クリエイターや店舗のリアルな活用シーンをシェアしよう 🌟"),
+        ]
+    },
+    {
+        "category": "💜 ファンコミュニティ",
+        "channels": [
+            ("クリエイターqr広場", "クリエイターの方は /qr で応援QRを投稿しよう！サポーターはここからスキャン 🌸"),
+            ("サポーターメダル自慢", "/ranking でもらったメダルを自慢しよう 🏅"),
+            ("応援の場",           "クリエイターとサポーターが交流する場所です 💜 応援メッセージもどうぞ"),
+            ("推し語り",           "推しについて自由に語ろう！ジャンル不問・全力オタクトークOK 🔥"),
+        ]
+    },
+    {
+        "category": "🏪 導入・相談",
+        "channels": [
+            ("店舗法人の方へ",     "店舗・法人でのoshipay導入についての案内です。まずここをご確認ください 🏪"),
+            ("導入相談",           "導入に関するご質問・ご相談はこちらへ。担当者が対応します 📩"),
+        ]
+    },
+]
+
+@tree.command(name="reset_server", description="全チャンネルを削除してOshiPay構成で作り直します（管理者専用・要注意）")
+@app_commands.checks.has_permissions(administrator=True)
+async def cmd_reset_server(interaction: discord.Interaction):
+    await interaction.response.send_message("⏳ 全チャンネルを削除して作り直しています...", ephemeral=True)
+    guild = interaction.guild
+
+    # 既存チャンネル・カテゴリをすべて削除
+    for channel in guild.channels:
+        try:
+            await channel.delete()
+        except Exception:
+            pass
+
+    # SERVER_STRUCTUREに従って再作成
+    created = []
+    for section in SERVER_STRUCTURE:
+        cat_name = section["category"]
+        cat = await guild.create_category(cat_name)
+        created.append(f"📁 {cat_name}")
+        for ch_name, topic in section["channels"]:
+            await guild.create_text_channel(ch_name, category=cat, topic=topic)
+            created.append(f"　#{ch_name}")
+
+    result = "✅ **作成完了！**\n" + "\n".join(created)
+    await interaction.followup.send(result, ephemeral=True)
+
+
+@tree.command(name="setup_server", description="OshiPay用のチャンネル構成を自動作成します（管理者専用）")
+@app_commands.checks.has_permissions(administrator=True)
+async def cmd_setup_server(interaction: discord.Interaction):
+    await interaction.response.send_message("⏳ チャンネルを作成中です...", ephemeral=True)
+    guild = interaction.guild
+    created = []
+    skipped = []
+
+    existing_names = {c.name for c in guild.channels}
+
+    for section in SERVER_STRUCTURE:
+        cat_name = section["category"]
+        cat = discord.utils.get(guild.categories, name=cat_name)
+        if cat is None:
+            cat = await guild.create_category(cat_name)
+            created.append(f"📁 {cat_name}")
+
+        for ch_name, topic in section["channels"]:
+            if ch_name in existing_names:
+                skipped.append(f"#{ch_name}")
+            else:
+                await guild.create_text_channel(ch_name, category=cat, topic=topic)
+                created.append(f"#{ch_name}")
+
+    result = ""
+    if created:
+        result += "✅ **作成しました:**\n" + "\n".join(f"　{c}" for c in created) + "\n"
+    if skipped:
+        result += "\n⏭ **スキップ（既存）:**\n" + "\n".join(f"　{c}" for c in skipped)
+
+    await interaction.followup.send(result or "変更なし", ephemeral=True)
+
+
+@cmd_setup_server.error
+async def setup_server_error(interaction: discord.Interaction, error):
+    if isinstance(error, app_commands.MissingPermissions):
+        await interaction.response.send_message("❌ 管理者権限が必要です。", ephemeral=True)
+    else:
+        await interaction.response.send_message(f"❌ エラー: {error}", ephemeral=True)
+
+
+# ══════════════════════════════════════════════════════════════
 # エラーハンドリング
 # ══════════════════════════════════════════════════════════════
 @cmd_setup.error
@@ -391,8 +652,13 @@ async def setup_error(interaction: discord.Interaction, error):
 # ══════════════════════════════════════════════════════════════
 @client.event
 async def on_ready():
-    await tree.sync()           # スラッシュコマンドを全サーバーに登録
-    notify_new_supports.start() # 通知ループ開始
+    client.add_view(RoleSelectView())   # ボタンをBot再起動後も有効化（永続View）
+    # ギルドごとに即時同期（copy_global_to_guildでコマンドをコピーしてから同期）
+    for guild in client.guilds:
+        tree.copy_global_to(guild=guild)
+        await tree.sync(guild=guild)
+        print(f"   ✅ スラッシュコマンド同期完了: {guild.name}")
+    notify_new_supports.start()         # 通知ループ開始
     print(f"✅ Bot起動完了: {client.user} (id: {client.user.id})")
     print(f"   接続サーバー数: {len(client.guilds)}")
 

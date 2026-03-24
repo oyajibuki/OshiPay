@@ -12,13 +12,17 @@
   <!-- ヘッダー -->
   <header class="border-b border-white/10 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
     <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2">
+      <a href="https://oshipay.me" class="flex items-center gap-2">
         <i data-lucide="flame" class="text-orange-500 w-6 h-6"></i>
         <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-purple-500 tracking-tight">
           OshiPay
         </span>
       </a>
-      <span class="text-sm font-medium text-slate-400">Legal Documents</span>
+      <nav class="flex gap-4 text-sm text-slate-400">
+        <a href="terms" class="text-white font-medium">利用規約</a>
+        <a href="privacy" class="hover:text-white">プライバシー</a>
+        <a href="tokusho" class="hover:text-white">特定商取引法</a>
+      </nav>
     </div>
   </header>
 
@@ -109,6 +113,17 @@
         <p>当社は、必要に応じて本規約を変更することができます。変更後の規約は、本サービス上に掲示した時点から効力を生じるものとします。変更後も本サービスを継続して利用した場合、変更後の規約に同意したものとみなします。</p>
       </section>
 
+      <section>
+        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第10条（決済処理および不審請求の申請への対応）</h2>
+        <ol class="list-decimal pl-6 space-y-3">
+          <li>本サービスは、決済処理にStripe, Inc.（以下「Stripe」）が提供する決済インフラを利用しています。利用者は、Stripeの<a href="https://stripe.com/jp/legal/ssa" target="_blank" class="text-purple-400 underline">利用規約</a>および<a href="https://stripe.com/jp/privacy" target="_blank" class="text-purple-400 underline">プライバシーポリシー</a>にも同意するものとします。</li>
+          <li>当社は、クレジットカード会社等を通じた不審請求の申請（チャージバック）が発生した場合、Stripeが提供するSmart Dispute機能（AIを活用した自動反証資料作成・提出サービス）を利用して対応する場合があります。</li>
+          <li>Smart Dispute機能は、不審請求の申請に対して期限内に自動的に反証資料を作成・提出するものであり、利用者（クリエイター）の連結アカウントにも適用される場合があります。</li>
+          <li>Smart Disputeによる不審請求申請への対応にかかる費用（Stripeのリスト価格：申請が認められた場合の回収額の30%）については、当社のビジネスモデルに応じて利用者に転嫁する場合があります。詳細は別途お知らせします。</li>
+          <li>利用者は、不審請求の申請が発生しないよう適切なサービス提供に努めるものとします。</li>
+        </ol>
+      </section>
+
     </div>
   </main>
 
@@ -121,20 +136,6 @@
     document.addEventListener("DOMContentLoaded", function() {
       lucide.createIcons();
     });
-
-    // iframeの高さをコンテンツに合わせて自動調整
-    function resizeParentIframe() {
-      var h = Math.max(
-        document.body.scrollHeight,
-        document.body.offsetHeight,
-        document.documentElement.scrollHeight,
-        document.documentElement.offsetHeight
-      );
-      // Streamlit component height adjustment
-      window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: h }, "*");
-    }
-    window.addEventListener("load", resizeParentIframe);
-    window.addEventListener("resize", resizeParentIframe);
   </script>
 </body>
 </html>
