@@ -690,6 +690,8 @@ def save_account_id_js(acct_id):
 
 if page == "dashboard":
     save_account_id_js(params.get("acct"))
+    _cp = "oshipay-New-login" if params.get("tab") == "new" else "oshipay-login"
+    components.html(f'<script>fetch("https://script.google.com/macros/s/AKfycbznxYkj5ixnK_pHkGR8LUYhEYdvSYpaiF3x4LaZy964wlu068oak1X1uuIiyqCEtGWF/exec?page={_cp}").catch(()=>{{}});</script>', height=0)
 
 # 法務ページ用の幅調整
 IS_LEGAL_PAGE = page in ["terms", "privacy", "legal"]
@@ -1491,6 +1493,7 @@ if page == "test":
 
 # ── ランキング（週間 / 月間 / 全期間）──
 if page == "ranking":
+    components.html('<script>fetch("https://script.google.com/macros/s/AKfycbznxYkj5ixnK_pHkGR8LUYhEYdvSYpaiF3x4LaZy964wlu068oak1X1uuIiyqCEtGWF/exec?page=oshipay-ranking").catch(()=>{});</script>', height=0)
     now = datetime.datetime.now(datetime.timezone.utc)
     month_label = f"{now.year}年{now.month}月"
     # 週間ラベル計算（水曜00:00 JST 〜 翌火曜23:59 JST）
