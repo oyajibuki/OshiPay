@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Powered by oshipay | 応援金決済インフラ</title>
+  <meta name="description" content="oshipayはクリエイター・小規模事業者向けの応援金決済インフラです。">
+  <link rel="icon" href="./favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --purple: #8b5cf6;
+      --purple-light: #c4b5fd;
+      --bg: #0f0a1e;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.1);
+    }
+    body {
+      font-family: 'Noto Sans JP', -apple-system, sans-serif;
+      background: var(--bg);
+      color: #f0f0f5;
+      line-height: 1.6;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 60px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.18) 0%, transparent 70%);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      color: var(--purple-light);
+      text-transform: lowercase;
+      margin-bottom: 28px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--purple);
+      background: rgba(139,92,246,0.15);
+      border: 1px solid rgba(139,92,246,0.35);
+      border-radius: 999px;
+      padding: 4px 14px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 6vw, 48px);
+      font-weight: 900;
+      line-height: 1.25;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { color: var(--purple-light); }
+    .hero p {
+      font-size: 15px;
+      color: rgba(255,255,255,0.55);
+      max-width: 480px;
+      margin: 0 auto 40px;
+    }
+    .cta-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-block;
+      padding: 14px 28px;
+      background: var(--purple);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 12px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-secondary {
+      display: inline-block;
+      padding: 14px 28px;
+      background: transparent;
+      color: var(--purple-light);
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(139,92,246,0.4);
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: rgba(139,92,246,0.1); }
+
+    /* ── Stats ── */
+    .stats-section {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 60px 24px;
+      text-align: center;
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: rgba(255,255,255,0.3);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .section-sub {
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 32px;
+    }
+    .stats-iframe-wrap {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(139,92,246,0.25);
+    }
+    .stats-iframe-wrap iframe {
+      width: 100%;
+      height: 240px;
+      border: none;
+      display: block;
+    }
+    .ranking-link {
+      display: inline-block;
+      margin-top: 16px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.3);
+      text-decoration: none;
+    }
+    .ranking-link:hover { color: var(--purple-light); }
+
+    /* ── Features ── */
+    .features-section {
+      padding: 60px 24px;
+      border-top: 1px solid var(--border);
+    }
+    .features-inner {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 40px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .feature-icon { font-size: 28px; margin-bottom: 12px; }
+    .feature-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .feature-card p { font-size: 13px; color: rgba(255,255,255,0.45); }
+
+    /* ── Flow ── */
+    .flow-section {
+      padding: 60px 24px;
+      border-top: 1px solid var(--border);
+      background: rgba(139,92,246,0.03);
+    }
+    .flow-inner { max-width: 560px; margin: 0 auto; }
+    .flow-steps { margin-top: 40px; display: flex; flex-direction: column; gap: 16px; }
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .step-num {
+      min-width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(139,92,246,0.2);
+      border: 1px solid rgba(139,92,246,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+      color: var(--purple-light);
+    }
+    .step-body h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .step-body p { font-size: 12px; color: rgba(255,255,255,0.45); }
+
+    /* ── CTA Bottom ── */
+    .cta-bottom {
+      text-align: center;
+      padding: 80px 24px;
+      border-top: 1px solid var(--border);
+    }
+    .cta-bottom h2 { font-size: 24px; font-weight: 900; margin-bottom: 12px; }
+    .cta-bottom p { font-size: 14px; color: rgba(255,255,255,0.45); margin-bottom: 32px; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.2);
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: rgba(255,255,255,0.3); text-decoration: none; }
+    footer a:hover { color: var(--purple-light); }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Hero ===== -->
+  <section class="hero">
+    <div class="logo">oshipay</div>
+    <div class="badge">Powered by oshipay</div>
+    <h1>クリエイターの<br><span>応援金決済</span>を<br>あなたのサービスに</h1>
+    <p>oshipayはファン・顧客からの応援金受け取りをシンプルに実現する決済インフラです。QRコード一枚で即日スタートできます。</p>
+    <div class="cta-group">
+      <a href="https://oshipay.streamlit.app/?page=dashboard&tab=new" class="btn-primary">無料で始める →</a>
+      <a href="https://oshipay.streamlit.app/?page=ranking" class="btn-secondary">ランキングを見る</a>
+    </div>
+  </section>
+
+  <!-- ===== Live Stats ===== -->
+  <section class="stats-section">
+    <p class="section-label">Live Data</p>
+    <h2 class="section-title">リアルタイム実績</h2>
+    <p class="section-sub">現在のoshipay利用状況（自動更新）</p>
+    <div class="stats-iframe-wrap">
+      <iframe
+        src="https://oshipay.streamlit.app/?page=stats_embed"
+        title="oshipay 統計"
+        loading="lazy"
+        scrolling="no">
+      </iframe>
+    </div>
+    <a href="https://oshipay.streamlit.app/?page=ranking" class="ranking-link" target="_blank">
+      📊 詳細ランキングを見る →
+    </a>
+  </section>
+
+  <!-- ===== Features ===== -->
+  <section class="features-section">
+    <div class="features-inner">
+      <p class="section-label" style="text-align:center;">Why oshipay</p>
+      <h2 class="section-title" style="text-align:center;font-size:22px;">なぜoshipayが選ばれるのか</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📲</div>
+          <h3>QRコード一枚で即日開始</h3>
+          <p>専用アプリ不要。スマホのカメラでQRを読むだけでファンが応援できます。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💳</div>
+          <h3>Stripe口座連携で安全受取</h3>
+          <p>業界標準のStripeを通じて応援金を安全に受け取れます。口座未登録でも応援は受付可能。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🏆</div>
+          <h3>ランキングで継続モチベーション</h3>
+          <p>週間・月間・全期間のランキングでクリエイター同士が切磋琢磨。ファンも応援しがいを感じます。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💜</div>
+          <h3>スタンプで気軽に応援</h3>
+          <p>金銭的な応援だけでなく、スタンプで気軽に応援できる機能も搭載。ファンエンゲージメントを高めます。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>応援データの可視化</h3>
+          <p>誰から・いくら応援されたかをリアルタイムで把握。活動の励みになるデータが揃っています。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🚀</div>
+          <h3>登録5分・完全無料スタート</h3>
+          <p>初期費用・月額費用ゼロ。応援金が発生した場合のみプラットフォーム手数料が発生します。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Flow ===== -->
+  <section class="flow-section">
+    <div class="flow-inner">
+      <p class="section-label" style="text-align:center;">How it works</p>
+      <h2 class="section-title" style="text-align:center;font-size:22px;">使い方は簡単3ステップ</h2>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>クリエイターページを作成</h4>
+            <p>表示名・プロフィール写真・自己紹介を入力するだけ。5分で完成します。</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>QRコードをファンに見せる</h4>
+            <p>ライブ会場・SNS・名刺にQRコードを掲載。ファンがスキャンするだけで応援できます。</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>口座登録して受け取る</h4>
+            <p>Stripeで受取口座を登録すれば応援金を振り込み受取。未登録でも応援は積み立てられます。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA Bottom ===== -->
+  <section class="cta-bottom">
+    <h2>今すぐ無料で始めましょう</h2>
+    <p>登録・利用は完全無料。クリエイター・小規模事業者・個人問わず誰でも始められます。</p>
+    <div class="cta-group">
+      <a href="https://oshipay.streamlit.app/?page=dashboard&tab=new" class="btn-primary">無料登録する →</a>
+      <a href="mailto:oyajibuki@gmail.com" class="btn-secondary">お問い合わせ</a>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <p>© 2026 oshipay · <a href="./terms.html">利用規約</a> · <a href="./privacy.html">プライバシーポリシー</a> · <a href="./tokusho.html">特定商取引法</a></p>
+  </footer>
+
+  <!-- アクセスカウンター -->
+  <script>
+    fetch("https://script.google.com/macros/s/AKfycbznxYkj5ixnK_pHkGR8LUYhEYdvSYpaiF3x4LaZy964wlu068oak1X1uuIiyqCEtGWF/exec?page=oshipay-poweredby")
+      .catch(() => {});
+  </script>
+</body>
+</html>

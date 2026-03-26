@@ -1491,6 +1491,50 @@ if page == "test":
 
     st.stop()
 
+# ── 公開統計（iframe埋め込み用）──
+if page == "stats_embed":
+    st.markdown("<style>.stMainBlockContainer,.block-container{max-width:none!important;padding:0!important;margin:0!important;}</style>", unsafe_allow_html=True)
+    try:
+        _se_creators = get_ranking_creators()
+        _se_with     = sum(1 for c in _se_creators if c.get("payout_enabled"))
+        _se_without  = len(_se_creators) - _se_with
+        _se_supports = get_all_time_ranking()
+        _se_total    = sum(int(s.get("amount", 0)) for s in _se_supports)
+    except Exception:
+        _se_creators, _se_with, _se_without, _se_total = [], 0, 0, 0
+    _se_count = len(_se_creators)
+    st.markdown(f"""
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                background:#0f0a1e;padding:20px;min-height:100vh;box-sizing:border-box;">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:480px;margin:0 auto;">
+        <div style="text-align:center;padding:20px 12px;background:rgba(139,92,246,0.12);
+                    border:1px solid rgba(139,92,246,0.35);border-radius:14px;">
+          <div style="font-size:36px;font-weight:900;color:#e0d7ff;line-height:1;">{_se_count}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:6px;letter-spacing:0.05em;">登録クリエイター</div>
+        </div>
+        <div style="text-align:center;padding:20px 12px;background:rgba(16,185,129,0.1);
+                    border:1px solid rgba(16,185,129,0.3);border-radius:14px;">
+          <div style="font-size:36px;font-weight:900;color:#6ee7b7;line-height:1;">¥{_se_total:,}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:6px;letter-spacing:0.05em;">応援金合計</div>
+        </div>
+        <div style="text-align:center;padding:20px 12px;background:rgba(99,102,241,0.1);
+                    border:1px solid rgba(99,102,241,0.3);border-radius:14px;">
+          <div style="font-size:36px;font-weight:900;color:#a5b4fc;line-height:1;">{_se_with}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:6px;letter-spacing:0.05em;">受取口座登録済み</div>
+        </div>
+        <div style="text-align:center;padding:20px 12px;background:rgba(251,191,36,0.08);
+                    border:1px solid rgba(251,191,36,0.2);border-radius:14px;">
+          <div style="font-size:36px;font-weight:900;color:#fcd34d;line-height:1;">{_se_without}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:6px;letter-spacing:0.05em;">口座未登録（見込み）</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:14px;font-size:10px;color:rgba(255,255,255,0.2);">
+        リアルタイムデータ · powered by oshipay
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
+
 # ── ランキング（週間 / 月間 / 全期間）──
 if page == "ranking":
     components.html('<script>fetch("https://script.google.com/macros/s/AKfycbznxYkj5ixnK_pHkGR8LUYhEYdvSYpaiF3x4LaZy964wlu068oak1X1uuIiyqCEtGWF/exec?page=oshipay-ranking").catch(()=>{});</script>', height=0)
