@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>oshipay 営業パートナー様向け | 業務案内</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif;
+            scroll-behavior: smooth;
+            background-color: #0f1729;
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #FF2E93 0%, #FF8A00 100%);
+        }
+        .text-gradient {
+            background: linear-gradient(135deg, #FF2E93 0%, #9B51E0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .pop-shadow {
+            box-shadow: 0 10px 30px -10px rgba(255, 46, 147, 0.3);
+        }
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(155, 81, 224, 0.2);
+        }
+        .slant-bg {
+            position: relative;
+            z-index: 1;
+        }
+        .slant-bg::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #111827;
+            transform: skewY(-3deg);
+            transform-origin: top left;
+            z-index: -1;
+        }
+        @keyframes blob {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        .animate-blob { animation: blob 7s infinite; }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .logo-gradient {
+            background: linear-gradient(to right, #9333ea, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .tagline-gradient {
+            background: linear-gradient(to right, #9333ea, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="text-white">
+    <!-- Header -->
+    <header class="fixed w-full z-50 bg-slate-900/90 backdrop-blur border-b border-slate-700">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🔥</span>
+                <span class="logo-gradient font-black text-xl">oshipay</span>
+                <span class="text-slate-400 text-sm hidden md:inline">— その感動、今すぐカタチに。</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="pt-32 pb-24 px-4 relative overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+        <div class="absolute top-[20%] right-[-10%] w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+        <div class="max-w-4xl mx-auto text-center relative z-10">
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-pink-100 text-pink-600 rounded-full font-bold text-sm mb-8 border border-pink-200">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+                </span>
+                営業パートナー様向け 業務ガイドライン
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black mb-8 leading-tight tracking-tight">
+                クリエイターとファンの<br>
+                <span class="text-gradient">「新しい経済圏」</span>を共に創る
+            </h1>
+            <div class="text-base md:text-lg text-slate-300 mb-10 leading-relaxed max-w-xl mx-auto rounded-2xl px-8 py-5 border-2 border-pink-500/40 bg-gradient-to-br from-pink-500/10 to-purple-500/10 shadow-lg shadow-pink-500/10">
+                本ページは営業パートナーの皆様向けに、<br>
+                <span class="text-white font-bold">業務内容・契約ルール</span>をまとめたドキュメントです。
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="pb-32">
+        <!-- 1. 営業活動 -->
+        <section class="max-w-5xl mx-auto px-4 mb-24 scroll-mt-24">
+            <div class="text-center mb-12">
+                <span class="text-pink-500 font-bold tracking-widest text-sm mb-2 block">MISSION 01</span>
+                <h2 class="text-3xl md:text-4xl font-black">最前線の「営業活動」🚀</h2>
+            </div>
+
+            <div class="bg-white rounded-[2rem] p-8 md:p-12 border-4 border-pink-50 shadow-xl relative overflow-hidden text-slate-800">
+                <div class="absolute -right-10 -top-10 text-9xl opacity-5">💬</div>
+
+                <div class="grid md:grid-cols-5 gap-8 items-center relative z-10">
+                    <div class="md:col-span-3 space-y-6">
+                        <p class="text-lg font-bold text-slate-700 leading-relaxed mb-6 text-center">
+                            デジタルとリアルの両面から、新規クリエイター・サポーターを開拓！単なる売り込みではなく<BR>「ファンとの絆を深める解決策」を提案します。
+                        </p>
+                        <ul class="space-y-4">
+                            <li class="flex items-center gap-3 bg-pink-50 border border-pink-200 p-4 rounded-xl font-bold text-slate-700">
+                                <span class="text-2xl">📱</span>
+                                <span>SNS（X / Instagram / Discord等）での新規アプローチ</span>
+                            </li>
+                            <li class="flex items-center gap-3 bg-purple-50 border border-purple-200 p-4 rounded-xl font-bold text-slate-700">
+                                <span class="text-2xl">✉️</span>
+                                <span>DM送信・返信対応・テレアポ・アポイントの獲得</span>
+                            </li>
+                            <li class="flex items-center gap-3 bg-orange-50 border border-orange-200 p-4 rounded-xl font-bold text-slate-700">
+                                <span class="text-2xl">🏃‍♂️</span>
+                                <span>店舗・ライブ現場等への飛び込み営業</span>
+                            </li>
+                            <li class="flex items-center gap-3 bg-blue-50 border border-blue-200 p-4 rounded-xl font-bold text-slate-700">
+                                <span class="text-2xl">🤝</span>
+                                <span>アカウント登録の促進・オンボーディング支援</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="md:col-span-2 space-y-4">
+                        <div class="hero-gradient p-6 rounded-3xl text-white text-center transform rotate-2 shadow-2xl">
+                            <h3 class="text-xl font-black mb-4">最重要ミッション！</h3>
+                            <p class="font-bold text-sm leading-relaxed">
+                                クリエイターの悩みに寄り添い、「oshipayならこう解決できる！」を熱量高く伝えるのがあなたの役目です🔥
+                            </p>
+                        </div>
+                        <div class="bg-slate-800 p-6 rounded-3xl text-white text-center transform -rotate-1 shadow-xl">
+                            <h3 class="text-lg font-black mb-2 text-pink-400">📍 主要営業エリア</h3>
+                            <p class="font-bold text-sm leading-relaxed">
+                                東京都内中心<br>
+                                （秋葉原・下北沢・渋谷・新宿・池袋 周辺）
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 市場調査・ヒアリング -->
+        <section class="max-w-5xl mx-auto px-4 mb-32 scroll-mt-24">
+            <div class="text-center mb-12">
+                <span class="text-purple-500 font-bold tracking-widest text-sm mb-2 block">MISSION 02</span>
+                <h2 class="text-3xl md:text-4xl font-black">現場の声を拾う「市場調査」🔍</h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-3xl p-8 border-2 border-purple-100 card-hover text-center relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-400 to-purple-600"></div>
+                    <div class="text-5xl mb-6 mt-2">🎤</div>
+                    <h3 class="text-xl font-black mb-3 text-purple-900">対面ヒアリング</h3>
+                    <p class="text-slate-600 font-medium text-sm">
+                        配信者やアイドルに直接コンタクト。現場特有の悩みやプラットフォームへの要望を深く掘り下げます。
+                    </p>
+                </div>
+                <div class="bg-white rounded-3xl p-8 border-2 border-blue-100 card-hover text-center relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+                    <div class="text-5xl mb-6 mt-2">📊</div>
+                    <h3 class="text-xl font-black mb-3 text-blue-900">ファンアンケート</h3>
+                    <p class="text-slate-600 font-medium text-sm">
+                        サポーター（ファン）のリアルな声を集計。「どうすればもっと推し活が楽しくなるか」を探ります。
+                    </p>
+                </div>
+                <div class="bg-white rounded-3xl p-8 border-2 border-orange-100 card-hover text-center relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-400 to-orange-600"></div>
+                    <div class="text-5xl mb-6 mt-2">🏢</div>
+                    <h3 class="text-xl font-black mb-3 text-orange-900">関係者リサーチ</h3>
+                    <p class="text-slate-600 font-medium text-sm">
+                        店舗やイベント関係者への調査。オフライン決済や連携の可能性・課題をチームにフィードバックします。
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-8 bg-purple-50 rounded-2xl p-6 border border-purple-100 flex items-center justify-center gap-4 text-slate-800">
+                <span class="text-2xl">💡</span>
+                <p class="font-bold text-purple-800">調査結果はレポート化し、oshipayのプロダクト開発にダイレクトに反映されます！</p>
+            </div>
+        </section>
+
+        <!-- 3. 活動報告 (Dark Section) -->
+        <section class="slant-bg py-24 mb-24 px-4">
+            <div class="max-w-5xl mx-auto text-white">
+                <div class="text-center mb-12">
+                    <span class="text-pink-400 font-bold tracking-widest text-sm mb-2 block">MISSION 03</span>
+                    <h2 class="text-3xl md:text-4xl font-black">リアルを共有する「活動報告」📹</h2>
+                </div>
+                <div class="flex flex-col md:flex-row gap-12 items-center">
+                    <div class="flex-1 space-y-8">
+                        <p class="text-lg font-bold text-slate-300">
+                            文字だけでは現場の「熱量」は伝わりません。私たちは動画を活用したオープンな報告スタイルを推奨しています。
+                        </p>
+
+                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                            <h4 class="text-xl font-black mb-2 flex items-center gap-2 text-pink-300">
+                                <span>📹</span> Vlog形式での営業ログ
+                            </h4>
+                            <p class="text-sm font-medium text-slate-300">
+                                日々の営業活動や現場の様子を貸与カメラで撮影し、チームに共有！文字化しにくい現場の空気感を伝えます。
+                            </p>
+                        </div>
+
+                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                            <h4 class="text-xl font-black mb-2 flex items-center gap-2 text-purple-300">
+                                <span>📝</span> 週次の振り返り
+                            </h4>
+                            <p class="text-sm font-medium text-slate-300">
+                                動画またはテキストで週次の振り返りを実施。良かったアプローチや課題を共有し、チーム全体でノウハウを蓄積します。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 w-full relative">
+                        <div class="bg-slate-800 border-4 border-slate-700 rounded-[3rem] p-4 mx-auto max-w-[300px] aspect-[9/19] relative shadow-2xl">
+                            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-700 rounded-b-xl"></div>
+                            <div class="w-full h-full bg-slate-900 rounded-[2rem] overflow-hidden relative flex flex-col items-center justify-center border border-slate-700">
+                                <div class="w-16 h-16 bg-pink-500/20 rounded-full flex items-center justify-center mb-4 text-pink-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                </div>
+                                <p class="text-slate-400 font-bold text-sm">Vlog Playback...</p>
+                                <div class="absolute bottom-6 left-6 right-6">
+                                    <div class="h-1 bg-slate-700 rounded-full w-full">
+                                        <div class="h-1 hero-gradient rounded-full w-1/3"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-pink-500/20 blur-[100px] rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 環境管理 -->
+        <section class="max-w-5xl mx-auto px-4">
+            <div class="bg-gradient-to-br from-slate-100 to-slate-200 rounded-[2rem] p-8 md:p-12 border border-white shadow-lg relative overflow-hidden text-slate-800">
+                <div class="text-center mb-8 relative z-10">
+                    <span class="text-slate-500 font-bold tracking-widest text-sm mb-2 block">RULES & CONDITIONS</span>
+                    <h2 class="text-2xl md:text-3xl font-black text-slate-800">業務環境・契約の基本ルール 📋</h2>
+                    <p class="font-bold text-slate-600 mt-4">契約書（準委任）に基づく、活動における重要事項です。</p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-6 relative z-10 mb-8">
+                    <div class="bg-white/80 backdrop-blur p-6 rounded-2xl flex items-start gap-4">
+                        <div class="text-3xl">💻</div>
+                        <div>
+                            <h4 class="font-black text-lg mb-1">業務端末・機材について</h4>
+                            <p class="text-sm font-medium text-slate-600 mb-3">業務に使用する端末（PC、スマートフォン等）<BR>および通信費は<span class="text-pink-600 font-bold">受託者（担当者様）のご負担</span><BR>となります。</p>
+                            <div class="bg-pink-50 p-3 rounded-xl border border-pink-100">
+                                <p class="text-sm font-bold text-pink-800 mb-1 flex items-center gap-1"><span>📹</span> Vlog用カメラの貸与</p>
+                                <p class="text-xs font-medium text-slate-600 leading-relaxed">撮影用カメラは当社より貸与いたします。万が一、紛失や破損が発生した場合は、実費でのご精算となりますのでお取り扱いには十分ご注意ください。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white/80 backdrop-blur p-6 rounded-2xl flex items-start gap-4">
+                        <div class="text-3xl">🚃</div>
+                        <div>
+                            <h4 class="font-black text-lg mb-1">交通費・報酬について</h4>
+                            <p class="text-sm font-medium text-slate-600">営業活動に伴う交通費は、月額の委託料に<span class="text-pink-600 font-bold"><BR>含まれております</span>。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white/90 backdrop-blur rounded-2xl p-6 relative z-10">
+                    <h4 class="font-black text-lg mb-4 text-slate-800">🛡️ コンプライアンス・秘密保持</h4>
+                    <ul class="space-y-3 text-sm font-medium text-slate-600">
+                        <li class="flex items-start gap-2">
+                            <span class="text-pink-500 shrink-0">✔</span>
+                            <span class="flex gap-1">
+                                <strong class="shrink-0">秘密保持：</strong>
+                                <span>業務上知り得た情報（個人情報含む）は、契約期間中および終了後2年間、第三者への漏洩や目的外の使用を<br>固く禁じます。</span>
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-pink-500 shrink-0">✔</span>
+                            <span class="flex gap-1">
+                                <strong class="shrink-0">知的財産権：</strong>
+                                <span>業務に伴い作成した成果物（動画・写真・テキスト等）の著作権は、制作と同時に当社（oshipay）に帰属します。</span>
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-pink-500 shrink-0">✔</span>
+                            <span class="flex gap-1">
+                                <strong class="shrink-0">競業避止：</strong>
+                                <span>契約期間中、事前の承諾なく当社と競合するサービスの営業業務等を行うことは禁じられています。</span>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section id="entry" class="mt-32 max-w-4xl mx-auto px-4 text-center">
+            <h2 class="text-2xl md:text-4xl font-black mb-6 tracking-tight">
+                あなたの一つひとつの行動が、<br>このプロジェクトの未来を創ります。
+            </h2>
+            <p class="font-bold text-slate-400">
+                業務の進め方やご不明な点がございましたら、担当までご相談ください。
+            </p>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-12 border-t border-slate-800 text-center">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="font-black text-2xl text-white mb-6">
+                oshipay <span class="text-pink-500">Sales</span>
+            </div>
+            <div class="flex justify-center gap-6 text-sm font-bold mb-8">
+                <a href="https://oshipay.me/" class="hover:text-white transition-colors">サービス</a>
+                <a href="https://oshipay.me/terms" class="hover:text-white transition-colors">利用規約</a>
+                <a href="https://oshipay.me/sales-b2b.html" class="hover:text-white transition-colors">営業キット</a>
+            </div>
+            <p class="text-xs">&copy; 2026 oshipay. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
