@@ -21,6 +21,7 @@ import io
 import asyncio
 import qrcode
 import discord
+from aiohttp import web
 from dotenv import load_dotenv
 from matcher import find_answer
 
@@ -77,6 +78,7 @@ tree            = app_commands.CommandTree(client)
 COLOR_PURPLE = 0x8b5cf6
 COLOR_ORANGE = 0xf97316
 COLOR_GREEN  = 0x22c55e
+COLOR_PINK   = 0xff69b4
 
 # ══════════════════════════════════════════════════════════════
 # 役割選択ボタン（クリエイター / サポーター）
@@ -443,7 +445,7 @@ async def cmd_ask(interaction: discord.Interaction, question: str):
             description=(
                 f"「**{question}**」についての回答が見つかりませんでした🙏\n\n"
                 "以下からお問い合わせください👇\n"
-                "・X（旧Twitter）: @oshipay_jp\n"
+                "・X（旧Twitter）: @oshipay_me\n"
                 "・お問い合わせフォーム: https://oshipay.me\n\n"
                 "**よく聞かれる質問の例:**\n"
                 "`/ask 手数料はいくら？`\n"
@@ -497,13 +499,19 @@ async def notify_new_supports():
             for s in new_supports:
                 sup_name = sup_map.get(s.get("supporter_id", ""), "匿名")
                 amount   = s["amount"]
+                msg      = s.get("message", "").strip()
+                created  = s.get("created_at", "")[:16].replace("T", " ")
 
                 embed = discord.Embed(
                     title="🎉 新しい応援が届きました！",
-                    description=f"**{sup_name}**さんから **¥{amount:,}** の応援が届きました！",
-                    color=COLOR_GREEN,
+                    color=0xFFD700,  # ゴールド
                 )
-                embed.set_footer(text=f"{creator_name}さんへ / oshipay.me")
+                embed.add_field(name="👤 サポーター", value=f"**{sup_name}** さん", inline=True)
+                embed.add_field(name="💰 応援金額",   value=f"**¥{amount:,}**", inline=True)
+                embed.add_field(name="📅 日時",       value=created, inline=True)
+                if msg:
+                    embed.add_field(name="💬 メッセージ", value=f"_{msg}_", inline=False)
+                embed.set_footer(text=f"🌸 {creator_name}さんへ届きました | oshipay.me")
 
                 view = discord.ui.View()
                 view.add_item(discord.ui.Button(
@@ -610,6 +618,159 @@ async def setup_server_error(interaction: discord.Interaction, error):
 
 
 # ══════════════════════════════════════════════════════════════
+# /post_intros  全チャンネルに紹介文を一括投稿（管理者専用）
+# ══════════════════════════════════════════════════════════════
+CHANNEL_INTROS = {
+    "お知らせ": "📣 **OshiPay からのお知らせ**\n\n新機能・キャンペーン・メンテナンス情報などをここに投稿します。\n通知をONにしておくと見逃しません🔔\n\noshipay.me — その感動、今すぐカタチに。",
+    "3分で体験": "🎮 **3分でOshiPayを体験してみよう！**\n\n① `/qr` と入力 → あなたの応援QRコードが表示されます\n② QRをスキャン → スマホから応援できます\n③ `/oshipay` → 応援リンクをシェアできます\n\nまずはやってみるのが一番早い！気軽に試してください🚀",
+    "よくある質問-bot": "💬 **OshiPayについて何でも聞いてください！**\n\n👇 こんな感じで質問できます\n　`/ask 手数料はいくら？`\n　`/ask 登録方法を教えて`\n　`/ask 入金はいつ？`\n\nBotが即答します。答えられない場合は #導入相談 へどうぞ🙏",
+    "登録してみた": "🌸 **登録・体験の報告はこちらへ！**\n\nOshiPayに登録してみた感想、使ってみた感想をぜひシェアしてください。\nはじめての応援を送った・受け取った報告も大歓迎です🎉\n\nみんなの体験談が新しいユーザーの背中を押します💜",
+    "みんなの活用事例": "🌟 **リアルな活用シーンをシェアしよう！**\n\n・ライブ会場でQRを使ってみた\n・推しへの応援に使ってみた\n・こんな場面で役に立った\n\n写真・スクリーンショットも歓迎です📸\n使い方のアイデアをみんなで広げましょう！",
+    "クリエイターqr広場": "🌸 **クリエイターの方はここにQRをシェアしよう！**\n\n`/qr` コマンドを使うとQRコードが表示されます。\nそのままここに投稿すれば、サポーターに見てもらえます。\n\n📌 投稿フォーマット（任意）\n名前：〇〇\n活動：（ライブ / 配信 / イラスト など）\nひとこと：",
+    "サポーターメダル自慢": "💜 **応援バッジ・ランキングを自慢しよう！**\n\n`/ranking` でランキングが表示されます。\n上位に入ったらぜひここでシェアしてください🏆\n\n推しへの応援をみんなに見せよう！",
+    "応援の場": "🔥 **クリエイター × サポーターの交流スペース**\n\n応援メッセージ、感謝の言葉、推し活報告など\nクリエイターとサポーターが自由に話せる場所です。\n\n推しへの愛を遠慮なく語ってください💜",
+    "推し語り": "💬 **推しについて自由に語ろう！**\n\nジャンル問わず「推し」について語れるチャンネルです。\nVTuber・アイドル・バンド・配信者・クリエイターなど何でもOK🎵\n\nOshiPayユーザーの推し活仲間と繋がろう！",
+    "導入相談": "🏪 **大量導入・法人でのご利用をお考えの方へ**\n\nOshiPayを複数店舗・イベント・組織で活用したい方の相談窓口です。\nお気軽にここに書き込んでください。担当者が対応します。\n\n📩 個別対応ご希望の方：oshipay.me@gmail.com\n🌐 公式サイト：https://oshipay.me",
+}
+
+@tree.command(name="post_intros", description="全チャンネルに紹介文を一括投稿します（管理者専用）")
+@app_commands.checks.has_permissions(administrator=True)
+async def cmd_post_intros(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+    posted, skipped = [], []
+    for channel in guild.text_channels:
+        intro = CHANNEL_INTROS.get(channel.name)
+        if intro:
+            try:
+                await channel.send(intro)
+                posted.append(f"✅ #{channel.name}")
+            except Exception as e:
+                skipped.append(f"❌ #{channel.name}（{e}）")
+        else:
+            skipped.append(f"⏭️ #{channel.name}（定義なし）")
+    result = "\n".join(posted + skipped)
+    await interaction.followup.send(f"**投稿完了！**\n{result}", ephemeral=True)
+
+@cmd_post_intros.error
+async def post_intros_error(interaction: discord.Interaction, error):
+    if isinstance(error, app_commands.MissingPermissions):
+        await interaction.response.send_message("❌ 管理者権限が必要です。", ephemeral=True)
+    else:
+        await interaction.response.send_message(f"❌ エラー: {error}", ephemeral=True)
+
+
+# ══════════════════════════════════════════════════════════════
+# /howto — 3ステップ使い方ガイド
+# ══════════════════════════════════════════════════════════════
+@tree.command(name="howto", description="oshipayの使い方を3ステップで表示します")
+async def cmd_howto(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="🚀 oshipayの使い方 — 3ステップ",
+        color=COLOR_PINK,
+    )
+    embed.add_field(
+        name="1️⃣ クリエイター登録（5分）",
+        value="oshipay.me にアクセス → 名前・メール・パスワードを入力\nQRコードが即発行されます！",
+        inline=False,
+    )
+    embed.add_field(
+        name="2️⃣ QRコードを設置",
+        value="ダウンロードして名刺・POPに印刷\nSNSプロフに応援URLを貼るだけでもOK📱",
+        inline=False,
+    )
+    embed.add_field(
+        name="3️⃣ ファンが応援",
+        value="QRスキャン → 金額選択 → クレカ/Apple Pay/Google Payで決済\n**2営業日後に銀行口座へ自動振込** 💰",
+        inline=False,
+    )
+    embed.set_footer(text="初期費用・月額料金 0円 / 手数料13.6%のみ | oshipay.me")
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(label="🌸 今すぐ登録する", url=f"{BASE_URL}", style=discord.ButtonStyle.link))
+    await interaction.response.send_message(embed=embed, view=view)
+
+
+# ══════════════════════════════════════════════════════════════
+# /fee — 手数料詳細
+# ══════════════════════════════════════════════════════════════
+@tree.command(name="fee", description="oshipayの手数料を詳しく表示します")
+async def cmd_fee(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="💰 oshipay 手数料のしくみ",
+        color=COLOR_GREEN,
+    )
+    embed.add_field(name="合計手数料", value="**13.6%**", inline=True)
+    embed.add_field(name="クリエイターへの還元率", value="**86.4%**", inline=True)
+    embed.add_field(name="月額・初期費用", value="**0円**", inline=True)
+    embed.add_field(
+        name="内訳",
+        value="Stripe決済手数料 **3.6%** ＋ oshipayシステム料 **10%**",
+        inline=False,
+    )
+    embed.add_field(
+        name="金額例",
+        value=(
+            "¥500の応援 → **¥432** 受け取り\n"
+            "¥1,000の応援 → **¥864** 受け取り\n"
+            "¥3,000の応援 → **¥2,592** 受け取り"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="競合比較",
+        value="SuperChat: 30〜50% / oshipay: **13.6%**（業界最安水準）",
+        inline=False,
+    )
+    embed.set_footer(text="oshipay.me — その感動、今すぐカタチに。")
+    await interaction.response.send_message(embed=embed)
+
+
+# ══════════════════════════════════════════════════════════════
+# /contact — お問い合わせ先
+# ══════════════════════════════════════════════════════════════
+@tree.command(name="contact", description="oshipayへのお問い合わせ先を表示します")
+async def cmd_contact(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="📬 お問い合わせ",
+        description="お気軽にご連絡ください！",
+        color=COLOR_PURPLE,
+    )
+    embed.add_field(name="📧 メール", value="oshipay.me@gmail.com", inline=False)
+    embed.add_field(name="🐦 X（旧Twitter）", value="@oshipay_me へDM", inline=False)
+    embed.add_field(name="💬 Discord", value="#導入相談 チャンネルへ", inline=False)
+    embed.add_field(name="🌐 公式サイト", value="https://oshipay.me", inline=False)
+    embed.set_footer(text="通常1〜2営業日以内にご返信します")
+    await interaction.response.send_message(embed=embed)
+
+
+# ══════════════════════════════════════════════════════════════
+# B. #よくある質問-bot チャンネルでメッセージに自動応答
+# ══════════════════════════════════════════════════════════════
+@client.event
+async def on_message(message: discord.Message):
+    # Bot自身のメッセージは無視
+    if message.author.bot:
+        return
+    # #よくある質問-bot チャンネルのみ反応
+    if "よくある質問" not in message.channel.name and "faq" not in message.channel.name.lower():
+        return
+    # スラッシュコマンドは無視
+    if message.content.startswith("/"):
+        return
+    question = message.content.strip()
+    if not question:
+        return
+    answer = find_answer(question)
+    embed = discord.Embed(
+        title=f"💬 {question[:50]}{'...' if len(question) > 50 else ''}",
+        description=answer,
+        color=COLOR_PINK,
+    )
+    embed.set_footer(text="oshipay.me — その感動、今すぐカタチに。")
+    await message.reply(embed=embed)
+
+
+# ══════════════════════════════════════════════════════════════
 # エラーハンドリング
 # ══════════════════════════════════════════════════════════════
 @cmd_setup.error
@@ -636,4 +797,25 @@ async def on_ready():
     print(f"   接続サーバー数: {len(client.guilds)}")
 
 
-client.run(DISCORD_TOKEN)
+# ══════════════════════════════════════════════════════════════
+# ヘルスチェック HTTP サーバー（Render Web Service 対応）
+# ══════════════════════════════════════════════════════════════
+async def health_check(request):
+    return web.Response(text="OK")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get("/", health_check)
+    app.router.add_get("/health", health_check)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"✅ ヘルスチェックサーバー起動: port {port}")
+
+async def main():
+    await start_web_server()
+    await client.start(DISCORD_TOKEN)
+
+asyncio.run(main())

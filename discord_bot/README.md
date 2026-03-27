@@ -54,14 +54,23 @@ python bot.py
 
 ---
 
-## STEP 3B｜Railway でデプロイ（本番・月ほぼ無料）
+## STEP 3B｜Render でデプロイ（本番・無料）
 
-> Railway は月$5の無料クレジットあり。小規模Botなら実質$0〜0.5/月。
+> Render の **Web Service（無料枠）** で動作します。
 
-1. https://railway.app でGitHubログイン
-2. 「New Project」→「Deploy from GitHub repo」
+1. https://render.com でGitHubログイン
+2. 「New +」→「Web Service」
 3. OshiPayリポジトリを選択
-4. 「Add variables」で環境変数を設定：
+4. 以下の通り設定：
+
+| 項目 | 値 |
+|---|---|
+| **Root Directory** | `discord_bot` |
+| **Runtime** | `Python 3` |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `python bot.py` |
+
+5. 「Environment Variables」で環境変数を設定：
 
 | キー | 値 |
 |---|---|
@@ -70,12 +79,12 @@ python bot.py
 | `SUPABASE_KEY` | SupabaseのAnon Key |
 | `APP_URL` | https://oshipay.me |
 
-5. Settings → 「Root Directory」を `discord_bot` に設定
-6. 「Start Command」を `python bot.py` に設定
-7. デプロイ開始（2〜3分）
+6. 「Create Web Service」でデプロイ開始（2〜3分）
 
-> ⚠️ Render を使う場合は「**Background Worker**」を選択（Web Serviceは不可）。
-> ただしRenderのBackground Workerは無料枠なし（$7/月〜）のためRailway推奨。
+> ⚠️ **スリープ対策が必要**
+> Renderの無料枠は15分アクセスなしでスリープします。
+> [UptimeRobot](https://uptimerobot.com)（無料）でデプロイURLを **10分おきに監視設定** してください。
+> → これでBotが常時起動し続けます。
 
 ---
 
@@ -118,4 +127,8 @@ Botが参加したサーバーで：
 → BotにそのチャンネルのSend Messages権限があるか確認してください。
 
 **Exited with status 1 エラー（Render）**
-→ Web ServiceではなくBackground Workerで作成してください。またはRailleyを使用してください。
+→ Start Commandが `python bot.py` になっているか確認してください。
+→ Root Directoryが `discord_bot` に設定されているか確認してください。
+
+**Botがしばらくすると反応しなくなる**
+→ Renderの無料枠スリープが原因です。UptimeRobotでデプロイURLを10分おきに監視してください。
