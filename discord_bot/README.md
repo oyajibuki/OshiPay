@@ -54,35 +54,85 @@ python bot.py
 
 ---
 
-## STEP 3B｜Koyeb でデプロイ（本番・完全無料・クレカ不要）
+## STEP 3B｜Google Cloud（GCP）でデプロイ（永久無料）
 
-> **Koyeb** の無料枠（Nano インスタンス）で動作します。スリープなし・常時起動。
+> **e2-micro VM**（us-central1）が永久無料枠。スリープなし・常時起動。
 
-1. https://app.koyeb.com でGitHubログイン（クレカ不要）
-2. 「Create Service」→「GitHub」を選択
-3. OshiPayリポジトリを選択
-4. 以下の通り設定：
+### 3B-1｜GCPアカウント作成
+1. https://cloud.google.com → 「無料で開始」
+2. クレカ登録（無料枠内は請求なし）
+3. 新しいプロジェクトを作成（例: `oshipay-bot`）
+
+### 3B-2｜VM インスタンス作成
+1. 左メニュー「Compute Engine」→「VM インスタンス」→「インスタンスを作成」
+2. 以下の通り設定：
 
 | 項目 | 値 |
 |---|---|
-| **Branch** | `main` |
-| **Build command** | `pip install -r requirements.txt` |
-| **Run command** | `python bot.py` |
-| **Working directory** | `discord_bot` |
+| **名前** | `oshipay-discord-bot` |
+| **リージョン** | `us-central1`（無料枠対象） |
+| **マシンタイプ** | `e2-micro`（無料枠対象） |
+| **ブートディスク** | `Ubuntu 22.04 LTS` / 30GB |
+| **ファイアウォール** | HTTP・HTTPS トラフィックを許可 |
 
-5. 「Environment variables」で以下を設定：
+3. 「作成」
 
-| キー | 値 |
-|---|---|
-| `DISCORD_BOT_TOKEN` | STEP1でコピーしたトークン |
-| `SUPABASE_URL` | SupabaseのURL |
-| `SUPABASE_KEY` | SupabaseのAnon Key |
-| `APP_URL` | https://oshipay.me |
+### 3B-3｜SSH接続してBotをセットアップ
+VMの「SSH」ボタンをクリック → ブラウザでターミナルが開く
 
-6. 「Ports」→ `8080` を設定（ヘルスチェック用）
-7. 「Deploy」でデプロイ開始（3〜5分）
+```bash
+# Pythonと必要ツールをインストール
+sudo apt update && sudo apt install -y python3-pip git
 
-> ✅ **スリープなし** — Koyebは常時起動なのでUptimeRobot等は不要です。
+# リポジトリをクローン
+git clone https://github.com/oyajibuki/OshiPay.git
+cd OshiPay/discord_bot
+
+# ライブラリをインストール
+pip3 install -r requirements.txt
+
+# 環境変数をセット
+export DISCORD_BOT_TOKEN="DiscordでコピーしたToken"
+export SUPABASE_URL="SupabaseのURL"
+export SUPABASE_KEY="SupabaseのAnon Key"
+export APP_URL="https://oshipay.me"
+
+# 常時起動設定（systemd）
+sudo tee /etc/systemd/system/oshipay-bot.service > /dev/null <<EOF
+[Unit]
+Description=OshiPay Discord Bot
+After=network.target
+
+[Service]
+User=$USER
+WorkingDirectory=/home/$USER/OshiPay/discord_bot
+ExecStart=/usr/bin/python3 bot.py
+Restart=always
+Environment=DISCORD_BOT_TOKEN=ここにトークン
+Environment=SUPABASE_URL=ここにURL
+Environment=SUPABASE_KEY=ここにKey
+Environment=APP_URL=https://oshipay.me
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable oshipay-bot
+sudo systemctl start oshipay-bot
+
+# 起動確認
+sudo systemctl status oshipay-bot
+```
+
+`Active: active (running)` と表示されれば成功 ✅
+
+### 3B-4｜コードを更新するとき
+```bash
+cd ~/OshiPay
+git pull
+sudo systemctl restart oshipay-bot
+```
 
 ---
 
@@ -124,9 +174,10 @@ Botが参加したサーバーで：
 **通知が来ない**
 → BotにそのチャンネルのSend Messages権限があるか確認してください。
 
-**デプロイエラー（Koyeb）**
-→ Run commandが `python bot.py`、Working directoryが `discord_bot` になっているか確認してください。
-→ Portsに `8080` が設定されているか確認してください。
+**Botが起動しない（GCP）**
+→ `sudo systemctl status oshipay-bot` でエラー内容を確認してください。
+→ `sudo journalctl -u oshipay-bot -n 50` で直近50行のログを確認できます。
 
-**Botが反応しなくなる（Koyeb）**
-→ ログを確認してください。環境変数が正しく設定されているか再確認してください。
+**Botが反応しなくなる（GCP）**
+→ `sudo systemctl restart oshipay-bot` で再起動してください。
+→ VMが停止していないかGCPコンソールで確認してください。
