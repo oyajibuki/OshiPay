@@ -54,23 +54,23 @@ python bot.py
 
 ---
 
-## STEP 3B｜Render でデプロイ（本番・無料）
+## STEP 3B｜Koyeb でデプロイ（本番・完全無料・クレカ不要）
 
-> Render の **Web Service（無料枠）** で動作します。
+> **Koyeb** の無料枠（Nano インスタンス）で動作します。スリープなし・常時起動。
 
-1. https://render.com でGitHubログイン
-2. 「New +」→「Web Service」
+1. https://app.koyeb.com でGitHubログイン（クレカ不要）
+2. 「Create Service」→「GitHub」を選択
 3. OshiPayリポジトリを選択
 4. 以下の通り設定：
 
 | 項目 | 値 |
 |---|---|
-| **Root Directory** | `discord_bot` |
-| **Runtime** | `Python 3` |
-| **Build Command** | `pip install -r requirements.txt` |
-| **Start Command** | `python bot.py` |
+| **Branch** | `main` |
+| **Build command** | `pip install -r requirements.txt` |
+| **Run command** | `python bot.py` |
+| **Working directory** | `discord_bot` |
 
-5. 「Environment Variables」で環境変数を設定：
+5. 「Environment variables」で以下を設定：
 
 | キー | 値 |
 |---|---|
@@ -79,12 +79,10 @@ python bot.py
 | `SUPABASE_KEY` | SupabaseのAnon Key |
 | `APP_URL` | https://oshipay.me |
 
-6. 「Create Web Service」でデプロイ開始（2〜3分）
+6. 「Ports」→ `8080` を設定（ヘルスチェック用）
+7. 「Deploy」でデプロイ開始（3〜5分）
 
-> ⚠️ **スリープ対策が必要**
-> Renderの無料枠は15分アクセスなしでスリープします。
-> [UptimeRobot](https://uptimerobot.com)（無料）でデプロイURLを **10分おきに監視設定** してください。
-> → これでBotが常時起動し続けます。
+> ✅ **スリープなし** — Koyebは常時起動なのでUptimeRobot等は不要です。
 
 ---
 
@@ -126,9 +124,9 @@ Botが参加したサーバーで：
 **通知が来ない**
 → BotにそのチャンネルのSend Messages権限があるか確認してください。
 
-**Exited with status 1 エラー（Render）**
-→ Start Commandが `python bot.py` になっているか確認してください。
-→ Root Directoryが `discord_bot` に設定されているか確認してください。
+**デプロイエラー（Koyeb）**
+→ Run commandが `python bot.py`、Working directoryが `discord_bot` になっているか確認してください。
+→ Portsに `8080` が設定されているか確認してください。
 
-**Botがしばらくすると反応しなくなる**
-→ Renderの無料枠スリープが原因です。UptimeRobotでデプロイURLを10分おきに監視してください。
+**Botが反応しなくなる（Koyeb）**
+→ ログを確認してください。環境変数が正しく設定されているか再確認してください。
