@@ -42,7 +42,7 @@ BASE_URL      = os.environ.get("APP_URL", "https://oshipay.me").rstrip("/")
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ── Bot ログ保存 ──────────────────────────────────────────────
-async def save_bot_log(question: str, answer: str | None, channel_name: str = "", user_id: str = "", guild_id: str = ""):
+async def save_bot_log(question: str, answer: str | None, channel_name: str = "", user_id: str = "", user_name: str = "", guild_id: str = ""):
     try:
         db.table("bot_logs").insert({
             "question":     question,
@@ -50,6 +50,7 @@ async def save_bot_log(question: str, answer: str | None, channel_name: str = ""
             "answered":     answer is not None,
             "channel_name": channel_name,
             "user_id":      str(user_id),
+            "user_name":    user_name,
             "guild_id":     str(guild_id),
         }).execute()
     except Exception as e:
@@ -475,6 +476,7 @@ async def cmd_ask(interaction: discord.Interaction, question: str):
         answer=answer,
         channel_name=interaction.channel.name if interaction.channel else "",
         user_id=interaction.user.id,
+        user_name=interaction.user.display_name,
         guild_id=interaction.guild_id or "",
     )
 
@@ -796,6 +798,7 @@ async def on_message(message: discord.Message):
         answer=answer,
         channel_name=message.channel.name,
         user_id=message.author.id,
+        user_name=message.author.display_name,
         guild_id=message.guild.id if message.guild else "",
     )
 

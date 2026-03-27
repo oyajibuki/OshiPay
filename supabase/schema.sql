@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS public.bot_logs (
     answered     BOOLEAN      DEFAULT FALSE,
     channel_name TEXT,
     user_id      TEXT,
+    user_name    TEXT,
     guild_id     TEXT,
     created_at   TIMESTAMPTZ  DEFAULT NOW()
 );
