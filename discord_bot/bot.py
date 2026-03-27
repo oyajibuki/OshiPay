@@ -41,6 +41,20 @@ BASE_URL      = os.environ.get("APP_URL", "https://oshipay.me").rstrip("/")
 # ── Supabase ──────────────────────────────────────────────────
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# ── Bot ログ保存 ──────────────────────────────────────────────
+async def save_bot_log(question: str, answer: str | None, channel_name: str = "", user_id: str = "", guild_id: str = ""):
+    try:
+        db.table("bot_logs").insert({
+            "question":     question,
+            "answer":       answer,
+            "answered":     answer is not None,
+            "channel_name": channel_name,
+            "user_id":      str(user_id),
+            "guild_id":     str(guild_id),
+        }).execute()
+    except Exception as e:
+        print(f"[bot_log error] {e}")
+
 # ── サーバー設定（JSONで永続化）────────────────────────────────
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "server_config.json")
 
@@ -456,6 +470,14 @@ async def cmd_ask(interaction: discord.Interaction, question: str):
         )
         await interaction.response.send_message(embed=embed)
 
+    await save_bot_log(
+        question=question,
+        answer=answer,
+        channel_name=interaction.channel.name if interaction.channel else "",
+        user_id=interaction.user.id,
+        guild_id=interaction.guild_id or "",
+    )
+
 
 # ══════════════════════════════════════════════════════════════
 # 自動通知（60秒ポーリング）
@@ -768,6 +790,14 @@ async def on_message(message: discord.Message):
     )
     embed.set_footer(text="oshipay.me — その感動、今すぐカタチに。")
     await message.reply(embed=embed)
+
+    await save_bot_log(
+        question=question,
+        answer=answer,
+        channel_name=message.channel.name,
+        user_id=message.author.id,
+        guild_id=message.guild.id if message.guild else "",
+    )
 
 
 # ══════════════════════════════════════════════════════════════
