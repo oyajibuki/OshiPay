@@ -105,4 +105,9 @@
 -- 🆕 未実行・今後の作業用はここに追記する
 -- ============================================
 
+-- LINE OAuth 対応 line_sub 追加（2026-03-30）
+ALTER TABLE public.supporters         ADD COLUMN IF NOT EXISTS line_sub TEXT UNIQUE;
+ALTER TABLE public.supporter_accounts ADD COLUMN IF NOT EXISTS line_sub TEXT UNIQUE;
+ALTER TABLE public.creators           ADD COLUMN IF NOT EXISTS line_sub TEXT UNIQUE;
+
 NOTIFY pgrst, 'reload schema';
