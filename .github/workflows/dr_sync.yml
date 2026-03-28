@@ -24,8 +24,8 @@ jobs:
       - name: Create .env.dr
         run: |
           cat > supabase/.env.dr << EOF
-          PRIMARY_SUPABASE_URL=${{ secrets.PRIMARY_SUPABASE_URL }}
-          PRIMARY_SUPABASE_KEY=${{ secrets.PRIMARY_SUPABASE_KEY }}
+          PRIMARY_SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          PRIMARY_SUPABASE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}
           DR_SUPABASE_URL=${{ secrets.DR_SUPABASE_URL }}
           DR_SUPABASE_KEY=${{ secrets.DR_SUPABASE_KEY }}
           EOF
