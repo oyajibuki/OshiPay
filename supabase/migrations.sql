@@ -100,4 +100,17 @@ ON CONFLICT DO NOTHING;
 ALTER TABLE public.supporter_accounts
   ADD COLUMN IF NOT EXISTS google_sub TEXT UNIQUE;
 
+-- ----------------------------------------
+-- Google sub を sup_056dac79 から sup_32dc1b6b へ移行
+-- アカウントは削除しない・google_subだけ付け替え
+-- 実行日: 2026-03-28
+-- ----------------------------------------
+UPDATE supporter_accounts
+SET google_sub = (SELECT google_sub FROM supporter_accounts WHERE supporter_id = 'sup_056dac79')
+WHERE supporter_id = 'sup_32dc1b6b';
+
+UPDATE supporter_accounts
+SET google_sub = NULL
+WHERE supporter_id = 'sup_056dac79';
+
 NOTIFY pgrst, 'reload schema';

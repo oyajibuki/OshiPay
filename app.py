@@ -738,12 +738,20 @@ if params.get("state") == "g_sup" and params.get("code") and not st.session_stat
             _disp = (_sn.data[0]["display_name"] if _sn.data else None) or _g_name
             st.session_state["supporter_auth"] = {"supporter_id": _row["supporter_id"], "display_name": _disp, "email": _row["email"]}
         else:
-            # email で既存アカウント検索
-            _sa_em = get_db().table("supporter_accounts").select("*").eq("email", _g_email).limit(1).execute()
-            if _sa_em.data:
-                # email一致 → 紐づけ確認画面へ
+            # email で既存アカウントを全件検索（supporter_accounts + supporters）
+            _sa_em  = get_db().table("supporter_accounts").select("supporter_id,email").eq("email", _g_email).execute()
+            _sn_em  = get_db().table("supporters").select("supporter_id,display_name,email").eq("email", _g_email).execute()
+            # supporter_id で重複排除してリスト化
+            _seen, _candidates = set(), []
+            for _r in (_sa_em.data or []) + (_sn_em.data or []):
+                if _r["supporter_id"] not in _seen:
+                    _seen.add(_r["supporter_id"])
+                    _disp_r = _r.get("display_name") or _r["supporter_id"]
+                    _candidates.append({"supporter_id": _r["supporter_id"], "display_name": _disp_r})
+            if _candidates:
+                # 1件以上一致 → 選択画面へ
                 st.session_state["_g_link_info"] = {
-                    "email": _g_email, "sub": _g_sub, "name": _g_name, "row": _sa_em.data[0]
+                    "email": _g_email, "sub": _g_sub, "name": _g_name, "candidates": _candidates
                 }
             else:
                 # 新規アカウント作成（1秒登録）
@@ -2284,27 +2292,73 @@ elif page == "supporter_dashboard":
     # ── Google アカウント紐づけ確認画面 ──
     if "_g_link_info" in st.session_state and "supporter_auth" not in st.session_state:
         _li = st.session_state["_g_link_info"]
+        _candidates = _li.get("candidates", [])
         st.markdown(f"""
         <div style="background:rgba(66,133,244,0.12); border:1px solid rgba(66,133,244,0.35); border-radius:14px; padding:24px; margin-bottom:20px; text-align:center;">
           <div style="font-size:28px; margin-bottom:10px;">🔗</div>
-          <div style="font-weight:700; color:#f0f0f5; font-size:16px; margin-bottom:8px;">同じメールのアカウントが見つかりました</div>
-          <div style="font-size:14px; color:rgba(240,240,245,0.8); margin-bottom:4px;">{_li['email']}</div>
-          <div style="font-size:12px; color:rgba(240,240,245,0.5); margin-top:8px;">このアカウントにGoogleログインを紐づけますか？<br>次回からGmailワンクリックでログインできます。</div>
+          <div style="font-weight:700; color:#f0f0f5; font-size:16px; margin-bottom:8px;">同じメールアドレスのアカウントが見つかりました</div>
+          <div style="font-size:13px; color:rgba(240,240,245,0.7); margin-bottom:4px;">{_li['email']}</div>
+          <div style="font-size:12px; color:rgba(240,240,245,0.5); margin-top:6px;">どのアカウントにGoogleログインを紐づけますか？</div>
         </div>
         """, unsafe_allow_html=True)
-        _lk1, _lk2 = st.columns(2)
-        with _lk1:
-            if st.button("✅ 紐づける（推奨）", use_container_width=True, type="primary", key="g_link_yes"):
-                get_db().table("supporter_accounts").update({"google_sub": _li["sub"]}).eq("supporter_id", _li["row"]["supporter_id"]).execute()
-                _sn2 = get_db().table("supporters").select("display_name").eq("supporter_id", _li["row"]["supporter_id"]).limit(1).execute()
-                _d2  = (_sn2.data[0]["display_name"] if _sn2.data else None) or _li["name"]
-                st.session_state["supporter_auth"] = {"supporter_id": _li["row"]["supporter_id"], "display_name": _d2, "email": _li["email"]}
+
+        # 候補リストをラジオボタンで選択
+        _radio_options = [f"{c['supporter_id']}　{c['display_name']}" for c in _candidates]
+        _radio_options.append("➕ 新しいアカウントとして続ける")
+        _selected = st.radio("紐づけるアカウントを選択", _radio_options, key="g_link_radio")
+
+        # 選択したアカウントにIDとパスワードで本人確認
+        _selected_idx = _radio_options.index(_selected) if _selected in _radio_options else -1
+        if _selected_idx < len(_candidates):
+            _target_sid = _candidates[_selected_idx]["supporter_id"]
+            st.caption(f"選択中: `{_target_sid}` — パスワードまたはサポーターIDで本人確認してください")
+            _lk_pw = st.text_input("パスワード（または空欄でIDのみ確認）", type="password", key="g_link_pw")
+            _lk1, _lk2 = st.columns(2)
+            with _lk1:
+                if st.button("✅ このアカウントに紐づける", use_container_width=True, type="primary", key="g_link_yes"):
+                    # パスワードチェック（入力された場合のみ）
+                    _pw_ok = True
+                    if _lk_pw:
+                        _sa_chk = get_db().table("supporter_accounts").select("password_hash").eq("supporter_id", _target_sid).limit(1).execute()
+                        if _sa_chk.data and _sa_chk.data[0].get("password_hash"):
+                            _pw_ok = _sa_chk.data[0]["password_hash"] == hash_password(_lk_pw)
+                    if _pw_ok:
+                        # google_sub を更新（upsert で supporter_accounts に確実に追加）
+                        _sa_exists = get_db().table("supporter_accounts").select("supporter_id").eq("supporter_id", _target_sid).limit(1).execute()
+                        if _sa_exists.data:
+                            get_db().table("supporter_accounts").update({"google_sub": _li["sub"]}).eq("supporter_id", _target_sid).execute()
+                        else:
+                            get_db().table("supporter_accounts").insert({
+                                "supporter_id": _target_sid, "email": _li["email"], "google_sub": _li["sub"]
+                            }).execute()
+                        _sn2 = get_db().table("supporters").select("display_name").eq("supporter_id", _target_sid).limit(1).execute()
+                        _d2  = (_sn2.data[0]["display_name"] if _sn2.data else None) or _li["name"]
+                        st.session_state["supporter_auth"] = {"supporter_id": _target_sid, "display_name": _d2, "email": _li["email"]}
+                        del st.session_state["_g_link_info"]
+                        st.rerun()
+                    else:
+                        st.error("パスワードが違います。")
+            with _lk2:
+                if st.button("キャンセル", use_container_width=True, key="g_link_no"):
+                    del st.session_state["_g_link_info"]
+                    st.session_state.pop("_g_done", None)
+                    st.rerun()
+        else:
+            # 新規アカウントとして続ける
+            if st.button("➕ 新しいアカウントを作成", use_container_width=True, type="primary", key="g_link_new"):
+                _new_sid = "sup_" + uuid.uuid4().hex[:12]
+                get_db().table("supporter_accounts").insert({
+                    "supporter_id": _new_sid, "email": _li["email"] + f"+g{uuid.uuid4().hex[:4]}", "google_sub": _li["sub"]
+                }).execute()
+                try:
+                    get_db().table("supporters").upsert({
+                        "supporter_id": _new_sid, "display_name": _li["name"], "email": _li["email"],
+                    }).execute()
+                except Exception:
+                    pass
+                st.session_state["supporter_auth"] = {"supporter_id": _new_sid, "display_name": _li["name"], "email": _li["email"]}
+                st.session_state["_g_new_name"] = _li["name"]
                 del st.session_state["_g_link_info"]
-                st.rerun()
-        with _lk2:
-            if st.button("キャンセル", use_container_width=True, key="g_link_no"):
-                del st.session_state["_g_link_info"]
-                st.session_state.pop("_g_done", None)
                 st.rerun()
         st.stop()
 
