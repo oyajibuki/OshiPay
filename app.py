@@ -785,18 +785,21 @@ if params.get("state") == "g_creator" and params.get("code") and not st.session_
         if _gc_sub_res.data:
             # 既存クリエーター（google_sub一致）→ 即ログイン
             _gc_row = _gc_sub_res.data[0]
-            st.session_state["creator_auth"] = _gc_row["acct_id"]
+            _gc_login_id = _gc_row["acct_id"]
+            st.session_state["creator_auth"] = _gc_login_id
         else:
             # emailで検索（複数ある場合は選択UI）
             _gc_em_res = get_db().table("creators").select("acct_id,display_name,email,slug").eq("email", _gc_email).execute()
             _gc_cands = _gc_em_res.data or []
+            _gc_login_id = None
             if len(_gc_cands) == 1:
                 # 1件のみ → google_sub を紐づけてログイン
                 _gc_row = _gc_cands[0]
                 get_db().table("creators").update({"google_sub": _gc_sub}).eq("acct_id", _gc_row["acct_id"]).execute()
-                st.session_state["creator_auth"] = _gc_row["acct_id"]
+                _gc_login_id = _gc_row["acct_id"]
+                st.session_state["creator_auth"] = _gc_login_id
             elif len(_gc_cands) > 1:
-                # 複数ある → 選択UIへ
+                # 複数ある → 選択UIへ（acct未確定なのでdashboardトップに遷移）
                 st.session_state["_gc_link_info"] = {
                     "email": _gc_email, "sub": _gc_sub, "name": _gc_name,
                     "candidates": [{"acct_id": r["acct_id"], "display_name": r.get("display_name") or r.get("slug") or r["acct_id"]} for r in _gc_cands]
@@ -808,13 +811,42 @@ if params.get("state") == "g_creator" and params.get("code") and not st.session_
                     "acct_id": _gc_new_id, "email": _gc_email, "google_sub": _gc_sub,
                     "display_name": _gc_name, "password_hash": "",
                 }).execute()
-                st.session_state["creator_auth"] = _gc_new_id
+                _gc_login_id = _gc_new_id
+                st.session_state["creator_auth"] = _gc_login_id
                 st.session_state["_gc_new_name"] = _gc_name
     else:
         st.session_state["_gc_creator_done"] = False
+        _gc_login_id = None
     st.query_params.clear()
     st.query_params["page"] = "dashboard"
+    if _gc_login_id:
+        st.query_params["acct"] = _gc_login_id
     st.rerun()
+
+# ── Googleログインボタン（クリック可能・components.html使用）──
+def _render_google_button(url: str, label: str = "Googleアカウントで登録 / ログイン"):
+    components.html(f"""
+    <style>
+      .g-btn {{
+        display:flex;align-items:center;justify-content:center;gap:10px;
+        background:#fff;color:#3c4043;font-size:14px;font-weight:600;
+        border:none;border-radius:10px;padding:11px 16px;width:100%;
+        cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);
+        font-family:sans-serif;
+      }}
+      .g-btn:hover {{ box-shadow:0 4px 12px rgba(0,0,0,0.4); }}
+    </style>
+    <button class="g-btn" onclick="window.top.location.href='{url}'">
+      <svg width="20" height="20" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        <path fill="none" d="M0 0h48v48H0z"/>
+      </svg>
+      {label}
+    </button>
+    """, height=52)
 
 # LocalStorage保存用の簡易JS
 def save_account_id_js(acct_id):
@@ -2530,25 +2562,8 @@ elif page == "supporter_dashboard":
 
             # ── Googleでログインボタン ──
             if GOOGLE_CLIENT_ID:
-                _g_url = _google_auth_url("g_sup")
-                st.markdown(f"""
-                <a href="{_g_url}" target="_top" style="text-decoration:none;display:block;margin-bottom:4px;">
-                  <div style="display:flex;align-items:center;justify-content:center;gap:10px;
-                              background:#fff;color:#3c4043;font-size:14px;font-weight:600;
-                              border:2px solid #fff;border-radius:10px;padding:11px 16px;
-                              cursor:pointer;transition:box-shadow .2s;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
-                    <svg width="20" height="20" viewBox="0 0 48 48">
-                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                      <path fill="none" d="M0 0h48v48H0z"/>
-                    </svg>
-                    Googleアカウントで登録 / ログイン
-                  </div>
-                </a>
-                """, unsafe_allow_html=True)
-                st.markdown('<div style="text-align:center; color:rgba(255,255,255,0.35); font-size:12px; margin:12px 0;">── または メール・パスワードで ──</div>', unsafe_allow_html=True)
+                _render_google_button(_google_auth_url("g_sup"))
+                st.markdown('<div style="text-align:center; color:rgba(255,255,255,0.35); font-size:12px; margin:4px 0 12px;">── または メール・パスワードで ──</div>', unsafe_allow_html=True)
 
             tab_register, tab_login, tab_forgot = st.tabs(["✨ 新規登録", "🔑 ログイン", "🔓 パスワードを忘れた"])
 
@@ -3119,25 +3134,8 @@ else: # Dashboard
 
         # ── Googleでログインボタン ──
         if GOOGLE_CLIENT_ID:
-            _gc_url = _google_auth_url("g_creator")
-            st.markdown(f"""
-            <a href="{_gc_url}" target="_top" style="text-decoration:none;display:block;margin-bottom:12px;">
-              <div style="display:flex;align-items:center;justify-content:center;gap:10px;
-                          background:#fff;color:#3c4043;font-size:14px;font-weight:600;
-                          border:2px solid #fff;border-radius:10px;padding:11px 16px;
-                          cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
-                <svg width="20" height="20" viewBox="0 0 48 48">
-                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                  <path fill="none" d="M0 0h48v48H0z"/>
-                </svg>
-                Googleアカウントで登録 / ログイン
-              </div>
-            </a>
-            <div style="text-align:center;color:rgba(255,255,255,0.35);font-size:12px;margin-bottom:12px;">── または ID・パスワードで ──</div>
-            """, unsafe_allow_html=True)
+            _render_google_button(_google_auth_url("g_creator"))
+            st.markdown('<div style="text-align:center;color:rgba(255,255,255,0.35);font-size:12px;margin:4px 0 12px;">── または ID・パスワードで ──</div>', unsafe_allow_html=True)
 
         # ?tab=new のときは新規作成をデフォルト、それ以外は既存アカウントをデフォルト
         if st.query_params.get("tab") == "new":
@@ -3282,25 +3280,8 @@ else: # Dashboard
         if st.session_state.get("creator_auth") != acct_id:
             st.warning("このダッシュボードを開くにはパスワードが必要です。")
             if GOOGLE_CLIENT_ID:
-                _gc_url2 = _google_auth_url("g_creator")
-                st.markdown(f"""
-                <a href="{_gc_url2}" target="_top" style="text-decoration:none;display:block;margin-bottom:10px;">
-                  <div style="display:flex;align-items:center;justify-content:center;gap:10px;
-                              background:#fff;color:#3c4043;font-size:14px;font-weight:600;
-                              border:2px solid #fff;border-radius:10px;padding:11px 16px;
-                              cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
-                    <svg width="20" height="20" viewBox="0 0 48 48">
-                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                      <path fill="none" d="M0 0h48v48H0z"/>
-                    </svg>
-                    Googleアカウントでログイン
-                  </div>
-                </a>
-                <div style="text-align:center;color:rgba(255,255,255,0.35);font-size:12px;margin-bottom:10px;">── または パスワードで ──</div>
-                """, unsafe_allow_html=True)
+                _render_google_button(_google_auth_url("g_creator"), label="Googleアカウントでログイン")
+                st.markdown('<div style="text-align:center;color:rgba(255,255,255,0.35);font-size:12px;margin:4px 0 10px;">── または パスワードで ──</div>', unsafe_allow_html=True)
             auth_pass = st.text_input("パスワードを入力", type="password", key="auth_pass")
             if st.button("🔓 ログイン", type="primary"):
                 try:
