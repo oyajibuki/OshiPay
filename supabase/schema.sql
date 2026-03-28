@@ -46,7 +46,9 @@ CREATE TABLE IF NOT EXISTS public.creators (
     email           TEXT,
     stripe_acct_id  TEXT,
     payout_enabled  BOOLEAN DEFAULT FALSE,
-    supporter_id    TEXT
+    supporter_id    TEXT,
+    google_sub      TEXT UNIQUE,
+    discord_sub     TEXT UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS public.supporters (
@@ -56,7 +58,8 @@ CREATE TABLE IF NOT EXISTS public.supporters (
     password_hash    TEXT,
     email            TEXT,
     creator_acct_id  TEXT,
-    google_sub       TEXT UNIQUE
+    google_sub       TEXT UNIQUE,
+    discord_sub      TEXT UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS public.deleted_slugs (
@@ -96,6 +99,7 @@ CREATE TABLE IF NOT EXISTS public.supporter_accounts (
     password_hash      TEXT,
     stripe_customer_id TEXT,
     google_sub         TEXT UNIQUE,
+    discord_sub        TEXT UNIQUE,
     created_at         TIMESTAMPTZ DEFAULT now()
 );
 
