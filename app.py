@@ -2280,6 +2280,13 @@ elif page == "supporter_dashboard":
     st.markdown('<div class="oshi-logo"><span class="text">oshipay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">サポーター・ダッシュボード</div>', unsafe_allow_html=True)
     
+    # ── Google OAuth リダイレクト ──
+    if st.session_state.pop("_do_google_redirect", False):
+        _g_url = _google_auth_url()
+        components.html(f'<script>window.top.location.href="{_g_url}";</script>', height=0)
+        st.markdown(f'<meta http-equiv="refresh" content="0; url={_g_url}">', unsafe_allow_html=True)
+        st.stop()
+
     # ── Google アカウント紐づけ確認画面 ──
     if "_g_link_info" in st.session_state and "supporter_auth" not in st.session_state:
         _li = st.session_state["_g_link_info"]
@@ -2430,12 +2437,9 @@ elif page == "supporter_dashboard":
 
             # ── Googleでログインボタン ──
             if GOOGLE_CLIENT_ID:
-                _g_url = _google_auth_url()
                 if st.button("Googleアカウントで登録 / ログイン", use_container_width=True, key="google_login_btn"):
-                    components.html(f'<script>window.top.location.href="{_g_url}";</script>', height=0)
-                    st.markdown(f'<meta http-equiv="refresh" content="0; url={_g_url}">', unsafe_allow_html=True)
-                with st.expander("🔧 デバッグ（確認後削除）"):
-                    st.code(f"CLIENT_ID先頭: {GOOGLE_CLIENT_ID[:20]}...\nREDIRECT_URI: {GOOGLE_REDIRECT_URI}\nOAuth URL:\n{_g_url}", language="text")
+                    st.session_state["_do_google_redirect"] = True
+                    st.rerun()
                 st.markdown('<div style="text-align:center; color:rgba(255,255,255,0.35); font-size:12px; margin:12px 0;">── または メール・パスワードで ──</div>', unsafe_allow_html=True)
 
             tab_register, tab_login, tab_forgot = st.tabs(["✨ 新規登録", "🔑 ログイン", "🔓 パスワードを忘れた"])
