@@ -3280,20 +3280,22 @@ else: # Dashboard
         # ── Googleアカウントで紐づけ選択（複数候補） ──
         if st.session_state.get("_gc_link_info"):
             _gcli = st.session_state["_gc_link_info"]
+            _gcli_sub_field = "discord_sub" if _gcli.get("provider") == "discord" else "google_sub"
+            _gcli_provider_name = "Discord" if _gcli.get("provider") == "discord" else "Google"
             st.markdown(f"""
             <div style="background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.35);
                         border-radius:12px;padding:16px;margin-bottom:12px;">
-              <div style="font-weight:700;color:#93c5fd;margin-bottom:4px;">Googleアカウントで確認</div>
+              <div style="font-weight:700;color:#93c5fd;margin-bottom:4px;">{_gcli_provider_name}アカウントで確認</div>
               <div style="font-size:12px;color:rgba(240,240,245,0.6);">
                 <b>{_gcli['email']}</b> はすでに複数のアカウントで使用されています。<br>
-                どのアカウントにGoogleログインを紐づけますか？
+                どのアカウントに{_gcli_provider_name}ログインを紐づけますか？
               </div>
             </div>
             """, unsafe_allow_html=True)
             for _gc_cand in _gcli["candidates"]:
                 _btn_label = f"✅ {_gc_cand['display_name']} ({_gc_cand['acct_id']})"
                 if st.button(_btn_label, key=f"gc_link_{_gc_cand['acct_id']}", use_container_width=True):
-                    get_db().table("creators").update({"google_sub": _gcli["sub"]}).eq("acct_id", _gc_cand["acct_id"]).execute()
+                    get_db().table("creators").update({_gcli_sub_field: _gcli["sub"]}).eq("acct_id", _gc_cand["acct_id"]).execute()
                     st.session_state["creator_auth"] = _gc_cand["acct_id"]
                     del st.session_state["_gc_link_info"]
                     st.query_params["acct"] = _gc_cand["acct_id"]
@@ -3302,7 +3304,7 @@ else: # Dashboard
                 _gc_new_id = "usr_" + uuid.uuid4().hex[:16]
                 get_db().table("creators").insert({
                     "acct_id": _gc_new_id, "email": _gcli["email"] + f"+g{uuid.uuid4().hex[:4]}",
-                    "google_sub": _gcli["sub"], "display_name": _gcli["name"], "password_hash": "",
+                    _gcli_sub_field: _gcli["sub"], "display_name": _gcli["name"], "password_hash": "",
                 }).execute()
                 st.session_state["creator_auth"] = _gc_new_id
                 del st.session_state["_gc_link_info"]
