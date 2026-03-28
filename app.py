@@ -3238,19 +3238,30 @@ elif page == "supporter_dashboard":
     st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
     st.markdown('<div class="header" style="font-size:16px;">⚙️ アカウント設定</div>', unsafe_allow_html=True)
 
+    # OAuth判定 + creator_acct_id 取得（一度だけ）
+    _sup_acct_row = get_db().table("supporters").select("creator_acct_id,google_sub,discord_sub,line_sub").eq("supporter_id", sup_user["supporter_id"]).maybe_single().execute()
+    _sup_is_oauth   = bool((_sup_acct_row.data or {}).get("google_sub") or (_sup_acct_row.data or {}).get("discord_sub") or (_sup_acct_row.data or {}).get("line_sub"))
+    _mn_creator_acct = (_sup_acct_row.data or {}).get("creator_acct_id")  # NULLならNone
+
     with st.expander("✏️ 表示名を変更する"):
         _cur_name = sup_user.get("display_name", "")
-        mn_new = st.text_input("新しい表示名", value=_cur_name, key="mn_new")
+        mn_new  = st.text_input("新しい表示名", value=_cur_name, key="mn_new")
+        mn_sync = st.checkbox("クリエーター名も同じにする", key="mn_sync") if _mn_creator_acct else False
         if st.button("表示名を更新", key="mn_btn"):
             if mn_new.strip():
                 get_db().table("supporters").update({"display_name": mn_new.strip()}).eq("supporter_id", sup_user["supporter_id"]).execute()
                 st.session_state["supporter_auth"]["display_name"] = mn_new.strip()
+                if mn_sync and _mn_creator_acct:
+                    get_db().table("creators").update({"display_name": mn_new.strip()}).eq("acct_id", _mn_creator_acct).execute()
                 st.success("表示名を更新しました！")
                 st.rerun()
             else:
                 st.warning("表示名を入力してください。")
 
-    with st.expander("📧 メールアドレスを変更する"):
+    if _sup_is_oauth:
+        st.caption("💡 LINE / Google / Discord でログイン中のため、メールアドレス・パスワードの変更はできません。")
+    else:
+     with st.expander("📧 メールアドレスを変更する"):
         _cur_email = sup_user.get("email", "")
         me_new = st.text_input("新しいメールアドレス", value=_cur_email, key="me_new")
         me_pass = st.text_input("現在のパスワード（確認）", type="password", key="me_pass")
@@ -3268,6 +3279,12 @@ elif page == "supporter_dashboard":
                             get_db().table("supporter_accounts").update({"email": _new_email_lc}).eq("supporter_id", sup_user["supporter_id"]).execute()
                         except Exception:
                             pass
+                        # 紐づきクリエーターに強制同期（_mn_creator_acct を流用）
+                        if _mn_creator_acct:
+                            try:
+                                get_db().table("creators").update({"email": _new_email_lc}).eq("acct_id", _mn_creator_acct).execute()
+                            except Exception:
+                                pass
                         st.session_state["supporter_auth"]["email"] = _new_email_lc
                         st.success("メールアドレスを更新しました！")
                         st.rerun()
@@ -3276,7 +3293,8 @@ elif page == "supporter_dashboard":
             else:
                 st.warning("正しいメールアドレスを入力してください。")
 
-    with st.expander("🔑 パスワードを変更する"):
+    if not _sup_is_oauth:
+     with st.expander("🔑 パスワードを変更する"):
         cp_curr = st.text_input("現在のパスワード", type="password", key="cp_curr")
         cp_new  = st.text_input("新しいパスワード", type="password", key="cp_new")
         cp_new2 = st.text_input("新しいパスワード（確認）", type="password", key="cp_new2")
@@ -3292,6 +3310,12 @@ elif page == "supporter_dashboard":
                             get_db().table("supporter_accounts").update({"password_hash": hash_password(cp_new)}).eq("supporter_id", sup_user["supporter_id"]).execute()
                         except Exception:
                             pass
+                        # 紐づきクリエーターに強制同期（_mn_creator_acct を流用）
+                        if _mn_creator_acct:
+                            try:
+                                get_db().table("creators").update({"password_hash": hash_password(cp_new)}).eq("acct_id", _mn_creator_acct).execute()
+                            except Exception:
+                                pass
                         st.success("パスワードを更新しました！")
                     else:
                         st.error("現在のパスワードが違います。")
@@ -3645,7 +3669,7 @@ else: # Dashboard
 
         # ── プロフィールテキスト（先に取得してdisplay_nameをデフォルト値に使う）──
         try:
-            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name,sns_links,profile_done,stripe_acct_id,email").eq("acct_id", acct_id).maybe_single().execute()
+            _cr = get_db().table("creators").select("bio,genre,slug,photo_url,display_name,sns_links,profile_done,stripe_acct_id,email,google_sub,discord_sub,line_sub").eq("acct_id", acct_id).maybe_single().execute()
             _cr_data = _cr.data or {}
         except Exception:
             _cr_data = {}
@@ -4056,6 +4080,16 @@ else: # Dashboard
         slug = st.text_input("ユーザーID（プロフィールURL用）", value=_cr_data.get("slug") or "", key=f"slug_{acct_id}",
                              help="例: asagiri → oshipay.me/u/asagiri（3〜20文字・英数字・ハイフンのみ）\n※ログイン時のIDとして使用・QRコードに表示されるURLの末尾になります")
 
+        # creator_acct_id で紐づきサポーターを検索
+        _cr_save_sup_id = None
+        try:
+            _crs1 = get_db().table("supporters").select("supporter_id").eq("creator_acct_id", acct_id).limit(1).execute()
+            if _crs1.data:
+                _cr_save_sup_id = _crs1.data[0]["supporter_id"]
+        except Exception:
+            pass
+        cr_name_sync = st.checkbox("サポーター名も同じにする", key=f"cr_name_sync_{acct_id}") if _cr_save_sup_id else False
+
         if st.button("💾 プロフィールを保存", type="primary", key=f"save_profile_{acct_id}"):
             _save_errors = []
             # bio バリデーション
@@ -4095,6 +4129,8 @@ else: # Dashboard
                     "display_name": name or None,
                     "profile_done": True,
                 }).eq("acct_id", acct_id).execute()
+                if cr_name_sync and _cr_save_sup_id and name:
+                    get_db().table("supporters").update({"display_name": name}).eq("supporter_id", _cr_save_sup_id).execute()
                 st.success("プロフィールを保存しました！")
                 st.session_state[f"profile_saved_{acct_id}"] = True
                 _saved_slug = slug.lower() if slug else acct_id
@@ -4122,8 +4158,14 @@ else: # Dashboard
             st.query_params["acct"] = acct_id
             st.rerun()
 
+        # OAuth判定
+        _cr_is_oauth = bool(_cr_data.get("google_sub") or _cr_data.get("discord_sub") or _cr_data.get("line_sub"))
+
         # パスワード変更
-        with st.expander("🔑 パスワードを変更する"):
+        if _cr_is_oauth:
+            st.caption("💡 LINE / Google / Discord でログイン中のため、メールアドレス・パスワードの変更はできません。")
+        if not _cr_is_oauth:
+         with st.expander("🔑 パスワードを変更する"):
             cc_curr = st.text_input("現在のパスワード", type="password", key="cc_curr")
             cc_new  = st.text_input("新しいパスワード", type="password", key="cc_new")
             cc_new2 = st.text_input("新しいパスワード（確認）", type="password", key="cc_new2")
@@ -4135,6 +4177,15 @@ else: # Dashboard
                         chk = get_db().table("creators").select("password_hash").eq("acct_id", acct_id).execute()
                         if chk.data and chk.data[0]["password_hash"] == hash_password(cc_curr):
                             get_db().table("creators").update({"password_hash": hash_password(cc_new)}).eq("acct_id", acct_id).execute()
+                            # 紐づきサポーターに強制同期
+                            try:
+                                _cc_lsup = get_db().table("supporters").select("supporter_id").eq("creator_acct_id", acct_id).limit(1).execute()
+                                _cc_lsup_id = (_cc_lsup.data or [{}])[0].get("supporter_id") if _cc_lsup.data else None
+                                if _cc_lsup_id:
+                                    get_db().table("supporters").update({"password_hash": hash_password(cc_new)}).eq("supporter_id", _cc_lsup_id).execute()
+                                    get_db().table("supporter_accounts").update({"password_hash": hash_password(cc_new)}).eq("supporter_id", _cc_lsup_id).execute()
+                            except Exception:
+                                pass
                             st.success("パスワードを更新しました！")
                         else:
                             st.error("現在のパスワードが違います。")
@@ -4142,7 +4193,8 @@ else: # Dashboard
                     st.warning("全ての項目を入力してください。")
 
         # メールアドレス変更
-        with st.expander("📧 メールアドレスを変更する"):
+        if not _cr_is_oauth:
+         with st.expander("📧 メールアドレスを変更する"):
             _cur_email = _cr_data.get("email") or ""
             if _cur_email:
                 _masked = _cur_email[:2] + "****" + _cur_email[_cur_email.find("@"):]
@@ -4163,6 +4215,15 @@ else: # Dashboard
                             st.error("このメールアドレスはすでに10アカウントに使用されています。別のメールアドレスをお使いください。")
                         else:
                             get_db().table("creators").update({"email": _em_lc}).eq("acct_id", acct_id).execute()
+                            # 紐づきサポーターに強制同期
+                            try:
+                                _em_lsup = get_db().table("supporters").select("supporter_id").eq("creator_acct_id", acct_id).limit(1).execute()
+                                _em_lsup_id = (_em_lsup.data or [{}])[0].get("supporter_id") if _em_lsup.data else None
+                                if _em_lsup_id:
+                                    get_db().table("supporters").update({"email": _em_lc}).eq("supporter_id", _em_lsup_id).execute()
+                                    get_db().table("supporter_accounts").update({"email": _em_lc}).eq("supporter_id", _em_lsup_id).execute()
+                            except Exception:
+                                pass
                             st.success("✅ メールアドレスを更新しました！")
                             st.rerun()
                     else:
