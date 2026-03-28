@@ -729,42 +729,41 @@ if params.get("state") == "g_sup" and params.get("code") and not st.session_stat
         _g_email = _g_info["email"].strip().lower()
         _g_sub   = str(_g_info.get("id", ""))
         _g_name  = _g_info.get("name", _g_email.split("@")[0])
-        # google_sub で既存アカウント検索
-        _sa_sub = get_db().table("supporter_accounts").select("*").eq("google_sub", _g_sub).limit(1).execute()
-        if _sa_sub.data:
+        # google_sub で supporters を検索（一元管理）
+        _sn_sub = get_db().table("supporters").select("*").eq("google_sub", _g_sub).limit(1).execute()
+        if not _sn_sub.data:
+            # supporter_accounts も念のため検索
+            _sa_sub = get_db().table("supporter_accounts").select("supporter_id").eq("google_sub", _g_sub).limit(1).execute()
+            if _sa_sub.data:
+                _sn_sub = get_db().table("supporters").select("*").eq("supporter_id", _sa_sub.data[0]["supporter_id"]).limit(1).execute()
+        if _sn_sub.data:
             # 既存アカウント（google_sub一致）→ 即ログイン
-            _row = _sa_sub.data[0]
-            _sn  = get_db().table("supporters").select("display_name").eq("supporter_id", _row["supporter_id"]).limit(1).execute()
-            _disp = (_sn.data[0]["display_name"] if _sn.data else None) or _g_name
-            st.session_state["supporter_auth"] = {"supporter_id": _row["supporter_id"], "display_name": _disp, "email": _row["email"]}
+            _row  = _sn_sub.data[0]
+            _disp = _row.get("display_name") or _g_name
+            _mail = _row.get("email") or _g_email
+            st.session_state["supporter_auth"] = {"supporter_id": _row["supporter_id"], "display_name": _disp, "email": _mail}
         else:
-            # email で既存アカウントを全件検索（supporter_accounts + supporters）
-            _sa_em  = get_db().table("supporter_accounts").select("supporter_id,email").eq("email", _g_email).execute()
-            _sn_em  = get_db().table("supporters").select("supporter_id,display_name,email").eq("email", _g_email).execute()
-            # supporter_id で重複排除してリスト化
+            # email で全テーブルを検索（スペース正規化して比較）
+            _sn_em = get_db().table("supporters").select("supporter_id,display_name,email").execute()
             _seen, _candidates = set(), []
-            for _r in (_sa_em.data or []) + (_sn_em.data or []):
-                if _r["supporter_id"] not in _seen:
+            for _r in (_sn_em.data or []):
+                _r_email = (_r.get("email") or "").strip().lower()
+                if _r_email == _g_email and _r["supporter_id"] not in _seen:
                     _seen.add(_r["supporter_id"])
-                    _disp_r = _r.get("display_name") or _r["supporter_id"]
-                    _candidates.append({"supporter_id": _r["supporter_id"], "display_name": _disp_r})
+                    _candidates.append({"supporter_id": _r["supporter_id"], "display_name": _r.get("display_name") or _r["supporter_id"]})
             if _candidates:
-                # 1件以上一致 → 選択画面へ
                 st.session_state["_g_link_info"] = {
                     "email": _g_email, "sub": _g_sub, "name": _g_name, "candidates": _candidates
                 }
             else:
                 # 新規アカウント作成（1秒登録）
                 _new_sid = "sup_" + uuid.uuid4().hex[:12]
+                get_db().table("supporters").upsert({
+                    "supporter_id": _new_sid, "display_name": _g_name, "email": _g_email, "google_sub": _g_sub,
+                }).execute()
                 get_db().table("supporter_accounts").insert({
                     "supporter_id": _new_sid, "email": _g_email, "google_sub": _g_sub,
                 }).execute()
-                try:
-                    get_db().table("supporters").upsert({
-                        "supporter_id": _new_sid, "display_name": _g_name, "email": _g_email,
-                    }).execute()
-                except Exception:
-                    pass
                 st.session_state["supporter_auth"] = {"supporter_id": _new_sid, "display_name": _g_name, "email": _g_email}
                 st.session_state["_g_new_name"] = _g_name
     else:
@@ -2323,7 +2322,9 @@ elif page == "supporter_dashboard":
                         if _sa_chk.data and _sa_chk.data[0].get("password_hash"):
                             _pw_ok = _sa_chk.data[0]["password_hash"] == hash_password(_lk_pw)
                     if _pw_ok:
-                        # google_sub を更新（upsert で supporter_accounts に確実に追加）
+                        # supporters に google_sub を保存（一元管理）
+                        get_db().table("supporters").update({"google_sub": _li["sub"]}).eq("supporter_id", _target_sid).execute()
+                        # supporter_accounts にも同期
                         _sa_exists = get_db().table("supporter_accounts").select("supporter_id").eq("supporter_id", _target_sid).limit(1).execute()
                         if _sa_exists.data:
                             get_db().table("supporter_accounts").update({"google_sub": _li["sub"]}).eq("supporter_id", _target_sid).execute()

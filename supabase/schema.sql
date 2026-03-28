@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS public.supporters (
     created_at       TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     password_hash    TEXT,
     email            TEXT,
-    creator_acct_id  TEXT
+    creator_acct_id  TEXT,
+    google_sub       TEXT UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS public.deleted_slugs (

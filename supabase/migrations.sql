@@ -113,4 +113,16 @@ UPDATE supporter_accounts
 SET google_sub = NULL
 WHERE supporter_id = 'sup_056dac79';
 
+-- ----------------------------------------
+-- supporters テーブルに google_sub カラム追加
+-- supporters で google_sub を一元管理する
+-- 実行日: 2026-03-28
+-- ----------------------------------------
+ALTER TABLE public.supporters
+  ADD COLUMN IF NOT EXISTS google_sub TEXT UNIQUE;
+
+-- sup_32dc1b6b のemail スペース修正
+UPDATE supporters SET email = 'oyajibuki@gmail.com' WHERE supporter_id = 'sup_32dc1b6b';
+UPDATE supporter_accounts SET email = 'oyajibuki@gmail.com' WHERE supporter_id = 'sup_32dc1b6b';
+
 NOTIFY pgrst, 'reload schema';
