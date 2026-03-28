@@ -1,0 +1,34 @@
+name: DR Sync (oshipay2JP → oshipay)
+
+on:
+  schedule:
+    - cron: "0 15 * * *"   # 毎日 00:00 JST（15:00 UTC）
+  workflow_dispatch:         # 手動実行も可能
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install supabase python-dotenv
+
+      - name: Create .env.dr
+        run: |
+          cat > supabase/.env.dr << EOF
+          PRIMARY_SUPABASE_URL=${{ secrets.PRIMARY_SUPABASE_URL }}
+          PRIMARY_SUPABASE_KEY=${{ secrets.PRIMARY_SUPABASE_KEY }}
+          DR_SUPABASE_URL=${{ secrets.DR_SUPABASE_URL }}
+          DR_SUPABASE_KEY=${{ secrets.DR_SUPABASE_KEY }}
+          EOF
+
+      - name: Run DR sync
+        run: python supabase/sync_to_dr.py
