@@ -2431,15 +2431,9 @@ elif page == "supporter_dashboard":
             # ── Googleでログインボタン ──
             if GOOGLE_CLIENT_ID:
                 _g_url = _google_auth_url()
-                components.html(f"""
-                <div style="text-align:center; margin-bottom:8px;">
-                  <button onclick="window.top.location.href='{_g_url}'"
-                    style="display:flex; align-items:center; justify-content:center; gap:10px; background:#fff; color:#3c4043; border:1px solid #dadce0; border-radius:12px; padding:13px 20px; font-size:15px; font-weight:600; cursor:pointer; width:100%; box-shadow:0 1px 3px rgba(0,0,0,0.12);">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
-                    Googleアカウントで登録 / ログイン
-                  </button>
-                </div>
-                """, height=60)
+                if st.button("Googleアカウントで登録 / ログイン", use_container_width=True, key="google_login_btn"):
+                    components.html(f'<script>window.top.location.href="{_g_url}";</script>', height=0)
+                    st.markdown(f'<meta http-equiv="refresh" content="0; url={_g_url}">', unsafe_allow_html=True)
                 st.markdown('<div style="text-align:center; color:rgba(255,255,255,0.35); font-size:12px; margin:12px 0;">── または メール・パスワードで ──</div>', unsafe_allow_html=True)
 
             tab_register, tab_login, tab_forgot = st.tabs(["✨ 新規登録", "🔑 ログイン", "🔓 パスワードを忘れた"])
