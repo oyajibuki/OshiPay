@@ -3196,16 +3196,22 @@ elif page == "supporter_dashboard":
         st.markdown('<div style="font-size:13px;color:rgba(240,240,245,0.6);margin-bottom:12px;">応援するだけでなく、自分もクリエーターとして活動できます。クリエーターIDを発行して応援を受け取りましょう。</div>', unsafe_allow_html=True)
         if st.button("🎨 クリエーターになる（無料）", use_container_width=True, type="primary", key="become_creator"):
             try:
-                _c_name  = sup_user.get("display_name") or "クリエーター"
-                _c_email = sup_user.get("email") or ""
-                _c_gsub  = sup_user.get("google_sub") or ""
+                # DBから最新のsub情報を取得（session_stateにはsub系は保存していないため）
+                _sup_full = get_db().table("supporters").select("display_name,email,google_sub,discord_sub,line_sub").eq("supporter_id", sup_user["supporter_id"]).maybe_single().execute()
+                _sup_data = _sup_full.data or {}
+                _c_name  = _sup_data.get("display_name") or sup_user.get("display_name") or "クリエーター"
+                _c_email = _sup_data.get("email") or sup_user.get("email") or ""
+                _c_gsub  = _sup_data.get("google_sub") or ""
+                _c_dsub  = _sup_data.get("discord_sub") or ""
+                _c_lsub  = _sup_data.get("line_sub") or ""
                 _use_acct_id = None
 
-                # google_sub が一致するクリエータがいれば、新規作成せず既存を使う
-                if _c_gsub:
-                    _gc_exist = get_db().table("creators").select("acct_id").eq("google_sub", _c_gsub).limit(1).execute()
-                    if _gc_exist.data:
-                        _use_acct_id = _gc_exist.data[0]["acct_id"]
+                # 各OAuthのsubが一致するクリエーターがいれば既存を使う（重複作成防止）
+                for _sub_col, _sub_val in [("google_sub", _c_gsub), ("discord_sub", _c_dsub), ("line_sub", _c_lsub)]:
+                    if _sub_val and not _use_acct_id:
+                        _ex = get_db().table("creators").select("acct_id").eq(_sub_col, _sub_val).limit(1).execute()
+                        if _ex.data:
+                            _use_acct_id = _ex.data[0]["acct_id"]
 
                 if not _use_acct_id:
                     _use_acct_id = "usr_" + uuid.uuid4().hex[:16]
@@ -3215,8 +3221,9 @@ elif page == "supporter_dashboard":
                         "supporter_id": sup_user["supporter_id"],
                         "profile_done": False, "payout_enabled": False,
                     }
-                    if _c_gsub:
-                        _ins["google_sub"] = _c_gsub
+                    if _c_gsub: _ins["google_sub"] = _c_gsub
+                    if _c_dsub: _ins["discord_sub"] = _c_dsub
+                    if _c_lsub: _ins["line_sub"]    = _c_lsub
                     get_db().table("creators").insert(_ins).execute()
 
                 get_db().table("supporters").update({"creator_acct_id": _use_acct_id}).eq("supporter_id", sup_user["supporter_id"]).execute()
