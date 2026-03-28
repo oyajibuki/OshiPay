@@ -2899,24 +2899,34 @@ elif page == "supporter_dashboard":
         st.markdown('<div style="font-size:13px;color:rgba(240,240,245,0.6);margin-bottom:12px;">応援するだけでなく、自分もクリエーターとして活動できます。クリエーターIDを発行して応援を受け取りましょう。</div>', unsafe_allow_html=True)
         if st.button("🎨 クリエーターになる（無料）", use_container_width=True, type="primary", key="become_creator"):
             try:
-                _new_acct_id = "usr_" + uuid.uuid4().hex[:16]
-                _c_name = sup_user.get("display_name") or "クリエーター"
+                _c_name  = sup_user.get("display_name") or "クリエーター"
                 _c_email = sup_user.get("email") or ""
-                get_db().table("creators").insert({
-                    "acct_id": _new_acct_id,
-                    "display_name": _c_name,
-                    "name": _c_name,
-                    "email": _c_email,
-                    "password_hash": "",
-                    "supporter_id": sup_user["supporter_id"],
-                    "profile_done": False,
-                    "payout_enabled": False,
-                }).execute()
-                get_db().table("supporters").update({"creator_acct_id": _new_acct_id}).eq("supporter_id", sup_user["supporter_id"]).execute()
-                st.success(f"✅ クリエーターID `{_new_acct_id}` を発行しました！")
-                st.session_state["creator_auth"] = _new_acct_id
+                _c_gsub  = sup_user.get("google_sub") or ""
+                _use_acct_id = None
+
+                # google_sub が一致するクリエータがいれば、新規作成せず既存を使う
+                if _c_gsub:
+                    _gc_exist = get_db().table("creators").select("acct_id").eq("google_sub", _c_gsub).limit(1).execute()
+                    if _gc_exist.data:
+                        _use_acct_id = _gc_exist.data[0]["acct_id"]
+
+                if not _use_acct_id:
+                    _use_acct_id = "usr_" + uuid.uuid4().hex[:16]
+                    _ins = {
+                        "acct_id": _use_acct_id, "display_name": _c_name, "name": _c_name,
+                        "email": _c_email, "password_hash": "",
+                        "supporter_id": sup_user["supporter_id"],
+                        "profile_done": False, "payout_enabled": False,
+                    }
+                    if _c_gsub:
+                        _ins["google_sub"] = _c_gsub
+                    get_db().table("creators").insert(_ins).execute()
+
+                get_db().table("supporters").update({"creator_acct_id": _use_acct_id}).eq("supporter_id", sup_user["supporter_id"]).execute()
+                st.success(f"✅ クリエーターID `{_use_acct_id}` を発行しました！")
+                st.session_state["creator_auth"] = _use_acct_id
                 st.query_params["page"] = "dashboard"
-                st.query_params["acct"] = _new_acct_id
+                st.query_params["acct"] = _use_acct_id
                 st.rerun()
             except Exception as _ce:
                 st.error(f"クリエーター作成エラー: {_ce}")
@@ -3837,6 +3847,114 @@ else: # Dashboard
                             st.rerun()
                     else:
                         st.error("パスワードが違います。")
+
+        # ── サポーターとして活動する ──
+        st.markdown('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0;">', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:15px;font-weight:700;color:rgba(240,240,245,0.85);margin-bottom:8px;">💜 サポーターとして応援する</div>', unsafe_allow_html=True)
+        try:
+            _cr_full = get_db().table("creators").select("google_sub,email").eq("acct_id", acct_id).maybe_single().execute()
+            _cr_gsub  = (_cr_full.data or {}).get("google_sub") or ""
+            _cr_email = (_cr_full.data or {}).get("email") or ""
+        except Exception:
+            _cr_gsub = _cr_email = ""
+
+        # 既存サポーターアカウントを検索（creator_acct_id で紐づけ済み / google_sub 一致 / email 一致）
+        _linked_sup_id = None
+        try:
+            _ls1 = get_db().table("supporters").select("supporter_id").eq("creator_acct_id", acct_id).limit(1).execute()
+            if _ls1.data:
+                _linked_sup_id = _ls1.data[0]["supporter_id"]
+            elif _cr_gsub:
+                _ls2 = get_db().table("supporters").select("supporter_id").eq("google_sub", _cr_gsub).limit(1).execute()
+                if _ls2.data:
+                    _linked_sup_id = _ls2.data[0]["supporter_id"]
+                    # 紐づけを記録
+                    get_db().table("supporters").update({"creator_acct_id": acct_id}).eq("supporter_id", _linked_sup_id).execute()
+        except Exception:
+            pass
+
+        if _linked_sup_id:
+            st.success(f"✅ サポーターID `{_linked_sup_id}` と連携済みです")
+            if st.button("💜 サポーターダッシュボードへ切り替え", use_container_width=True, key="switch_to_supporter"):
+                _sup_row2 = get_db().table("supporters").select("supporter_id,display_name,email").eq("supporter_id", _linked_sup_id).maybe_single().execute()
+                _sd = _sup_row2.data or {}
+                st.session_state["supporter_auth"] = {
+                    "supporter_id": _sd.get("supporter_id", _linked_sup_id),
+                    "display_name": _sd.get("display_name", ""),
+                    "email": _sd.get("email", ""),
+                }
+                st.query_params["page"] = "supporter_dashboard"
+                st.rerun()
+        else:
+            st.markdown('<div style="font-size:13px;color:rgba(240,240,245,0.6);margin-bottom:10px;">クリエーターとして活動しながら、他のクリエーターを応援することもできます。</div>', unsafe_allow_html=True)
+            if st.button("💜 サポーターになる（無料）", use_container_width=True, key="become_supporter"):
+                try:
+                    _new_sup_id = None
+                    # google_sub で既存サポーターを検索
+                    if _cr_gsub:
+                        _bs1 = get_db().table("supporters").select("supporter_id,display_name,email").eq("google_sub", _cr_gsub).limit(1).execute()
+                        if _bs1.data:
+                            _new_sup_id = _bs1.data[0]["supporter_id"]
+                    # email で既存サポーターを検索（1件のみ自動紐づけ）
+                    if not _new_sup_id and _cr_email:
+                        _bs2 = get_db().table("supporters").select("supporter_id,display_name,email").eq("email", _cr_email).execute()
+                        if len(_bs2.data or []) == 1:
+                            _new_sup_id = _bs2.data[0]["supporter_id"]
+                        elif len(_bs2.data or []) > 1:
+                            st.session_state["_cr_to_sup_candidates"] = [
+                                {"supporter_id": r["supporter_id"], "display_name": r.get("display_name") or r["supporter_id"]}
+                                for r in _bs2.data
+                            ]
+                            st.session_state["_cr_to_sup_acct"] = acct_id
+                            st.rerun()
+                    # 新規作成
+                    if not _new_sup_id:
+                        _new_sup_id = "sup_" + uuid.uuid4().hex[:12]
+                        _sup_ins = {
+                            "supporter_id": _new_sup_id,
+                            "display_name": _cr_data.get("display_name") or "サポーター",
+                            "email": _cr_email,
+                        }
+                        if _cr_gsub:
+                            _sup_ins["google_sub"] = _cr_gsub
+                        get_db().table("supporters").insert(_sup_ins).execute()
+                        if _cr_email:
+                            get_db().table("supporter_accounts").insert({
+                                "supporter_id": _new_sup_id, "email": _cr_email,
+                                **({"google_sub": _cr_gsub} if _cr_gsub else {}),
+                            }).execute()
+                    # creator_acct_id を紐づけ
+                    get_db().table("supporters").update({"creator_acct_id": acct_id}).eq("supporter_id", _new_sup_id).execute()
+                    _sup_row3 = get_db().table("supporters").select("supporter_id,display_name,email").eq("supporter_id", _new_sup_id).maybe_single().execute()
+                    _sd3 = _sup_row3.data or {}
+                    st.session_state["supporter_auth"] = {
+                        "supporter_id": _sd3.get("supporter_id", _new_sup_id),
+                        "display_name": _sd3.get("display_name", ""),
+                        "email": _sd3.get("email", ""),
+                    }
+                    st.query_params["page"] = "supporter_dashboard"
+                    st.rerun()
+                except Exception as _se:
+                    st.error(f"サポーター作成エラー: {_se}")
+
+        # サポーター候補が複数の場合の選択UI
+        if st.session_state.get("_cr_to_sup_candidates"):
+            _cands = st.session_state["_cr_to_sup_candidates"]
+            st.markdown('<div style="font-size:13px;color:#93c5fd;margin-bottom:8px;">既存のサポーターアカウントが複数あります。どれを使いますか？</div>', unsafe_allow_html=True)
+            for _sc in _cands:
+                if st.button(f"✅ {_sc['display_name']} ({_sc['supporter_id']})", key=f"sel_sup_{_sc['supporter_id']}", use_container_width=True):
+                    _sel_id = _sc["supporter_id"]
+                    get_db().table("supporters").update({"creator_acct_id": acct_id}).eq("supporter_id", _sel_id).execute()
+                    _sup_row4 = get_db().table("supporters").select("supporter_id,display_name,email").eq("supporter_id", _sel_id).maybe_single().execute()
+                    _sd4 = _sup_row4.data or {}
+                    st.session_state["supporter_auth"] = {
+                        "supporter_id": _sd4.get("supporter_id", _sel_id),
+                        "display_name": _sd4.get("display_name", ""),
+                        "email": _sd4.get("email", ""),
+                    }
+                    del st.session_state["_cr_to_sup_candidates"]
+                    st.query_params["page"] = "supporter_dashboard"
+                    st.rerun()
 
         # 連携解除ボタン
         if st.button("🚫 連携解除", type="secondary", key="disconnect_btn"):
