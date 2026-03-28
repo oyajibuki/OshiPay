@@ -26,7 +26,7 @@ NOTIFY pgrst, 'reload schema';
 
 -- ----------------------------------------
 -- payout_enabled 初期値セット
--- 実行日: 2026-xx-xx
+-- 実行日: 2026-03-27
 -- ----------------------------------------
 
 -- ✅ 口座登録完了
@@ -60,7 +60,7 @@ WHERE stripe_acct_id IN (
 -- ----------------------------------------
 -- データ修正（幽霊エントリ）
 -- ニコ太郎の支払い記録を正しいacct_idに修正
--- 実行日: 2026-xx-xx
+-- 実行日: 2026-03-27
 -- ----------------------------------------
 UPDATE supports
 SET creator_acct = 'usr_cb2476d477df4b91'
@@ -68,7 +68,7 @@ WHERE creator_acct = 'acct_1TD38K2ayG13ne5r';
 
 -- ----------------------------------------
 -- supporter_id マイグレーション（sup_BBB → sup_AAA）
--- 実行日: 2026-xx-xx
+-- 実行日: 2026-03-27
 -- ----------------------------------------
 UPDATE supports         SET supporter_id = 'sup_AAA' WHERE supporter_id = 'sup_BBB';
 UPDATE pending_supports SET supporter_id = 'sup_AAA' WHERE supporter_id = 'sup_BBB';
@@ -77,17 +77,27 @@ DELETE FROM supporter_accounts WHERE supporter_id = 'sup_BBB';
 
 -- ----------------------------------------
 -- show_on_profile 一括有効化
--- 実行日: 2026-xx-xx
+-- 実行日: 2026-03-27
 -- ----------------------------------------
 UPDATE supports SET show_on_profile = TRUE
 WHERE show_on_profile IS NULL OR show_on_profile = FALSE;
 
 -- ----------------------------------------
 -- supporter_accounts へのデータ移行（supporters から）
--- 実行日: 2026-xx-xx
+-- 実行日: 2026-03-27
 -- ----------------------------------------
 INSERT INTO supporter_accounts (supporter_id, email, password_hash)
 SELECT supporter_id, email, password_hash
 FROM supporters
 WHERE email IS NOT NULL AND email != ''
 ON CONFLICT DO NOTHING;
+
+-- ----------------------------------------
+-- supporter_accounts に google_sub カラム追加
+-- Googleログイン対応（1アカウント1Gmail）
+-- 実行日: 2026-03-28
+-- ----------------------------------------
+ALTER TABLE public.supporter_accounts
+  ADD COLUMN IF NOT EXISTS google_sub TEXT UNIQUE;
+
+NOTIFY pgrst, 'reload schema';

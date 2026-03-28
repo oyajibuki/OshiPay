@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS public.supporter_accounts (
     email              TEXT UNIQUE NOT NULL,
     password_hash      TEXT,
     stripe_customer_id TEXT,
+    google_sub         TEXT UNIQUE,
     created_at         TIMESTAMPTZ DEFAULT now()
 );
 

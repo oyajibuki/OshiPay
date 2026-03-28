@@ -15,6 +15,7 @@ import streamlit.components.v1 as components
 import stripe
 import qrcode
 import urllib.parse
+import requests as _req
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -49,6 +50,45 @@ ICON_OPTIONS = {
 BASE_URL = os.environ.get("APP_URL", "https://oshipay.me").rstrip('/') + '/'
 LP_URL   = "https://oshipay.me/"
 QR_BASE  = "https://oshipay.me"   # QRコードのベースURL（カスタムドメイン）
+
+# ── Google OAuth 設定 ──
+GOOGLE_CLIENT_ID     = ""
+GOOGLE_CLIENT_SECRET = ""
+try:
+    GOOGLE_CLIENT_ID     = st.secrets["GOOGLE_CLIENT_ID"]
+    GOOGLE_CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
+except Exception:
+    pass
+GOOGLE_REDIRECT_URI = "https://oshipay.me"
+
+def _google_auth_url() -> str:
+    return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode({
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "prompt": "select_account",
+        "state": "g_sup",
+    })
+
+def _exchange_google_code(code: str) -> dict | None:
+    try:
+        tok = _req.post("https://oauth2.googleapis.com/token", data={
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }).json()
+        at = tok.get("access_token")
+        if not at:
+            return None
+        return _req.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {at}"},
+        ).json()
+    except Exception:
+        return None
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ヘルパー関数
@@ -680,6 +720,50 @@ elif "device_id" not in st.session_state:
     _new_did = "dev_" + uuid.uuid4().hex[:20]
     st.session_state["device_id"] = _new_did
     st.query_params["did"] = _new_did
+
+# ── Google OAuth コールバック処理 ──
+if params.get("state") == "g_sup" and params.get("code") and not st.session_state.get("_g_done"):
+    st.session_state["_g_done"] = True
+    _g_info = _exchange_google_code(params["code"])
+    if _g_info and _g_info.get("email"):
+        _g_email = _g_info["email"].strip().lower()
+        _g_sub   = str(_g_info.get("id", ""))
+        _g_name  = _g_info.get("name", _g_email.split("@")[0])
+        # google_sub で既存アカウント検索
+        _sa_sub = get_db().table("supporter_accounts").select("*").eq("google_sub", _g_sub).limit(1).execute()
+        if _sa_sub.data:
+            # 既存アカウント（google_sub一致）→ 即ログイン
+            _row = _sa_sub.data[0]
+            _sn  = get_db().table("supporters").select("display_name").eq("supporter_id", _row["supporter_id"]).limit(1).execute()
+            _disp = (_sn.data[0]["display_name"] if _sn.data else None) or _g_name
+            st.session_state["supporter_auth"] = {"supporter_id": _row["supporter_id"], "display_name": _disp, "email": _row["email"]}
+        else:
+            # email で既存アカウント検索
+            _sa_em = get_db().table("supporter_accounts").select("*").eq("email", _g_email).limit(1).execute()
+            if _sa_em.data:
+                # email一致 → 紐づけ確認画面へ
+                st.session_state["_g_link_info"] = {
+                    "email": _g_email, "sub": _g_sub, "name": _g_name, "row": _sa_em.data[0]
+                }
+            else:
+                # 新規アカウント作成（1秒登録）
+                _new_sid = "sup_" + uuid.uuid4().hex[:12]
+                get_db().table("supporter_accounts").insert({
+                    "supporter_id": _new_sid, "email": _g_email, "google_sub": _g_sub,
+                }).execute()
+                try:
+                    get_db().table("supporters").upsert({
+                        "supporter_id": _new_sid, "display_name": _g_name, "email": _g_email,
+                    }).execute()
+                except Exception:
+                    pass
+                st.session_state["supporter_auth"] = {"supporter_id": _new_sid, "display_name": _g_name, "email": _g_email}
+                st.session_state["_g_new_name"] = _g_name
+    else:
+        st.session_state["_g_done"] = False
+    st.query_params.clear()
+    st.query_params["page"] = "supporter_dashboard"
+    st.rerun()
 
 # LocalStorage保存用の簡易JS
 def save_account_id_js(acct_id):
@@ -2196,6 +2280,33 @@ elif page == "supporter_dashboard":
     st.markdown('<div class="oshi-logo"><span class="text">oshipay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">サポーター・ダッシュボード</div>', unsafe_allow_html=True)
     
+    # ── Google アカウント紐づけ確認画面 ──
+    if "_g_link_info" in st.session_state and "supporter_auth" not in st.session_state:
+        _li = st.session_state["_g_link_info"]
+        st.markdown(f"""
+        <div style="background:rgba(66,133,244,0.12); border:1px solid rgba(66,133,244,0.35); border-radius:14px; padding:24px; margin-bottom:20px; text-align:center;">
+          <div style="font-size:28px; margin-bottom:10px;">🔗</div>
+          <div style="font-weight:700; color:#f0f0f5; font-size:16px; margin-bottom:8px;">同じメールのアカウントが見つかりました</div>
+          <div style="font-size:14px; color:rgba(240,240,245,0.8); margin-bottom:4px;">{_li['email']}</div>
+          <div style="font-size:12px; color:rgba(240,240,245,0.5); margin-top:8px;">このアカウントにGoogleログインを紐づけますか？<br>次回からGmailワンクリックでログインできます。</div>
+        </div>
+        """, unsafe_allow_html=True)
+        _lk1, _lk2 = st.columns(2)
+        with _lk1:
+            if st.button("✅ 紐づける（推奨）", use_container_width=True, type="primary", key="g_link_yes"):
+                get_db().table("supporter_accounts").update({"google_sub": _li["sub"]}).eq("supporter_id", _li["row"]["supporter_id"]).execute()
+                _sn2 = get_db().table("supporters").select("display_name").eq("supporter_id", _li["row"]["supporter_id"]).limit(1).execute()
+                _d2  = (_sn2.data[0]["display_name"] if _sn2.data else None) or _li["name"]
+                st.session_state["supporter_auth"] = {"supporter_id": _li["row"]["supporter_id"], "display_name": _d2, "email": _li["email"]}
+                del st.session_state["_g_link_info"]
+                st.rerun()
+        with _lk2:
+            if st.button("キャンセル", use_container_width=True, key="g_link_no"):
+                del st.session_state["_g_link_info"]
+                st.session_state.pop("_g_done", None)
+                st.rerun()
+        st.stop()
+
     if "supporter_auth" not in st.session_state:
         _prefill_sid = st.session_state.pop("_sup_prefill_id", None) or params.get("sid", "")
 
@@ -2316,6 +2427,18 @@ elif page == "supporter_dashboard":
         else:
             # ── モードC: IDなし or 不明 → タブ（新規登録優先）──
             st.info("応援チケットの確認・応援履歴の管理ができます。")
+
+            # ── Googleでログインボタン ──
+            if GOOGLE_CLIENT_ID:
+                _g_url = _google_auth_url()
+                st.markdown(f"""
+                <a href="{_g_url}" target="_top" style="display:flex; align-items:center; justify-content:center; gap:10px; background:#fff; color:#3c4043; border:1px solid #dadce0; border-radius:12px; padding:13px 20px; font-size:15px; font-weight:600; text-decoration:none; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,0.12);">
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
+                  Googleアカウントで登録 / ログイン
+                </a>
+                """, unsafe_allow_html=True)
+                st.markdown('<div style="text-align:center; color:rgba(255,255,255,0.35); font-size:12px; margin:12px 0;">── または メール・パスワードで ──</div>', unsafe_allow_html=True)
+
             tab_register, tab_login, tab_forgot = st.tabs(["✨ 新規登録", "🔑 ログイン", "🔓 パスワードを忘れた"])
 
             with tab_register:
@@ -2449,6 +2572,30 @@ elif page == "supporter_dashboard":
         st.stop()
         
     sup_user = st.session_state["supporter_auth"]
+
+    # ── 新規Googleアカウント: 表示名確認 ──
+    if "_g_new_name" in st.session_state:
+        _default_gname = st.session_state["_g_new_name"]
+        st.markdown("""
+        <div style="background:rgba(66,133,244,0.12); border:1px solid rgba(66,133,244,0.35); border-radius:14px; padding:20px; margin-bottom:20px; text-align:center;">
+          <div style="font-size:22px; margin-bottom:8px;">🎉</div>
+          <div style="font-weight:700; color:#f0f0f5; font-size:15px; margin-bottom:4px;">Googleアカウントで登録完了！</div>
+          <div style="font-size:12px; color:rgba(240,240,245,0.6);">表示名を確認・変更できます</div>
+        </div>
+        """, unsafe_allow_html=True)
+        _gn_input = st.text_input("表示名（公開されます）", value=_default_gname, key="g_name_input")
+        if st.button("この名前で始める", type="primary", use_container_width=True, key="g_name_confirm"):
+            _final_name = _gn_input.strip() or _default_gname
+            try:
+                get_db().table("supporters").update({"display_name": _final_name}).eq("supporter_id", sup_user["supporter_id"]).execute()
+            except Exception:
+                pass
+            st.session_state["supporter_auth"]["display_name"] = _final_name
+            sup_user["display_name"] = _final_name
+            del st.session_state["_g_new_name"]
+            st.rerun()
+        st.stop()
+
     st.markdown(f'<div style="font-size:18px; font-weight:700; text-align:center; color:#f0f0f5; margin-bottom:5px;">ようこそ、{sup_user["display_name"]} さん！</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="font-size:13px; text-align:center; color:rgba(255,255,255,0.5); margin-bottom:20px;">あなたのサポーターID: <code>{sup_user["supporter_id"]}</code></div>', unsafe_allow_html=True)
     

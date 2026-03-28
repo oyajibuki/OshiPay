@@ -4,3 +4,4 @@ qrcode
 pillow
 supabase
 resend
+requests
