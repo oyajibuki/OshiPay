@@ -23,6 +23,11 @@
 -- ALTER TABLE public.supporter_accounts ADD COLUMN IF NOT EXISTS discord_sub TEXT UNIQUE;
 -- ALTER TABLE public.creators           ADD COLUMN IF NOT EXISTS discord_sub TEXT UNIQUE;
 
+-- ✅ LINE OAuth 対応 line_sub 追加（2026-03-29 16:36 JST）→ schema.sql に反映済み
+-- ALTER TABLE public.supporters         ADD COLUMN IF NOT EXISTS line_sub TEXT UNIQUE;
+-- ALTER TABLE public.supporter_accounts ADD COLUMN IF NOT EXISTS line_sub TEXT UNIQUE;
+-- ALTER TABLE public.creators           ADD COLUMN IF NOT EXISTS line_sub TEXT UNIQUE;
+
 -- ✅ bot_logs テーブル作成（2026-03-27）→ schema.sql に統合済み
 
 -- ============================================
@@ -104,10 +109,5 @@
 -- ============================================
 -- 🆕 未実行・今後の作業用はここに追記する
 -- ============================================
-
--- ✅ LINE OAuth 対応 line_sub 追加（2026-03-30）→ schema.sql に反映済み
--- ALTER TABLE public.supporters         ADD COLUMN IF NOT EXISTS line_sub TEXT UNIQUE;
--- ALTER TABLE public.supporter_accounts ADD COLUMN IF NOT EXISTS line_sub TEXT UNIQUE;
--- ALTER TABLE public.creators           ADD COLUMN IF NOT EXISTS line_sub TEXT UNIQUE;
 
 NOTIFY pgrst, 'reload schema';
