@@ -12,6 +12,16 @@ ALTER TABLE public.creators ADD COLUMN IF NOT EXISTS google_sub TEXT UNIQUE;
 NOTIFY pgrst, 'reload schema';
 
 -- ----------------------------------------
+-- Discord OAuth 対応（discord_sub カラム追加）
+-- 実行日: 2026-03-29
+-- ----------------------------------------
+ALTER TABLE public.supporters          ADD COLUMN IF NOT EXISTS discord_sub TEXT UNIQUE;
+ALTER TABLE public.supporter_accounts  ADD COLUMN IF NOT EXISTS discord_sub TEXT UNIQUE;
+ALTER TABLE public.creators            ADD COLUMN IF NOT EXISTS discord_sub TEXT UNIQUE;
+
+NOTIFY pgrst, 'reload schema';
+
+-- ----------------------------------------
 -- Discord Bot ログテーブル作成
 -- 実行日: 2026-03-27
 -- ----------------------------------------

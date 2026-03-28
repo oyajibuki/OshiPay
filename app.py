@@ -90,6 +90,47 @@ def _exchange_google_code(code: str) -> dict | None:
     except Exception:
         return None
 
+# ── Discord OAuth 設定 ──
+DISCORD_CLIENT_ID     = ""
+DISCORD_CLIENT_SECRET = ""
+try:
+    DISCORD_CLIENT_ID     = st.secrets["DISCORD_CLIENT_ID"]
+    DISCORD_CLIENT_SECRET = st.secrets["DISCORD_CLIENT_SECRET"]
+except Exception:
+    pass
+DISCORD_REDIRECT_URI = "https://oshipay.streamlit.app"
+
+def _discord_auth_url(state: str = "d_sup") -> str:
+    return "https://discord.com/api/oauth2/authorize?" + urllib.parse.urlencode({
+        "client_id": DISCORD_CLIENT_ID,
+        "redirect_uri": DISCORD_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "identify email",
+        "state": state,
+    })
+
+def _exchange_discord_code(code: str) -> dict | None:
+    try:
+        tok = _req.post("https://discord.com/api/oauth2/token", data={
+            "code": code,
+            "client_id": DISCORD_CLIENT_ID,
+            "client_secret": DISCORD_CLIENT_SECRET,
+            "redirect_uri": DISCORD_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }, headers={"Content-Type": "application/x-www-form-urlencoded"}).json()
+        at = tok.get("access_token")
+        if not at:
+            return None
+        user = _req.get(
+            "https://discord.com/api/users/@me",
+            headers={"Authorization": f"Bearer {at}"},
+        ).json()
+        if not user.get("verified"):
+            user["email"] = ""
+        return user
+    except Exception:
+        return None
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ヘルパー関数
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -823,6 +864,84 @@ if params.get("state") == "g_creator" and params.get("code") and not st.session_
         st.query_params["acct"] = _gc_login_id
     st.rerun()
 
+# ── Discord OAuth コールバック処理（サポーター用）──
+if params.get("state") == "d_sup" and params.get("code") and not st.session_state.get("_d_sup_done"):
+    st.session_state["_d_sup_done"] = True
+    _ds_info = _exchange_discord_code(params["code"])
+    if _ds_info and _ds_info.get("id"):
+        _ds_sub   = str(_ds_info["id"])
+        _ds_email = (_ds_info.get("email") or "").strip().lower()
+        _ds_name  = _ds_info.get("global_name") or _ds_info.get("username") or _ds_email.split("@")[0] or "サポーター"
+        _ds_sub_res = get_db().table("supporters").select("*").eq("discord_sub", _ds_sub).limit(1).execute()
+        if _ds_sub_res.data:
+            _row = _ds_sub_res.data[0]
+            st.session_state["supporter_auth"] = {"supporter_id": _row["supporter_id"], "display_name": _row.get("display_name", _ds_name), "email": _row.get("email", _ds_email)}
+        else:
+            _candidates = []
+            if _ds_email:
+                _ds_em_all = get_db().table("supporters").select("supporter_id,display_name,email").execute()
+                _seen = set()
+                for _r in (_ds_em_all.data or []):
+                    if (_r.get("email") or "").strip().lower() == _ds_email and _r["supporter_id"] not in _seen:
+                        _seen.add(_r["supporter_id"])
+                        _candidates.append({"supporter_id": _r["supporter_id"], "display_name": _r.get("display_name") or _r["supporter_id"]})
+            if _candidates:
+                st.session_state["_g_link_info"] = {"email": _ds_email, "sub": _ds_sub, "name": _ds_name, "candidates": _candidates, "provider": "discord"}
+            else:
+                _new_sid = "sup_" + uuid.uuid4().hex[:12]
+                get_db().table("supporters").upsert({"supporter_id": _new_sid, "display_name": _ds_name, "email": _ds_email, "discord_sub": _ds_sub}).execute()
+                if _ds_email:
+                    try:
+                        get_db().table("supporter_accounts").insert({"supporter_id": _new_sid, "email": _ds_email, "discord_sub": _ds_sub}).execute()
+                    except Exception:
+                        pass
+                st.session_state["supporter_auth"] = {"supporter_id": _new_sid, "display_name": _ds_name, "email": _ds_email}
+    else:
+        st.session_state["_d_sup_done"] = False
+    st.query_params.clear()
+    st.query_params["page"] = "supporter_dashboard"
+    st.rerun()
+
+# ── Discord OAuth コールバック処理（クリエーター用）──
+if params.get("state") == "d_creator" and params.get("code") and not st.session_state.get("_d_creator_done"):
+    st.session_state["_d_creator_done"] = True
+    _dc_info = _exchange_discord_code(params["code"])
+    _dc_login_id = None
+    if _dc_info and _dc_info.get("id"):
+        _dc_sub   = str(_dc_info["id"])
+        _dc_email = (_dc_info.get("email") or "").strip().lower()
+        _dc_name  = _dc_info.get("global_name") or _dc_info.get("username") or _dc_email.split("@")[0] or "クリエーター"
+        _dc_sub_res = get_db().table("creators").select("acct_id,display_name,email").eq("discord_sub", _dc_sub).limit(1).execute()
+        if _dc_sub_res.data:
+            _dc_login_id = _dc_sub_res.data[0]["acct_id"]
+            st.session_state["creator_auth"] = _dc_login_id
+        else:
+            _dc_cands = []
+            if _dc_email:
+                _dc_em_res = get_db().table("creators").select("acct_id,display_name,email,slug").eq("email", _dc_email).execute()
+                _dc_cands = _dc_em_res.data or []
+            if len(_dc_cands) == 1:
+                _dc_login_id = _dc_cands[0]["acct_id"]
+                get_db().table("creators").update({"discord_sub": _dc_sub}).eq("acct_id", _dc_login_id).execute()
+                st.session_state["creator_auth"] = _dc_login_id
+            elif len(_dc_cands) > 1:
+                st.session_state["_gc_link_info"] = {
+                    "email": _dc_email, "sub": _dc_sub, "name": _dc_name, "provider": "discord",
+                    "candidates": [{"acct_id": r["acct_id"], "display_name": r.get("display_name") or r.get("slug") or r["acct_id"]} for r in _dc_cands]
+                }
+            else:
+                _dc_login_id = "usr_" + uuid.uuid4().hex[:16]
+                get_db().table("creators").insert({
+                    "acct_id": _dc_login_id, "email": _dc_email, "discord_sub": _dc_sub,
+                    "display_name": _dc_name, "password_hash": "",
+                }).execute()
+                st.session_state["creator_auth"] = _dc_login_id
+    st.query_params.clear()
+    st.query_params["page"] = "dashboard"
+    if _dc_login_id:
+        st.query_params["acct"] = _dc_login_id
+    st.rerun()
+
 # ── Googleログインボタン（st.link_button + CSS でGoogleアイコン付きスタイル）──
 _GOOGLE_SVG_URI = (
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E"
@@ -852,6 +971,43 @@ def _render_google_button(url: str, label: str = "Googleアカウントで登録
     [data-testid="stLinkButton"] > a:hover {{
         box-shadow: 0 4px 14px rgba(0,0,0,0.4) !important;
         background-color: #f8f8f8 !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+    st.link_button(label, url, use_container_width=True)
+
+_DISCORD_SVG_URI = (
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E"
+    "%3Cpath fill='white' d='M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037"
+    "c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077"
+    " 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58"
+    ".099 18.057c.002.022.015.043.031.055a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028"
+    " 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892"
+    ".077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.928 1.793"
+    " 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006"
+    ".127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993"
+    "a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054"
+    "c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z'/%3E%3C/svg%3E"
+)
+
+def _render_discord_button(url: str, label: str = "Discordアカウントで登録 / ログイン"):
+    # :last-of-type でDiscordボタン（2番目）だけをblurpleに上書き
+    # Googleボタン（1番目）は[data-testid="stLinkButton"] > a (低specificity) の白背景のまま
+    st.markdown(f"""
+    <style>
+    [data-testid="stLinkButton"]:last-of-type > a {{
+        background: #5865F2 url("{_DISCORD_SVG_URI}") no-repeat 14px center / 22px 22px !important;
+        padding-left: 44px !important;
+        color: white !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        border-radius: 10px !important;
+        box-shadow: 0 2px 8px rgba(88,101,242,0.4) !important;
+        border: none !important;
+    }}
+    [data-testid="stLinkButton"]:last-of-type > a:hover {{
+        box-shadow: 0 4px 14px rgba(88,101,242,0.6) !important;
+        background-color: #4752C4 !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -2407,15 +2563,16 @@ elif page == "supporter_dashboard":
                         if _sa_chk.data and _sa_chk.data[0].get("password_hash"):
                             _pw_ok = _sa_chk.data[0]["password_hash"] == hash_password(_lk_pw)
                     if _pw_ok:
-                        # supporters に google_sub を保存（一元管理）
-                        get_db().table("supporters").update({"google_sub": _li["sub"]}).eq("supporter_id", _target_sid).execute()
+                        _sub_field = "discord_sub" if _li.get("provider") == "discord" else "google_sub"
+                        # supporters に sub を保存（一元管理）
+                        get_db().table("supporters").update({_sub_field: _li["sub"]}).eq("supporter_id", _target_sid).execute()
                         # supporter_accounts にも同期
                         _sa_exists = get_db().table("supporter_accounts").select("supporter_id").eq("supporter_id", _target_sid).limit(1).execute()
                         if _sa_exists.data:
-                            get_db().table("supporter_accounts").update({"google_sub": _li["sub"]}).eq("supporter_id", _target_sid).execute()
+                            get_db().table("supporter_accounts").update({_sub_field: _li["sub"]}).eq("supporter_id", _target_sid).execute()
                         else:
                             get_db().table("supporter_accounts").insert({
-                                "supporter_id": _target_sid, "email": _li["email"], "google_sub": _li["sub"]
+                                "supporter_id": _target_sid, "email": _li["email"], _sub_field: _li["sub"]
                             }).execute()
                         _sn2 = get_db().table("supporters").select("display_name").eq("supporter_id", _target_sid).limit(1).execute()
                         _d2  = (_sn2.data[0]["display_name"] if _sn2.data else None) or _li["name"]
@@ -2572,6 +2729,8 @@ elif page == "supporter_dashboard":
             # ── Googleでログインボタン ──
             if GOOGLE_CLIENT_ID:
                 _render_google_button(_google_auth_url("g_sup"))
+                if DISCORD_CLIENT_ID:
+                    _render_discord_button(_discord_auth_url("d_sup"))
                 st.markdown('<div style="text-align:center; color:rgba(255,255,255,0.35); font-size:12px; margin:4px 0 12px;">── または メール・パスワードで ──</div>', unsafe_allow_html=True)
 
             tab_register, tab_login, tab_forgot = st.tabs(["✨ 新規登録", "🔑 ログイン", "🔓 パスワードを忘れた"])
@@ -3162,6 +3321,8 @@ else: # Dashboard
         # ── Googleでログインボタン ──
         if GOOGLE_CLIENT_ID:
             _render_google_button(_google_auth_url("g_creator"))
+            if DISCORD_CLIENT_ID:
+                _render_discord_button(_discord_auth_url("d_creator"))
             st.markdown('<div style="text-align:center;color:rgba(255,255,255,0.35);font-size:12px;margin:4px 0 12px;">── または ID・パスワードで ──</div>', unsafe_allow_html=True)
 
         # ?tab=new のときは新規作成をデフォルト、それ以外は既存アカウントをデフォルト
@@ -3304,6 +3465,8 @@ else: # Dashboard
             st.warning("このダッシュボードを開くにはパスワードが必要です。")
             if GOOGLE_CLIENT_ID:
                 _render_google_button(_google_auth_url("g_creator"), label="Googleアカウントでログイン")
+                if DISCORD_CLIENT_ID:
+                    _render_discord_button(_discord_auth_url("d_creator"), label="Discordアカウントでログイン")
                 st.markdown('<div style="text-align:center;color:rgba(255,255,255,0.35);font-size:12px;margin:4px 0 10px;">── または パスワードで ──</div>', unsafe_allow_html=True)
             auth_pass = st.text_input("パスワードを入力", type="password", key="auth_pass")
             if st.button("🔓 ログイン", type="primary"):
