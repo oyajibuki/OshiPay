@@ -59,7 +59,7 @@ try:
     GOOGLE_CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
 except Exception:
     pass
-GOOGLE_REDIRECT_URI = "https://oshipay.me"
+GOOGLE_REDIRECT_URI = "https://oshipay.streamlit.app"
 
 def _google_auth_url() -> str:
     return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode({
