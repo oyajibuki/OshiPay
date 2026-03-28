@@ -3151,6 +3151,14 @@ else: # Dashboard
                 st.rerun()
             st.stop()
 
+        # ── みなし同意文言 ──
+        st.markdown("""
+        <div style="font-size:11px;color:rgba(240,240,245,0.45);text-align:center;margin-bottom:10px;line-height:1.6;">
+        登録またはログインすることで、<a href="https://oshipay.me/terms" target="_blank" style="color:rgba(180,180,255,0.7);">利用規約</a>・<a href="https://oshipay.me/privacy" target="_blank" style="color:rgba(180,180,255,0.7);">プライバシーポリシー</a>に同意したものとみなします。<br>
+        ※13歳未満の方はご利用いただけません。18歳未満の方が受取機能を利用する場合は親権者の同意が必要です。
+        </div>
+        """, unsafe_allow_html=True)
+
         # ── Googleでログインボタン ──
         if GOOGLE_CLIENT_ID:
             _render_google_button(_google_auth_url("g_creator"))
@@ -3186,38 +3194,34 @@ else: # Dashboard
             # 作成中フラグ（連打防止）
             _reg_creating = st.session_state.get("_reg_creating", False)
 
-            _age_ok   = st.checkbox("私は13歳以上です（13歳未満の方はご利用いただけません）")
-            st.caption("⚠️ 18歳未満の方が受取機能（口座登録）を利用する場合は、親権者の同意・情報登録が必要です。")
-            _terms_ok = st.checkbox("利用規約に同意して、応援ページを作成する")
-            if _age_ok and _terms_ok:
-                _btn_disabled = _reg_creating or not (new_email and _pass_ok)
-                if st.button("✨ 応援ページを作成する（無料）", type="primary",
-                             disabled=_btn_disabled, use_container_width=True):
-                    st.session_state["_reg_creating"] = True
-                    with st.spinner("応援ページを作成しています..."):
-                        try:
-                            _email_count = get_db().table("creators").select("acct_id").eq("email", new_email.strip().lower()).execute()
-                            if len(_email_count.data or []) >= 10:
-                                st.session_state["_reg_creating"] = False
-                                st.error("このメールアドレスはすでに10アカウントに使用されています。別のメールアドレスをお使いください。")
-                                st.stop()
-                            creator_id = "usr_" + uuid.uuid4().hex[:16]
-                            _reg_ok, _reg_err = register_creator(creator_id, new_pass, email=new_email)
-                            if not _reg_ok:
-                                st.session_state["_reg_creating"] = False
-                                st.error(f"登録エラー: {_reg_err}")
-                                st.stop()
-                            send_acct_id_email(new_email, creator_id)
-                        except Exception as _e:
+            _btn_disabled = _reg_creating or not (new_email and _pass_ok)
+            if st.button("✨ 応援ページを作成する（無料）", type="primary",
+                         disabled=_btn_disabled, use_container_width=True):
+                st.session_state["_reg_creating"] = True
+                with st.spinner("応援ページを作成しています..."):
+                    try:
+                        _email_count = get_db().table("creators").select("acct_id").eq("email", new_email.strip().lower()).execute()
+                        if len(_email_count.data or []) >= 10:
                             st.session_state["_reg_creating"] = False
-                            st.error(f"エラー: {_e}")
+                            st.error("このメールアドレスはすでに10アカウントに使用されています。別のメールアドレスをお使いください。")
                             st.stop()
-                    # 作成完了 → ダッシュボードへ遷移
-                    st.session_state["_reg_creating"] = False
-                    st.session_state["creator_auth"] = creator_id
-                    st.success("✅ 作成完了！ダッシュボードへ移動します...")
-                    st.query_params.update({"page": "dashboard", "acct": creator_id})
-                    st.rerun()
+                        creator_id = "usr_" + uuid.uuid4().hex[:16]
+                        _reg_ok, _reg_err = register_creator(creator_id, new_pass, email=new_email)
+                        if not _reg_ok:
+                            st.session_state["_reg_creating"] = False
+                            st.error(f"登録エラー: {_reg_err}")
+                            st.stop()
+                        send_acct_id_email(new_email, creator_id)
+                    except Exception as _e:
+                        st.session_state["_reg_creating"] = False
+                        st.error(f"エラー: {_e}")
+                        st.stop()
+                # 作成完了 → ダッシュボードへ遷移
+                st.session_state["_reg_creating"] = False
+                st.session_state["creator_auth"] = creator_id
+                st.success("✅ 作成完了！ダッシュボードへ移動します...")
+                st.query_params.update({"page": "dashboard", "acct": creator_id})
+                st.rerun()
 
         with tab_recover:
             # ── 既存アカウント復元フォーム ──
