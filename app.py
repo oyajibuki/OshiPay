@@ -4172,24 +4172,28 @@ else: # Dashboard
         st.markdown('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0;">', unsafe_allow_html=True)
         st.markdown('<div style="font-size:15px;font-weight:700;color:rgba(240,240,245,0.85);margin-bottom:8px;">💜 サポーターとして応援する</div>', unsafe_allow_html=True)
         try:
-            _cr_full = get_db().table("creators").select("google_sub,email").eq("acct_id", acct_id).maybe_single().execute()
-            _cr_gsub  = (_cr_full.data or {}).get("google_sub") or ""
-            _cr_email = (_cr_full.data or {}).get("email") or ""
+            _cr_full = get_db().table("creators").select("google_sub,discord_sub,line_sub,email").eq("acct_id", acct_id).maybe_single().execute()
+            _cr_gsub  = (_cr_full.data or {}).get("google_sub")  or ""
+            _cr_dsub  = (_cr_full.data or {}).get("discord_sub") or ""
+            _cr_lsub  = (_cr_full.data or {}).get("line_sub")    or ""
+            _cr_email = (_cr_full.data or {}).get("email")        or ""
         except Exception:
-            _cr_gsub = _cr_email = ""
+            _cr_gsub = _cr_dsub = _cr_lsub = _cr_email = ""
 
-        # 既存サポーターアカウントを検索（creator_acct_id で紐づけ済み / google_sub 一致 / email 一致）
+        # 既存サポーターアカウントを検索（creator_acct_id で紐づけ済み / sub一致 / email 一致）
         _linked_sup_id = None
         try:
             _ls1 = get_db().table("supporters").select("supporter_id").eq("creator_acct_id", acct_id).limit(1).execute()
             if _ls1.data:
                 _linked_sup_id = _ls1.data[0]["supporter_id"]
-            elif _cr_gsub:
-                _ls2 = get_db().table("supporters").select("supporter_id").eq("google_sub", _cr_gsub).limit(1).execute()
-                if _ls2.data:
-                    _linked_sup_id = _ls2.data[0]["supporter_id"]
-                    # 紐づけを記録
-                    get_db().table("supporters").update({"creator_acct_id": acct_id}).eq("supporter_id", _linked_sup_id).execute()
+            else:
+                # google_sub / discord_sub / line_sub の順に検索
+                for _sub_col, _sub_val in [("google_sub", _cr_gsub), ("discord_sub", _cr_dsub), ("line_sub", _cr_lsub)]:
+                    if _sub_val and not _linked_sup_id:
+                        _ls2 = get_db().table("supporters").select("supporter_id").eq(_sub_col, _sub_val).limit(1).execute()
+                        if _ls2.data:
+                            _linked_sup_id = _ls2.data[0]["supporter_id"]
+                            get_db().table("supporters").update({"creator_acct_id": acct_id}).eq("supporter_id", _linked_sup_id).execute()
         except Exception:
             pass
 
@@ -4210,11 +4214,12 @@ else: # Dashboard
             if st.button("💜 サポーターになる（無料）", use_container_width=True, key="become_supporter"):
                 try:
                     _new_sup_id = None
-                    # google_sub で既存サポーターを検索
-                    if _cr_gsub:
-                        _bs1 = get_db().table("supporters").select("supporter_id,display_name,email").eq("google_sub", _cr_gsub).limit(1).execute()
-                        if _bs1.data:
-                            _new_sup_id = _bs1.data[0]["supporter_id"]
+                    # google_sub / discord_sub / line_sub で既存サポーターを検索
+                    for _sub_col, _sub_val in [("google_sub", _cr_gsub), ("discord_sub", _cr_dsub), ("line_sub", _cr_lsub)]:
+                        if _sub_val and not _new_sup_id:
+                            _bs1 = get_db().table("supporters").select("supporter_id,display_name,email").eq(_sub_col, _sub_val).limit(1).execute()
+                            if _bs1.data:
+                                _new_sup_id = _bs1.data[0]["supporter_id"]
                     # email で既存サポーターを検索（1件のみ自動紐づけ）
                     if not _new_sup_id and _cr_email:
                         _bs2 = get_db().table("supporters").select("supporter_id,display_name,email").eq("email", _cr_email).execute()
@@ -4235,14 +4240,16 @@ else: # Dashboard
                             "display_name": _cr_data.get("display_name") or "サポーター",
                             "email": _cr_email,
                         }
-                        if _cr_gsub:
-                            _sup_ins["google_sub"] = _cr_gsub
+                        if _cr_gsub: _sup_ins["google_sub"]  = _cr_gsub
+                        if _cr_dsub: _sup_ins["discord_sub"] = _cr_dsub
+                        if _cr_lsub: _sup_ins["line_sub"]    = _cr_lsub
                         get_db().table("supporters").insert(_sup_ins).execute()
                         if _cr_email:
-                            get_db().table("supporter_accounts").insert({
-                                "supporter_id": _new_sup_id, "email": _cr_email,
-                                **({"google_sub": _cr_gsub} if _cr_gsub else {}),
-                            }).execute()
+                            _sa_ins = {"supporter_id": _new_sup_id, "email": _cr_email}
+                            if _cr_gsub: _sa_ins["google_sub"]  = _cr_gsub
+                            if _cr_dsub: _sa_ins["discord_sub"] = _cr_dsub
+                            if _cr_lsub: _sa_ins["line_sub"]    = _cr_lsub
+                            get_db().table("supporter_accounts").insert(_sa_ins).execute()
                     # creator_acct_id を紐づけ
                     get_db().table("supporters").update({"creator_acct_id": acct_id}).eq("supporter_id", _new_sup_id).execute()
                     _sup_row3 = get_db().table("supporters").select("supporter_id,display_name,email").eq("supporter_id", _new_sup_id).maybe_single().execute()
