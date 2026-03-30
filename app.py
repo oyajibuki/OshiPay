@@ -1017,6 +1017,112 @@ if params.get("state") == "l_sup" and params.get("code") and not st.session_stat
     st.query_params["page"] = "supporter_dashboard"
     st.rerun()
 
+# ── Google OAuth コールバック処理（応援ページ用）──
+_gsp_state = params.get("state", "")
+if _gsp_state.startswith("gsp_") and params.get("code") and not st.session_state.get("_gsp_done"):
+    _gsp_creator = _gsp_state[4:]
+    st.session_state["_gsp_done"] = True
+    _gsp_info = _exchange_google_code(params["code"])
+    if _gsp_info and _gsp_info.get("email"):
+        _gsp_email = _gsp_info["email"].strip().lower()
+        _gsp_name  = _gsp_info.get("name", _gsp_email.split("@")[0])
+        _gsp_sub   = str(_gsp_info.get("id", ""))
+        _gsp_by_sub = get_db().table("supporters").select("*").eq("google_sub", _gsp_sub).limit(1).execute()
+        if _gsp_by_sub.data:
+            _gsp_row = _gsp_by_sub.data[0]
+            st.session_state["supporter_auth"] = {
+                "supporter_id": _gsp_row["supporter_id"],
+                "display_name": _gsp_row.get("display_name") or _gsp_name,
+                "email":        _gsp_row.get("email") or _gsp_email,
+            }
+        else:
+            _gsp_sid, _ = get_or_create_supporter_by_email(_gsp_email, _gsp_name)
+            if _gsp_sub:
+                get_db().table("supporters").update({"google_sub": _gsp_sub}).eq("supporter_id", _gsp_sid).execute()
+            _gsp_chk = get_db().table("supporters").select("display_name").eq("supporter_id", _gsp_sid).maybe_single().execute()
+            st.session_state["supporter_auth"] = {
+                "supporter_id": _gsp_sid,
+                "display_name": (_gsp_chk.data or {}).get("display_name") or _gsp_name,
+                "email":        _gsp_email,
+            }
+    st.query_params.clear()
+    st.query_params["page"] = "support"
+    st.query_params["creator"] = _gsp_creator
+    st.rerun()
+
+# ── Discord OAuth コールバック処理（応援ページ用）──
+_dsp_state = params.get("state", "")
+if _dsp_state.startswith("dsp_") and params.get("code") and not st.session_state.get("_dsp_done"):
+    _dsp_creator = _dsp_state[4:]
+    st.session_state["_dsp_done"] = True
+    _dsp_info = _exchange_discord_code(params["code"])
+    if _dsp_info and _dsp_info.get("id"):
+        _dsp_sub   = str(_dsp_info["id"])
+        _dsp_email = (_dsp_info.get("email") or "").strip().lower()
+        _dsp_name  = _dsp_info.get("username", "サポーター")
+        _dsp_by_sub = get_db().table("supporters").select("*").eq("discord_sub", _dsp_sub).limit(1).execute()
+        if _dsp_by_sub.data:
+            _dsp_row = _dsp_by_sub.data[0]
+            st.session_state["supporter_auth"] = {
+                "supporter_id": _dsp_row["supporter_id"],
+                "display_name": _dsp_row.get("display_name") or _dsp_name,
+                "email":        _dsp_row.get("email") or _dsp_email,
+            }
+        else:
+            if _dsp_email:
+                _dsp_sid, _ = get_or_create_supporter_by_email(_dsp_email, _dsp_name)
+            else:
+                _dsp_sid = "sup_" + uuid.uuid4().hex[:12]
+                get_db().table("supporters").upsert({
+                    "supporter_id": _dsp_sid,
+                    "display_name": _dsp_name,
+                }).execute()
+            get_db().table("supporters").update({"discord_sub": _dsp_sub}).eq("supporter_id", _dsp_sid).execute()
+            _dsp_chk = get_db().table("supporters").select("display_name").eq("supporter_id", _dsp_sid).maybe_single().execute()
+            st.session_state["supporter_auth"] = {
+                "supporter_id": _dsp_sid,
+                "display_name": (_dsp_chk.data or {}).get("display_name") or _dsp_name,
+                "email":        _dsp_email,
+            }
+    st.query_params.clear()
+    st.query_params["page"] = "support"
+    st.query_params["creator"] = _dsp_creator
+    st.rerun()
+
+# ── LINE OAuth コールバック処理（応援ページ用）──
+_lsp_state = params.get("state", "")
+if _lsp_state.startswith("lsp_") and params.get("code") and not st.session_state.get("_lsp_done"):
+    _lsp_creator = _lsp_state[4:]
+    st.session_state["_lsp_done"] = True
+    _lsp_info = _exchange_line_code(params["code"])
+    if _lsp_info and _lsp_info.get("userId"):
+        _lsp_sub  = str(_lsp_info["userId"])
+        _lsp_name = _lsp_info.get("displayName", "サポーター")
+        _lsp_by_sub = get_db().table("supporters").select("*").eq("line_sub", _lsp_sub).limit(1).execute()
+        if _lsp_by_sub.data:
+            _lsp_row = _lsp_by_sub.data[0]
+            st.session_state["supporter_auth"] = {
+                "supporter_id": _lsp_row["supporter_id"],
+                "display_name": _lsp_row.get("display_name") or _lsp_name,
+                "email":        _lsp_row.get("email", ""),
+            }
+        else:
+            _lsp_sid = "sup_" + uuid.uuid4().hex[:12]
+            get_db().table("supporters").upsert({
+                "supporter_id": _lsp_sid,
+                "display_name": _lsp_name,
+                "line_sub":     _lsp_sub,
+            }).execute()
+            st.session_state["supporter_auth"] = {
+                "supporter_id": _lsp_sid,
+                "display_name": _lsp_name,
+                "email":        "",
+            }
+    st.query_params.clear()
+    st.query_params["page"] = "support"
+    st.query_params["creator"] = _lsp_creator
+    st.rerun()
+
 # ── LINE OAuth コールバック処理（クリエーター用）──
 if params.get("state") == "l_creator" and params.get("code") and not st.session_state.get("_l_creator_done"):
     st.session_state["_l_creator_done"] = True
@@ -2440,6 +2546,41 @@ if page == "support" and support_user:
 
     st.markdown(f'<div class="selected-amount-display">{int(st.session_state.amt):,}</div>', unsafe_allow_html=True)
     msg = st.text_area("応援メッセージ（オプション）", max_chars=140)
+
+    # ── SNS ログイン（応援ページ）──
+    _sup_auth = st.session_state.get("supporter_auth", {})
+    if _sup_auth.get("supporter_id"):
+        _sauth_name = _sup_auth.get("display_name") or "サポーター"
+        st.markdown(
+            f'<div style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.4);'
+            f'border-radius:14px;padding:14px 16px;text-align:center;margin-bottom:16px;">'
+            f'✅ <b>{_sauth_name}</b> さんですね！</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("別のアカウントでログイン", key="sup_sns_logout"):
+            del st.session_state["supporter_auth"]
+            st.rerun()
+    else:
+        st.markdown(
+            '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);'
+            'border-radius:14px;padding:14px 16px;margin-bottom:4px;">'
+            '<div style="text-align:center;font-size:12px;color:rgba(240,240,245,0.6);margin-bottom:10px;">'
+            '🔑 SNSアカウントでかんたんログイン</div>',
+            unsafe_allow_html=True,
+        )
+        _scol1, _scol2, _scol3 = st.columns(3)
+        with _scol1:
+            st.link_button("🟢 LINE", _line_auth_url(f"lsp_{connect_acct}"), use_container_width=True)
+        with _scol2:
+            st.link_button("🔵 Google", _google_auth_url(f"gsp_{connect_acct}"), use_container_width=True)
+        with _scol3:
+            st.link_button("🟣 Discord", _discord_auth_url(f"dsp_{connect_acct}"), use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="text-align:center;font-size:11px;color:rgba(240,240,245,0.35);'
+            'margin:4px 0 12px;">または以下にメールアドレスを入力</div>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown('<div class="section-subtitle" style="text-align:left;margin-bottom:4px;">📧 メールアドレス（必須）</div><div style="font-size:11px;color:rgba(240,240,245,0.5);margin-bottom:8px;">応援証明書・サポーターIDをお届けします。アカウント登録にも使用します。</div>', unsafe_allow_html=True)
     _default_email = st.session_state.get("supporter_auth", {}).get("email", "")
