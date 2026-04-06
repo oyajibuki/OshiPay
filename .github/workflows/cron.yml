@@ -18,12 +18,13 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install supabase resend
+        run: pip install supabase resend stripe
 
       - name: Run cron_job.py
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+          STRIPE_SECRET:        ${{ secrets.STRIPE_SECRET }}
           APP_URL:              https://oshipay.me
         run: python cron_job.py
