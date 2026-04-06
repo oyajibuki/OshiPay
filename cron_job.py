@@ -11,6 +11,7 @@ import os
 import datetime
 import urllib.parse
 import resend
+import stripe
 
 from supabase import create_client
 
@@ -18,10 +19,13 @@ from supabase import create_client
 SUPABASE_URL     = os.environ["SUPABASE_URL"]
 SUPABASE_KEY     = os.environ["SUPABASE_SERVICE_KEY"]   # service_role キー
 RESEND_API_KEY   = os.environ["RESEND_API_KEY"]
+STRIPE_SECRET    = os.environ["STRIPE_SECRET"]
 BASE_URL         = os.environ.get("APP_URL", "https://oshipay.me").rstrip("/") + "/"
 RESEND_FROM      = "noreply@oshipay.me"
+PAYOUT_THRESHOLD = 10000  # ¥10,000以上で自動ペイアウト
 
-resend.api_key = RESEND_API_KEY
+resend.api_key   = RESEND_API_KEY
+stripe.api_key   = STRIPE_SECRET
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -194,4 +198,59 @@ for row in expired_targets:
     cancel_count += 1
 
 print(f"  自動キャンセル処理完了: {cancel_count}件")
+# ══════════════════════════════════════════════════════
+# ⑥ 自動ペイアウト（¥10,000以上貯まったクリエイターに振込）
+# ══════════════════════════════════════════════════════
+print("── ⑥ 自動ペイアウト処理 開始 ──")
+
+try:
+    payout_creators = (
+        db.table("creators")
+        .select("acct_id,display_name,name,email,stripe_acct_id")
+        .eq("payout_enabled", True)
+        .not_.is_("stripe_acct_id", "null")
+        .execute()
+    )
+    payout_targets = payout_creators.data or []
+except Exception as e:
+    print(f"  クリエイター取得エラー: {e}")
+    payout_targets = []
+
+payout_count = 0
+for creator in payout_targets:
+    stripe_acct_id = creator.get("stripe_acct_id", "")
+    creator_name   = creator.get("display_name") or creator.get("name") or "クリエイター"
+    creator_email  = creator.get("email", "")
+    if not stripe_acct_id:
+        continue
+    try:
+        balance   = stripe.Balance.retrieve(stripe_account=stripe_acct_id)
+        available = next((b.amount for b in balance.available if b.currency == "jpy"), 0)
+        if available >= PAYOUT_THRESHOLD:
+            stripe.Payout.create(
+                amount=available,
+                currency="jpy",
+                stripe_account=stripe_acct_id
+            )
+            print(f"  ペイアウト実行: {stripe_acct_id} ¥{available:,}")
+            # クリエイターへ通知メール
+            if creator_email:
+                try:
+                    send_email(
+                        creator_email,
+                        "【oshipay】応援金の振込を実行しました",
+                        f"{creator_name}さん\n\n"
+                        f"口座残高が¥{PAYOUT_THRESHOLD:,}を超えたため、¥{available:,}の振込を実行しました。\n"
+                        f"銀行口座への反映まで数営業日かかる場合があります。\n\n"
+                        f"--\noshipay\n{BASE_URL}"
+                    )
+                except Exception as e:
+                    print(f"  ペイアウト通知メール失敗: {e}")
+            payout_count += 1
+        else:
+            print(f"  残高不足でスキップ: {stripe_acct_id} ¥{available:,} / ¥{PAYOUT_THRESHOLD:,}")
+    except Exception as e:
+        print(f"  ペイアウトエラー: {stripe_acct_id} - {e}")
+
+print(f"  自動ペイアウト処理完了: {payout_count}件")
 print("── cron_job.py 完了 ──")

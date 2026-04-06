@@ -207,9 +207,14 @@ def create_connect_account():
         capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}},
         business_type="individual",
         business_profile={
-            "mcc": "7922", 
+            "mcc": "7922",
             "product_description": "oshipay - 投げ銭サービス",
             "url": BASE_URL
+        },
+        settings={
+            "payouts": {
+                "schedule": {"interval": "manual"}  # ¥10,000達成時にcronで自動ペイアウト
+            }
         },
     )
     return account.id
