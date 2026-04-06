@@ -30,7 +30,7 @@
   <main class="max-w-3xl mx-auto px-4 py-8 md:px-6 md:py-16">
     <div class="mb-12">
       <h1 class="text-3xl md:text-4xl font-bold mb-4 text-white">利用規約</h1>
-      <p class="text-slate-400">最終更新日: 2026年3月23日</p>
+      <p class="text-slate-400">最終更新日: 2026年4月7日</p>
     </div>
 
     <div class="space-y-10 text-slate-300 leading-relaxed">
@@ -53,8 +53,22 @@
         <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">第3条（決済と手数料）</h2>
         <ol class="list-decimal pl-6 space-y-2">
           <li>本サービス上の決済は、提携する決済代行会社（Stripe）を通じて安全に行われます。</li>
-          <li>プラットフォーム利用料として、応援（決済）金額の13.6%（OshiPay手数料10%＋Stripe決済手数料3.6%）をシステム手数料として差し引き、残りの86.4%が受取人に還元されます。</li>
-          <li>受取人への入金は、決済代行会社（Stripe）の審査・処理スケジュールに従い行われます。一般的に決済完了から2営業日後に自動的に払い出されますが、口座開設直後（初回）は審査のため7〜14営業日程度かかる場合があります。当社はStripeの入金スケジュールを直接制御する立場にはなく、入金時期についていかなる保証も行いません。</li>
+          <li>プラットフォーム利用料として、応援（決済）金額の13.6%（OshiPay手数料10%＋Stripe決済手数料3.6%）をシステム手数料として差し引き、残りの86.4%が受取人の残高として積み立てられます。</li>
+          <li>受取人への銀行口座への振込は、累積残高が<strong class="text-white">¥10,000以上</strong>に達した時点で自動的に実行されます。¥10,000未満の残高は翌月以降に繰り越され、¥10,000に到達した時点で振込が行われます。</li>
+          <li>振込実行後、銀行口座への反映まで数営業日かかる場合があります。また、口座開設直後（初回）はStripeの審査のため7〜14営業日程度かかる場合があります。当社はStripeの入金スケジュールを直接制御する立場にはなく、入金時期についていかなる保証も行いません。</li>
+          <li>アカウントを退会する場合、残高が¥10,000未満であっても累積残高を振込します。ただし、この場合も以下の手数料が差し引かれます。
+            <ul class="list-disc pl-6 mt-2 space-y-1 text-slate-400">
+              <li>OshiPayプラットフォーム手数料：残高の10%</li>
+              <li>振込手数料：¥250＋残高の0.25%</li>
+              <li>アカウント維持費：¥200（振込が発生した月の月額費用）</li>
+            </ul>
+          </li>
+          <li>アカウントの退会をご希望の場合は、<a href="https://oshipay.me/contact.html" class="text-purple-300 underline">お問い合わせフォーム</a>より以下の情報をご記入の上、お申し込みください。受付後、<strong class="text-white">3営業日以内に退会手続きを開始</strong>し、残高の振込完了まで別途数営業日かかる場合があります。
+            <ul class="list-disc pl-6 mt-2 space-y-1 text-slate-400">
+              <li>登録メールアドレス</li>
+              <li>OshiPayユーザーID（プロフィールURLのslug）</li>
+            </ul>
+          </li>
           <li>入金に関するご不明点は、Stripe社のサポート（<a href="https://support.stripe.com" target="_blank" class="text-purple-300 underline">support.stripe.com</a>）にお問い合わせください。</li>
         </ol>
       </section>
