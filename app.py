@@ -2413,15 +2413,19 @@ if page == "ranking":
                 unsafe_allow_html=True
             )
 
-    # フッター（oshipay宣伝）
+    # フッター（Discord招待）
     footer_html = (
-        f'<div style="margin-top:40px;padding:20px 24px 12px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:16px;text-align:center;">'
-        f'<div style="font-size:20px;font-weight:900;color:#f97316;margin-bottom:6px;">oshipayで推しを応援しよう</div>'
-        f'<div style="font-size:12px;color:rgba(240,240,245,0.55);margin-bottom:12px;">あなたの応援がランキングに刻まれます</div>'
+        f'<div style="margin-top:40px;padding:20px 24px 12px;background:rgba(88,101,242,0.08);border:1px solid rgba(88,101,242,0.3);border-radius:16px;text-align:center;">'
+        f'<div style="font-size:20px;font-weight:900;color:#818cf8;margin-bottom:6px;">あなたの推しをOshipayに呼ぼう！</div>'
+        f'<div style="font-size:12px;color:rgba(240,240,245,0.55);margin-bottom:12px;">Discordでリクエストを送ると、推しに届けます</div>'
         f'</div>'
     )
     st.markdown(footer_html, unsafe_allow_html=True)
-    st.link_button("応援する →", LP_URL, use_container_width=True)
+    _fc1, _fc2 = st.columns(2)
+    with _fc1:
+        st.link_button("🏠 TOPページ", LP_URL, use_container_width=True)
+    with _fc2:
+        st.link_button("🟣 Discordで呼ぶ", "https://discord.gg/3k2AjuR8", use_container_width=True)
     st.stop()
 
 # ── コインプレビュー（開発用）──
