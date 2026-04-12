@@ -718,6 +718,43 @@ def get_stamp_weekly_ranking() -> list:
     except Exception:
         return []
 
+def get_message_ranking_alltime() -> list:
+    """応援メッセージランキング（全期間・件数）"""
+    try:
+        from collections import Counter
+        resp = get_db().table("free_messages").select("creator_acct").execute()
+        counter = Counter(r["creator_acct"] for r in (resp.data or []))
+        return [{"creator_acct": acct, "msg_count": cnt} for acct, cnt in counter.most_common()]
+    except Exception:
+        return []
+
+def get_message_ranking_monthly() -> list:
+    """応援メッセージランキング（月間）※将来表示用"""
+    try:
+        from collections import Counter
+        now = datetime.datetime.now(datetime.timezone.utc)
+        start = datetime.datetime(now.year, now.month, 1, tzinfo=datetime.timezone.utc).isoformat()
+        resp = get_db().table("free_messages").select("creator_acct").gte("created_at", start).execute()
+        counter = Counter(r["creator_acct"] for r in (resp.data or []))
+        return [{"creator_acct": acct, "msg_count": cnt} for acct, cnt in counter.most_common()]
+    except Exception:
+        return []
+
+def get_message_ranking_weekly() -> list:
+    """応援メッセージランキング（週間: 水〜火）※将来表示用"""
+    try:
+        from collections import Counter
+        jst = datetime.timezone(datetime.timedelta(hours=9))
+        now_jst = datetime.datetime.now(jst)
+        days_since_wed = (now_jst.weekday() - 2) % 7
+        week_start = (now_jst - datetime.timedelta(days=days_since_wed)).replace(hour=0, minute=0, second=0, microsecond=0)
+        ws_iso = week_start.astimezone(datetime.timezone.utc).isoformat()
+        resp = get_db().table("free_messages").select("creator_acct").gte("created_at", ws_iso).execute()
+        counter = Counter(r["creator_acct"] for r in (resp.data or []))
+        return [{"creator_acct": acct, "msg_count": cnt} for acct, cnt in counter.most_common()]
+    except Exception:
+        return []
+
 def get_ranking_creators() -> list:
     """display_name が設定されたクリエイター一覧を取得（ランキング表示条件）"""
     try:
@@ -2249,8 +2286,8 @@ if page == "ranking":
             )
             st.markdown(card_html, unsafe_allow_html=True)
 
-    tab_weekly, tab_monthly, tab_alltime, tab_stamps = st.tabs([
-        f"📆 週間 ({week_label})", f"📅 月間 ({month_label})", "🌟 全期間", "💜 スタンプ"
+    tab_alltime, tab_monthly, tab_weekly, tab_msgs = st.tabs([
+        "🌟 全期間", f"📅 月間 ({month_label})", f"📆 週間 ({week_label})", "💬 応援メッセージ"
     ])
 
     # プロフィール完成クリエイター一覧（全タブ共通）
@@ -2259,9 +2296,9 @@ if page == "ranking":
     except Exception:
         _base_creators = []
 
-    with tab_weekly:
+    with tab_alltime:
         try:
-            render_ranking(get_weekly_ranking(), "週間合計", base_creators=_base_creators)
+            render_ranking(get_all_time_ranking(), "全期間合計", base_creators=_base_creators)
         except Exception:
             st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
             st.stop()
@@ -2273,15 +2310,67 @@ if page == "ranking":
             st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
             st.stop()
 
-    with tab_alltime:
+    with tab_weekly:
         try:
-            render_ranking(get_all_time_ranking(), "全期間合計", base_creators=_base_creators)
+            render_ranking(get_weekly_ranking(), "週間合計", base_creators=_base_creators)
         except Exception:
             st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
             st.stop()
 
+    def _render_msg_ranking(msg_data):
+        """応援メッセージランキングリストを描画するヘルパー"""
+        if not msg_data:
+            st.markdown('<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,0.35);font-size:14px;">まだ応援メッセージがありません 🌱</div>', unsafe_allow_html=True)
+            return
+        _m_acct_ids = [d["creator_acct"] for d in msg_data]
+        try:
+            _m_cr_rows = get_db().table("creators").select("acct_id,display_name,name,slug,photo_url,payout_enabled").in_("acct_id", _m_acct_ids).execute()
+            _m_cr_map  = {r["acct_id"]: r for r in (_m_cr_rows.data or [])}
+        except Exception:
+            _m_cr_map = {}
+        _m_medals = ["🥇", "🥈", "🥉"]
+        for _mi, _md in enumerate(msg_data):
+            _ma    = _md["creator_acct"]
+            _mcnt  = _md["msg_count"]
+            _mcr   = _m_cr_map.get(_ma, {})
+            _mname = _mcr.get("display_name") or _mcr.get("name") or _mcr.get("slug") or _ma
+            _mphoto= _mcr.get("photo_url") or ""
+            _mmedal= _m_medals[_mi] if _mi < 3 else f"{_mi+1}位"
+            _murl  = f"https://oyajibuki.github.io/OshiPay/creator.html?id={_ma}"
+            _has_stripe_m = bool(_mcr.get("payout_enabled"))
+            _no_stripe_badge_m = (
+                '<span style="font-size:10px;color:#94a3b8;background:rgba(148,163,184,0.1);'
+                'border:1px solid rgba(148,163,184,0.25);border-radius:9999px;padding:2px 7px;'
+                'margin-left:6px;white-space:nowrap;">受取口座未登録</span>'
+                if not _has_stripe_m else ""
+            )
+            _mav = (f'<img src="{_mphoto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.15);flex-shrink:0;">'
+                    if _mphoto else
+                    '<div style="width:40px;height:40px;border-radius:50%;background:rgba(139,92,246,0.2);border:2px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🎤</div>')
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 18px;margin-bottom:10px;">'
+                f'<div style="display:flex;align-items:center;gap:10px;">'
+                f'<span style="font-size:22px;min-width:28px;text-align:center;">{_mmedal}</span>'
+                f'{_mav}'
+                f'<div style="flex:1;min-width:0;">'
+                f'<a href="{_murl}" target="_blank" style="font-size:16px;font-weight:900;color:#f0f0f5;text-decoration:none;">{_mname}</a>'
+                f'{_no_stripe_badge_m}'
+                f'</div>'
+                f'<span style="font-size:18px;font-weight:900;color:#c4b5fd;">{_mcnt} 💬</span>'
+                f'</div></div>',
+                unsafe_allow_html=True
+            )
+
+    with tab_msgs:
+        try:
+            _render_msg_ranking(get_message_ranking_alltime())
+        except Exception:
+            st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
+            st.stop()
+
+    # ── 以下は将来表示用（スタンプ・週間・月間ランキング）──
     def _render_stamp_list(stamp_data):
-        """スタンプランキングリストを描画するヘルパー"""
+        """スタンプランキングリストを描画するヘルパー（将来表示用）"""
         if not stamp_data:
             st.markdown('<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,0.35);font-size:14px;">まだスタンプデータがありません 🌱</div>', unsafe_allow_html=True)
             return
@@ -2323,19 +2412,6 @@ if page == "ranking":
                 f'</div></div>',
                 unsafe_allow_html=True
             )
-
-    with tab_stamps:
-        try:
-            _st_week, _st_month, _st_all = st.tabs([f"📆 週間", f"📅 月間", "🌟 全期間"])
-            with _st_week:
-                _render_stamp_list(get_stamp_weekly_ranking())
-            with _st_month:
-                _render_stamp_list(get_stamp_monthly_ranking())
-            with _st_all:
-                _render_stamp_list(get_stamp_ranking())
-        except Exception:
-            st.error("現在データベースが起動中です。数分後にページを再読み込みしてください。")
-            st.stop()
 
     # フッター（oshipay宣伝）
     footer_html = (
@@ -2471,47 +2547,138 @@ if page == "support" and support_user:
         st.markdown(f'<div class="support-avatar">{support_icon}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="support-name">{support_name or "Creator"}</div><div class="support-label">を応援しよう</div>', unsafe_allow_html=True)
 
-    # ── スタンプ応援（無料・1端末1回）──
-    _device_hash = st.session_state.get("device_id", "anon")
+    # ── 無料応援メッセージ（1日1通・ログイン必須）──
+    _FREE_MSGS = ["応援してます！", "頑張ってください。", "大好きです！", "いつもありがとう！", "元気もらってます！"]
+    _msg_sup_auth = st.session_state.get("supporter_auth", {})
+    _msg_sup_id   = _msg_sup_auth.get("supporter_id", "")
+    # 開発用: ?dev_login=1 でログイン済み状態を模倣（ローカル確認用）
+    if not _msg_sup_id and params.get("dev_login") == "1":
+        _msg_sup_auth = {"supporter_id": "dev_test_001", "display_name": "テストユーザー"}
+        _msg_sup_id   = "dev_test_001"
     try:
-        _sr = get_db().table("stamps").select("stamp_type").eq("creator_acct", connect_acct).eq("device_hash", _device_hash).maybe_single().execute()
-        _already_stamped = bool(_sr.data)
-        _my_stamp_emoji  = (_sr.data or {}).get("stamp_type", "")
+        _msg_total_resp = get_db().table("free_messages").select("id", count="exact").eq("creator_acct", connect_acct).execute()
+        _msg_total = _msg_total_resp.count or 0
     except Exception:
-        _already_stamped = False
-        _my_stamp_emoji  = ""
-    try:
-        _sc = get_db().table("stamps").select("id", count="exact").eq("creator_acct", connect_acct).execute()
-        _stamp_total = _sc.count or 0
-    except Exception:
-        _stamp_total = 0
+        _msg_total = 0
 
-    st.markdown('<div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:14px;padding:14px 16px;margin-bottom:18px;">', unsafe_allow_html=True)
-    if _stamp_total > 0:
-        st.markdown(f'<div style="text-align:center;font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:8px;">💜 累計 {_stamp_total} 件の応援スタンプ</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div style="text-align:center;font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:8px;">💜 無料で応援スタンプを送ろう</div>', unsafe_allow_html=True)
+    # ── ヘッダー（空白なし・1行で完結）──
+    _msg_count_txt = f"累計 {_msg_total} 件 ｜ " if _msg_total > 0 else ""
+    st.markdown(
+        f'<div style="text-align:center;font-size:13px;font-weight:700;color:rgba(240,240,245,0.75);'
+        f'background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);'
+        f'border-radius:14px;padding:10px 16px;margin-bottom:10px;">'
+        f'💜 {_msg_count_txt}ログインして応援メッセージを送ろう（1日1回）</div>',
+        unsafe_allow_html=True,
+    )
 
-    if _already_stamped:
-        st.markdown(f'<div style="text-align:center;font-size:14px;color:#c4b5fd;font-weight:700;padding:6px 0;">✅ {_my_stamp_emoji} スタンプ送信済み！ありがとうございます</div>', unsafe_allow_html=True)
+    if not _msg_sup_id:
+        # 未ログイン → SNSログインを促す
+        _mc1, _mc2, _mc3 = st.columns(3)
+        with _mc1:
+            st.link_button("🟢 LINE", _line_auth_url(f"lsp_{connect_acct}"), use_container_width=True)
+        with _mc2:
+            st.link_button("🔵 Google", _google_auth_url(f"gsp_{connect_acct}"), use_container_width=True)
+        with _mc3:
+            st.link_button("🟣 Discord", _discord_auth_url(f"dsp_{connect_acct}"), use_container_width=True)
     else:
-        _scols = st.columns(4)
-        for _si, _semoji in enumerate(["🔥", "👏", "💜", "⭐"]):
-            if _scols[_si].button(_semoji, key=f"stamp_btn_{_semoji}", use_container_width=True):
-                try:
-                    get_db().table("stamps").insert({
-                        "creator_acct": connect_acct,
-                        "stamp_type":   _semoji,
-                        "device_hash":  _device_hash,
-                    }).execute()
+        # ログイン済み → 今日送信済みか確認
+        _jst9 = datetime.timezone(datetime.timedelta(hours=9))
+        try:
+            _today_jst    = datetime.datetime.now(_jst9).date().isoformat()
+            _tomorrow_jst = (datetime.datetime.now(_jst9).date() + datetime.timedelta(days=1)).isoformat()
+            _sent_resp = (
+                get_db().table("free_messages")
+                .select("id,streak_count,message")
+                .eq("creator_acct", connect_acct)
+                .eq("supporter_id", _msg_sup_id)
+                .gte("created_at", f"{_today_jst}T00:00:00+09:00")
+                .lt("created_at",  f"{_tomorrow_jst}T00:00:00+09:00")
+                .maybe_single().execute()
+            )
+            _already_sent = bool(_sent_resp.data)
+            _my_streak    = (_sent_resp.data or {}).get("streak_count", 1) if _already_sent else 0
+            _sent_msg     = (_sent_resp.data or {}).get("message", "") if _already_sent else ""
+        except Exception:
+            _already_sent = False
+            _my_streak    = 0
+            _sent_msg     = ""
+
+        if _already_sent:
+            _streak_badge = (
+                f'<div style="font-size:16px;margin-top:6px;">🔥 {_my_streak}日連続応援中！</div>'
+                if _my_streak > 1 else ""
+            )
+            # _sent_msg が空でも「」が出ないよう条件分岐
+            _sent_msg_html = (
+                f'<br><span style="font-size:12px;color:rgba(240,240,245,0.45);font-weight:400;">「{_sent_msg}」</span>'
+                if _sent_msg else ""
+            )
+            st.markdown(
+                f'<div style="text-align:center;font-size:14px;color:#c4b5fd;font-weight:700;padding:6px 0;">'
+                f'✅ 今日の応援送信済み！ありがとうございます{_sent_msg_html}'
+                f'{_streak_badge}</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            # ① 応援スタンプ（定型文選択）
+            _selected_key = f"selected_phrase_{connect_acct}"
+            _selected     = st.session_state.get(_selected_key, "")
+            st.markdown('<div style="font-size:11px;color:rgba(240,240,245,0.45);margin-bottom:6px;">① 応援スタンプ</div>', unsafe_allow_html=True)
+            for _phrase in _FREE_MSGS:
+                _is_sel = (_selected == _phrase)
+                _label  = f"✅ {_phrase}" if _is_sel else _phrase
+                if st.button(_label, key=f"phrase_sel_{_phrase}", use_container_width=True,
+                             type="primary" if _is_sel else "secondary"):
+                    st.session_state[_selected_key] = _phrase
                     st.rerun()
+
+            # ② メッセージ入力
+            st.markdown('<div style="font-size:11px;color:rgba(240,240,245,0.45);margin-top:10px;margin-bottom:4px;">② メッセージ入力</div>', unsafe_allow_html=True)
+            _msg_input = st.text_input(
+                "メッセージ",
+                value=_selected,
+                placeholder="定型文を選ぶか直接入力...",
+                key="free_msg_text_input",
+                label_visibility="collapsed",
+            )
+
+            # ③ 応援ボタン
+            _can_submit = bool((_msg_input or "").strip())
+            if st.button("💜 応援する", use_container_width=True, type="primary",
+                         disabled=not _can_submit, key="free_msg_submit"):
+                # streak計算: 昨日送信あり → +1、なければ 1 からリセット
+                try:
+                    _yesterday_jst = (datetime.datetime.now(_jst9).date() - datetime.timedelta(days=1)).isoformat()
+                    _yday_resp = (
+                        get_db().table("free_messages")
+                        .select("streak_count")
+                        .eq("creator_acct", connect_acct)
+                        .eq("supporter_id", _msg_sup_id)
+                        .gte("created_at", f"{_yesterday_jst}T00:00:00+09:00")
+                        .lt("created_at",  f"{_today_jst}T00:00:00+09:00")
+                        .maybe_single().execute()
+                    )
+                    _new_streak = ((_yday_resp.data or {}).get("streak_count") or 0) + 1 if _yday_resp.data else 1
                 except Exception:
-                    st.info("すでにスタンプ済みです")
-    st.markdown('</div>', unsafe_allow_html=True)
+                    _new_streak = 1
+                try:
+                    get_db().table("free_messages").insert({
+                        "creator_acct": connect_acct,
+                        "supporter_id": _msg_sup_id,
+                        "message":      _msg_input.strip(),
+                        "streak_count": _new_streak,
+                    }).execute()
+                    if _selected_key in st.session_state:
+                        del st.session_state[_selected_key]
+                    st.rerun()
+                except Exception as _me:
+                    st.error(f"送信エラー: {_me}")
 
     if "amt" not in st.session_state: st.session_state.amt = 100
 
-    st.markdown('<div class="section-subtitle">応援する金額を選んで、メッセージを送ろう</div>', unsafe_allow_html=True)
+    st.markdown('<div class="oshi-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-subtitle">💸 応援金を送る（有料）</div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center;font-size:12px;color:rgba(240,240,245,0.45);margin-bottom:12px;">金額を選んでメッセージを添えて応援しよう</div>', unsafe_allow_html=True)
 
     # ── 口座未登録クリエイターへの注意書き ──
     if not _creator_bank_ready:
@@ -2627,7 +2794,7 @@ if page == "support" and support_user:
 
     if _creator_bank_ready:
         # ── 口座登録済み（payout_enabled=True）：通常 Stripe フロー ──
-        if st.button("🔥 応援する！", disabled=is_disabled):
+        if st.button("💰 応援金を送る！", disabled=is_disabled, type="primary", use_container_width=True):
             # メール必須チェック
             if not support_email or "@" not in support_email:
                 st.error("📧 メールアドレスを入力してください。応援証明書をお届けするために必要です。")
@@ -2670,7 +2837,7 @@ if page == "support" and support_user:
                 st.error(e)
     else:
         # ── 口座未登録：pending_supports に保存（Stripe不使用）──
-        if st.button("💜 応援を登録する", disabled=is_disabled, type="primary"):
+        if st.button("💰 応援金を送る！", disabled=is_disabled, type="primary", use_container_width=True):
             if not support_email or "@" not in support_email:
                 st.error("📧 メールアドレスを入力してください。口座登録完了時にご連絡します。")
                 st.stop()

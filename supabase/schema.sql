@@ -118,13 +118,25 @@ CREATE TABLE IF NOT EXISTS public.bot_logs (
     created_at   TIMESTAMPTZ  DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.free_messages (
+    id           UUID         DEFAULT gen_random_uuid() PRIMARY KEY,
+    creator_acct TEXT         NOT NULL,
+    supporter_id TEXT         NOT NULL,
+    message      TEXT         NOT NULL,
+    streak_count INTEGER      DEFAULT 1,
+    created_at   TIMESTAMPTZ  DEFAULT now()
+);
+
 -- ========================================
 -- 2. インデックス
 -- ========================================
 
-CREATE INDEX IF NOT EXISTS idx_supports_supporter_id ON public.supports(supporter_id);
-CREATE INDEX IF NOT EXISTS idx_creators_slug         ON public.creators(slug);
-CREATE INDEX IF NOT EXISTS idx_creators_is_deleted   ON public.creators(is_deleted);
+CREATE INDEX IF NOT EXISTS idx_supports_supporter_id        ON public.supports(supporter_id);
+CREATE INDEX IF NOT EXISTS idx_creators_slug                ON public.creators(slug);
+CREATE INDEX IF NOT EXISTS idx_creators_is_deleted          ON public.creators(is_deleted);
+CREATE INDEX IF NOT EXISTS idx_free_messages_creator_acct   ON public.free_messages(creator_acct);
+CREATE INDEX IF NOT EXISTS idx_free_messages_supporter_id   ON public.free_messages(supporter_id);
+CREATE INDEX IF NOT EXISTS idx_free_messages_created_at     ON public.free_messages(created_at);
 
 -- ========================================
 -- 3. RLS 有効化
@@ -138,6 +150,7 @@ ALTER TABLE public.stamps             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pending_supports   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supporter_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bot_logs           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.free_messages      ENABLE ROW LEVEL SECURITY;
 
 -- ========================================
 -- 4. RLS ポリシー（DROP → CREATE で冪等）
@@ -162,10 +175,14 @@ CREATE POLICY "Public select pending_supports"       ON public.pending_supports 
 CREATE POLICY "Public can insert supporter_accounts" ON public.supporter_accounts FOR INSERT         WITH CHECK (true);
 CREATE POLICY "Public can read supporter_accounts"   ON public.supporter_accounts FOR SELECT         USING (true);
 CREATE POLICY "Public can update supporter_accounts" ON public.supporter_accounts FOR UPDATE         USING (true);
-DROP POLICY IF EXISTS "Public insert bot_logs"       ON public.bot_logs;
-DROP POLICY IF EXISTS "Public select bot_logs"       ON public.bot_logs;
-CREATE POLICY "Public insert bot_logs"               ON public.bot_logs           FOR INSERT         WITH CHECK (true);
-CREATE POLICY "Public select bot_logs"               ON public.bot_logs           FOR SELECT         USING (true);
+DROP POLICY IF EXISTS "Public insert bot_logs"         ON public.bot_logs;
+DROP POLICY IF EXISTS "Public select bot_logs"         ON public.bot_logs;
+CREATE POLICY "Public insert bot_logs"                 ON public.bot_logs           FOR INSERT         WITH CHECK (true);
+CREATE POLICY "Public select bot_logs"                 ON public.bot_logs           FOR SELECT         USING (true);
+DROP POLICY IF EXISTS "Public insert free_messages"    ON public.free_messages;
+DROP POLICY IF EXISTS "Public select free_messages"    ON public.free_messages;
+CREATE POLICY "Public insert free_messages"            ON public.free_messages      FOR INSERT         WITH CHECK (true);
+CREATE POLICY "Public select free_messages"            ON public.free_messages      FOR SELECT         USING (true);
 
 -- ========================================
 -- 5. Storage ポリシー（DROP → CREATE で冪等）

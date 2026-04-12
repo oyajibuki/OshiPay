@@ -110,4 +110,23 @@
 -- 🆕 未実行・今後の作業用はここに追記する
 -- ============================================
 
+-- ✅ free_messages テーブル作成（2026-04-12）→ schema.sql に反映済み
+-- スタンプ（device_hash依存）の代替。ログイン必須・1日1通・streak管理。
+CREATE TABLE IF NOT EXISTS public.free_messages (
+    id           UUID         DEFAULT gen_random_uuid() PRIMARY KEY,
+    creator_acct TEXT         NOT NULL,
+    supporter_id TEXT         NOT NULL,
+    message      TEXT         NOT NULL,
+    streak_count INTEGER      DEFAULT 1,
+    created_at   TIMESTAMPTZ  DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_free_messages_creator_acct ON public.free_messages(creator_acct);
+CREATE INDEX IF NOT EXISTS idx_free_messages_supporter_id ON public.free_messages(supporter_id);
+CREATE INDEX IF NOT EXISTS idx_free_messages_created_at   ON public.free_messages(created_at);
+ALTER TABLE public.free_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public insert free_messages" ON public.free_messages;
+DROP POLICY IF EXISTS "Public select free_messages" ON public.free_messages;
+CREATE POLICY "Public insert free_messages" ON public.free_messages FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public select free_messages" ON public.free_messages FOR SELECT USING (true);
+
 NOTIFY pgrst, 'reload schema';
