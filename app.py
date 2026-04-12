@@ -2417,7 +2417,7 @@ if page == "ranking":
     footer_html = (
         f'<div style="margin-top:40px;padding:20px 24px 12px;background:rgba(88,101,242,0.08);border:1px solid rgba(88,101,242,0.3);border-radius:16px;text-align:center;">'
         f'<div style="font-size:20px;font-weight:900;color:#818cf8;margin-bottom:6px;">あなたの推しをOshipayに呼ぼう！</div>'
-        f'<div style="font-size:12px;color:rgba(240,240,245,0.55);margin-bottom:12px;">Discordでリクエスト募集中！リクエスト多数の推しは導入を検討します</div>'
+        f'<div style="font-size:12px;color:rgba(240,240,245,0.55);margin-bottom:12px;">Discordでリクエスト募集中！リクエスト多数の推しにはoshipayからも導入相談します</div>'
         f'</div>'
     )
     st.markdown(footer_html, unsafe_allow_html=True)
