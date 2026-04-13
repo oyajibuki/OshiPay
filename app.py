@@ -5139,37 +5139,64 @@ if page == "calendar":
         _ev_url    = _url_m.group(1) if _url_m else ""
         _desc      = _re_cal.sub(r'\n?(https?://\S+)\s*$', '', _desc_full).strip()
 
-        # 場所をリンクボタン化（URL あれば飛べる、なければ非リンクバッジ）— 大きめスタイル
-        _btn_style = (
-            'display:inline-flex;align-items:center;gap:5px;font-size:15px;font-weight:700;'
-            'border-radius:8px;padding:5px 14px;white-space:nowrap;text-decoration:none;'
-        )
-        if _ev_url and _loc:
-            _loc_html = (
-                f'<a href="{_ev_url}" target="_blank" style="{_btn_style}'
-                f'color:#a78bfa;background:rgba(139,92,246,0.12);'
-                f'border:1px solid rgba(139,92,246,0.35);">📍 {_loc}</a>'
-            )
-        elif _ev_url and not _loc:
-            _loc_html = (
-                f'<a href="{_ev_url}" target="_blank" style="{_btn_style}'
-                f'color:#a78bfa;background:rgba(139,92,246,0.12);'
-                f'border:1px solid rgba(139,92,246,0.35);">🔗 リンクを見る</a>'
-            )
-        elif _loc:
-            _loc_html = (
-                f'<span style="display:inline-flex;align-items:center;gap:5px;font-size:15px;font-weight:700;'
-                f'color:rgba(240,240,245,0.7);background:rgba(255,255,255,0.05);'
-                f'border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 14px;'
-                f'white-space:nowrap;">📍 {_loc}</span>'
+        # ── カテゴリ絵文字（見出し横に使う）
+        _cat_emoji = _CAL_CAT_EMOJI.get(_cat, "🎤")
+
+        # ── サブ情報（クリエイター名 | ジャンル）
+        if _verified:
+            _cr_name  = _c_data.get("name", "") or _c_data.get("display_name", "")
+            _cr_genre = _c_data.get("genre", "")
+            _sub_parts = [p for p in [_cr_name, _cr_genre] if p]
+            _sub_text  = " | ".join(_sub_parts) if _sub_parts else ""
+        else:
+            _sub_text = ""
+
+        # サブ情報の小アバター
+        if _photo and _verified:
+            _mini_av = (
+                f'<img src="{_photo}" style="width:20px;height:20px;border-radius:50%;'
+                f'object-fit:cover;flex-shrink:0;border:1px solid rgba(255,255,255,0.15);">'
             )
         else:
-            _loc_html = ""
+            _mini_av = (
+                f'<span style="width:20px;height:20px;border-radius:50%;'
+                f'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);'
+                f'display:inline-flex;align-items:center;justify-content:center;'
+                f'font-size:11px;flex-shrink:0;">{_cat_emoji}</span>'
+            )
+        _sub_html = (
+            f'<div style="display:flex;align-items:center;gap:6px;margin-top:5px;">'
+            f'{_mini_av}'
+            f'<span style="font-size:12px;color:rgba(240,240,245,0.45);font-weight:600;">{_sub_text}</span>'
+            f'</div>'
+        ) if _sub_text else ""
 
+        # ── 「詳細を見る」ボタン（左下）/ 場所バッジ
+        _detail_style = (
+            'display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;'
+            'border-radius:8px;padding:6px 14px;white-space:nowrap;text-decoration:none;'
+        )
+        if _ev_url:
+            _label_loc = f"📍 {_loc}" if _loc else "詳細を見る"
+            _detail_btn = (
+                f'<a href="{_ev_url}" target="_blank" style="{_detail_style}'
+                f'color:#c4b5fd;background:rgba(139,92,246,0.15);'
+                f'border:1px solid rgba(139,92,246,0.4);">{_label_loc} ↗</a>'
+            )
+        elif _loc:
+            _detail_btn = (
+                f'<span style="{_detail_style}color:#fbbf24;background:rgba(251,191,36,0.1);'
+                f'border:1px solid rgba(251,191,36,0.35);">📍 {_loc}</span>'
+            )
+        else:
+            _detail_btn = ""
+
+        # ── 応援ボタン（右下）— target="_blank" で確実に開く
         _req_cnt = _ev.get("request_count", 0)
         if _verified:
             _abtn = (
-                f'<a href="{_c_url}" target="_top" style="display:inline-flex;align-items:center;gap:5px;'
+                f'<a href="{_c_url}" target="_blank" rel="noopener noreferrer" '
+                f'style="display:inline-flex;align-items:center;gap:5px;'
                 f'padding:8px 18px;border-radius:20px;'
                 f'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;'
                 f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">💖 応援・支援する</a>'
@@ -5177,20 +5204,20 @@ if page == "calendar":
         else:
             _req_label = "📡 OshiPay開始をリクエスト" + (f" ({_req_cnt})" if _req_cnt > 0 else "")
             _abtn = (
-                f'<a href="?page=calendar&request={_ev_id}" '
+                f'<a href="?page=calendar&request={_ev_id}" target="_blank" rel="noopener noreferrer" '
                 f'style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;'
                 f'border-radius:20px;background:rgba(249,115,22,0.12);'
                 f'border:1px solid rgba(249,115,22,0.4);color:#fb923c;'
                 f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">{_req_label}</a>'
             )
 
-        # 説明文（URLは除去済み）
+        # ── 説明文
         _desc_html = (
-            f'<div style="font-size:13px;color:rgba(240,240,245,0.65);'
-            f'line-height:1.6;margin:6px 0 0;">{_desc}</div>'
+            f'<div style="font-size:13px;color:rgba(240,240,245,0.6);'
+            f'line-height:1.6;margin:8px 0 0;">{_desc}</div>'
         ) if _desc else ""
 
-        # 左端の大型日付ブロック
+        # ── 左端の大型日付ブロック
         _date_block = (
             f'<div style="min-width:54px;max-width:54px;text-align:center;flex-shrink:0;'
             f'border-right:1px solid rgba(255,255,255,0.08);padding-right:12px;margin-right:4px;">'
@@ -5201,31 +5228,42 @@ if page == "calendar":
             f'<div style="font-size:10px;color:rgba(240,240,245,0.35);margin-top:4px;white-space:nowrap;">{_d_time}</div>'
             f'</div>'
         )
+
+        # ── カード全体
         st.markdown(
+            # カード外枠
             f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);'
             f'border-left:3px solid {_bcol};border-radius:12px;padding:14px 16px;margin-bottom:10px;">'
-            f'<div style="display:flex;gap:12px;align-items:flex-start;">'
-            f'{_date_block}'
-            f'{_avatar}'
-            f'<div style="flex:1;min-width:0;">'
-            f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;flex-wrap:wrap;">'
+            # ① バッジ行（カード最上部）
+            f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;flex-wrap:wrap;">'
             f'<span style="font-size:11px;padding:2px 10px;border-radius:20px;font-weight:800;'
             f'background:{_bcol}22;color:{_bcol};border:1px solid {_bcol}55;">{_cat}</span>'
             f'<span style="font-size:11px;color:rgba(240,240,245,0.3);">›</span>'
             f'<span style="font-size:11px;padding:2px 10px;border-radius:20px;background:{_type_bg};color:{_type_col};font-weight:700;">{_ev_type}</span>'
             f'</div>'
-            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap;">'
-            f'<a href="{_name_url}" target="_top" style="font-size:15px;font-weight:900;color:#f0f0f5;text-decoration:none;">{_dname}</a>'
+            # ② メイン行（日付 ＋ コンテンツ）
+            f'<div style="display:flex;gap:12px;align-items:flex-start;">'
+            f'{_date_block}'
+            f'<div style="flex:1;min-width:0;">'
+            # プロジェクト名（大見出し）
+            f'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+            f'<span style="font-size:20px;">{_cat_emoji}</span>'
+            f'<a href="{_name_url}" target="_blank" rel="noopener noreferrer" '
+            f'style="font-size:20px;font-weight:900;color:#f0f0f5;text-decoration:none;line-height:1.2;">{_dname}</a>'
             f'{_vbadge}'
             f'</div>'
+            # サブ情報（小アバター＋名前）
+            f'{_sub_html}'
+            # 説明文
             f'{_desc_html}'
-            f'<div style="display:flex;align-items:center;gap:8px;margin-top:10px;">'
-            f'<div style="flex:1">{_loc_html}</div>'
+            # アクションボタン行
+            f'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap;">'
+            f'<div>{_detail_btn}</div>'
             f'{_abtn}'
             f'</div>'
-            f'</div>'
-            f'</div>'
-            f'</div>',
+            f'</div>'  # flex:1
+            f'</div>'  # メイン行
+            f'</div>',  # カード外枠
             unsafe_allow_html=True,
         )
 
