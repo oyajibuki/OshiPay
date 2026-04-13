@@ -2163,6 +2163,16 @@ if page == "ranking":
     _wk_end   = _wk_start + datetime.timedelta(days=6)
     week_label = f"{_wk_start.month}/{_wk_start.day}(水)〜{_wk_end.month}/{_wk_end.day}(火)"
 
+    # ナビゲーション（右上にカレンダーリンク）
+    st.markdown(
+        '<div style="display:flex;align-items:center;justify-content:flex-end;'
+        'padding:8px 4px 4px;margin-bottom:4px;">'
+        '<a href="?page=calendar" style="font-size:11px;color:rgba(240,240,245,0.6);text-decoration:none;'
+        'background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);'
+        'border-radius:14px;padding:4px 10px;white-space:nowrap;">📅 推しカレンダー</a>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     st.markdown('<div class="oshi-logo"><span class="text">oshipay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🏆 応援ランキング</div>', unsafe_allow_html=True)
 
@@ -2421,10 +2431,12 @@ if page == "ranking":
         f'</div>'
     )
     st.markdown(footer_html, unsafe_allow_html=True)
-    _fc1, _fc2 = st.columns(2)
+    _fc1, _fc2, _fc3 = st.columns(3)
     with _fc1:
         st.link_button("🏠 TOPページ", LP_URL, use_container_width=True)
     with _fc2:
+        st.link_button("📅 推しカレンダー", "?page=calendar", use_container_width=True)
+    with _fc3:
         st.link_button("🟣 Discordで呼ぶ", "https://discord.gg/3k2AjuR8", use_container_width=True)
     st.stop()
 
@@ -5071,13 +5083,40 @@ if page == "calendar":
         )
 
         _date_str = _cal_format_date(_ev.get("event_date", ""), _ev.get("event_date_end"))
-        _loc      = _ev.get("location", "")
-        _loc_html = (
-            f'<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;'
-            f'color:rgba(240,240,245,0.55);background:rgba(255,255,255,0.05);'
-            f'border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:3px 10px;'
-            f'white-space:nowrap;">📍 {_loc}</span>'
-        ) if _loc else ""
+        _loc = _ev.get("location", "")
+
+        # ① 説明末尾のURLを抽出し、場所ボタンのリンク先にする（URLは本文に表示しない）
+        _desc_full = _ev.get("description", "")
+        _url_m     = _re_cal.search(r'(https?://\S+)\s*$', _desc_full)
+        _ev_url    = _url_m.group(1) if _url_m else ""
+        _desc      = _re_cal.sub(r'\n?(https?://\S+)\s*$', '', _desc_full).strip()
+
+        # 場所をリンクボタン化（URL あれば飛べる、なければ非リンクバッジ）
+        _btn_style = (
+            'display:inline-flex;align-items:center;gap:4px;font-size:12px;'
+            'border-radius:6px;padding:3px 10px;white-space:nowrap;text-decoration:none;'
+        )
+        if _ev_url and _loc:
+            _loc_html = (
+                f'<a href="{_ev_url}" target="_blank" style="{_btn_style}'
+                f'color:#8b5cf6;background:rgba(139,92,246,0.1);'
+                f'border:1px solid rgba(139,92,246,0.35);">📍 {_loc}</a>'
+            )
+        elif _ev_url and not _loc:
+            _loc_html = (
+                f'<a href="{_ev_url}" target="_blank" style="{_btn_style}'
+                f'color:#8b5cf6;background:rgba(139,92,246,0.1);'
+                f'border:1px solid rgba(139,92,246,0.35);">🔗 リンクを見る</a>'
+            )
+        elif _loc:
+            _loc_html = (
+                f'<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;'
+                f'color:rgba(240,240,245,0.55);background:rgba(255,255,255,0.05);'
+                f'border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:3px 10px;'
+                f'white-space:nowrap;">📍 {_loc}</span>'
+            )
+        else:
+            _loc_html = ""
 
         _req_cnt = _ev.get("request_count", 0)
         if _verified:
@@ -5097,21 +5136,11 @@ if page == "calendar":
                 f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">{_req_label}</a>'
             )
 
-        # ④ 説明文中のURLをリンク化
-        _desc = _ev.get("description", "")
-        if _desc:
-            _desc_linked = _re_cal.sub(
-                r'(https?://[^\s<>"\']+)',
-                r'<a href="\1" target="_blank" style="color:#8b5cf6;text-decoration:underline;'
-                r'word-break:break-all;">\1</a>',
-                _desc,
-            )
-            _desc_html = (
-                f'<div style="font-size:13px;color:rgba(240,240,245,0.65);'
-                f'line-height:1.6;margin:6px 0 0;">{_desc_linked}</div>'
-            )
-        else:
-            _desc_html = ""
+        # 説明文（URLは除去済み）
+        _desc_html = (
+            f'<div style="font-size:13px;color:rgba(240,240,245,0.65);'
+            f'line-height:1.6;margin:6px 0 0;">{_desc}</div>'
+        ) if _desc else ""
 
         st.markdown(
             f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);'
