@@ -185,6 +185,62 @@ CREATE POLICY "Public insert free_messages"            ON public.free_messages  
 CREATE POLICY "Public select free_messages"            ON public.free_messages      FOR SELECT         USING (true);
 
 -- ========================================
+-- 📅 カレンダー機能テーブル
+-- ========================================
+
+CREATE TABLE IF NOT EXISTS public.calendar_events (
+    id                UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+    creator_acct      TEXT        REFERENCES public.creators(acct_id) ON DELETE SET NULL,
+    temp_display_name TEXT,
+    temp_photo_url    TEXT,
+    status            TEXT        DEFAULT 'unverified' CHECK (status IN ('unverified', 'verified')),
+    category          TEXT        NOT NULL DEFAULT 'ライブ・路上',
+    event_type        TEXT        NOT NULL DEFAULT 'その他',
+    event_date        TIMESTAMPTZ NOT NULL,
+    event_date_end    TIMESTAMPTZ,
+    location          TEXT,
+    description       TEXT,
+    agent_code        TEXT,
+    request_count     INTEGER     DEFAULT 0,
+    is_deleted        BOOLEAN     DEFAULT FALSE,
+    created_at        TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.claim_tokens (
+    token      UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+    event_id   UUID        NOT NULL REFERENCES public.calendar_events(id) ON DELETE CASCADE,
+    is_used    BOOLEAN     DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    expires_at TIMESTAMPTZ DEFAULT (now() + INTERVAL '7 days')
+);
+
+-- インデックス
+CREATE INDEX IF NOT EXISTS idx_calendar_events_status     ON public.calendar_events(status);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_event_date ON public.calendar_events(event_date);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_category   ON public.calendar_events(category);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_creator    ON public.calendar_events(creator_acct);
+CREATE INDEX IF NOT EXISTS idx_claim_tokens_event_id      ON public.claim_tokens(event_id);
+
+-- RLS 有効化
+ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.claim_tokens    ENABLE ROW LEVEL SECURITY;
+
+-- RLS ポリシー
+DROP POLICY IF EXISTS "Public read calendar_events"   ON public.calendar_events;
+DROP POLICY IF EXISTS "Public insert calendar_events" ON public.calendar_events;
+DROP POLICY IF EXISTS "Public update calendar_events" ON public.calendar_events;
+DROP POLICY IF EXISTS "Public read claim_tokens"      ON public.claim_tokens;
+DROP POLICY IF EXISTS "Public insert claim_tokens"    ON public.claim_tokens;
+DROP POLICY IF EXISTS "Public update claim_tokens"    ON public.claim_tokens;
+
+CREATE POLICY "Public read calendar_events"   ON public.calendar_events FOR SELECT USING (true);
+CREATE POLICY "Public insert calendar_events" ON public.calendar_events FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update calendar_events" ON public.calendar_events FOR UPDATE USING (true);
+CREATE POLICY "Public read claim_tokens"      ON public.claim_tokens    FOR SELECT USING (true);
+CREATE POLICY "Public insert claim_tokens"    ON public.claim_tokens    FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update claim_tokens"    ON public.claim_tokens    FOR UPDATE USING (true);
+
+-- ========================================
 -- 5. Storage ポリシー（DROP → CREATE で冪等）
 -- ========================================
 

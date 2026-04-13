@@ -1315,7 +1315,7 @@ if page == "lp":
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }</style>", unsafe_allow_html=True)
 elif IS_LEGAL_PAGE:
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 800px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
-elif page in ["reply_view", "ranking", "profile"]:
+elif page in ["reply_view", "ranking", "profile", "calendar", "calendar_post", "calendar_agent", "calendar_claim"]:
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 700px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
 else:
     st.markdown("<style>.stMainBlockContainer, .block-container { max-width: 460px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
@@ -4718,3 +4718,549 @@ else: # Dashboard
             st.rerun()
     st.markdown(f'<div class="oshi-footer">Powered by <a href="https://oshipay.me/index.html">oshipay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="https://oshipay.me/terms" target="_blank">利用規約</a><a href="https://oshipay.me/privacy" target="_blank">プライバシーポリシー</a><a href="https://oshipay.me/tokusho" target="_blank">特定商取引法</a></div>', unsafe_allow_html=True)
+
+# ================================================================
+# 📅 推しカレンダー機能
+# ================================================================
+
+_CAL_CATEGORIES  = ["ゲーム・同人", "配信・実況", "コンカフェ", "ライブ・路上"]
+_CAL_EVENT_TYPES = ["リリース", "配信", "初配信", "出勤", "ライブ", "ストリート", "その他"]
+_CAL_AGENT_CODE  = "oshipay2025"
+_CAL_WEEKDAY_JP  = ["月", "火", "水", "木", "金", "土", "日"]
+_CAL_CAT_COLORS  = {
+    "ゲーム・同人": "#8b5cf6",
+    "配信・実況":   "#3b82f6",
+    "コンカフェ":   "#ec4899",
+    "ライブ・路上": "#f97316",
+}
+_CAL_TYPE_COLORS = {
+    "リリース":   ("rgba(139,92,246,0.25)",  "#c4b5fd"),
+    "配信":       ("rgba(59,130,246,0.25)",  "#93c5fd"),
+    "初配信":     ("rgba(34,197,94,0.25)",   "#86efac"),
+    "出勤":       ("rgba(236,72,153,0.25)",  "#f9a8d4"),
+    "ライブ":     ("rgba(249,115,22,0.25)",  "#fdba74"),
+    "ストリート": ("rgba(249,115,22,0.25)",  "#fdba74"),
+    "その他":     ("rgba(255,255,255,0.1)",  "rgba(240,240,245,0.7)"),
+}
+_CAL_CAT_EMOJI = {
+    "ゲーム・同人": "🎮",
+    "配信・実況":   "📺",
+    "コンカフェ":   "☕",
+    "ライブ・路上": "🎸",
+}
+
+
+def _cal_get_events(month_filter="all", cat_filter="all"):
+    _jst = datetime.timezone(datetime.timedelta(hours=9))
+    _now = datetime.datetime.now(_jst)
+    q = get_db().table("calendar_events").select("*").eq("is_deleted", False)
+    if month_filter and month_filter != "all":
+        try:
+            m = int(month_filter)
+            y = _now.year
+            if m < _now.month:
+                y += 1
+            s = datetime.datetime(y, m, 1, tzinfo=_jst)
+            e = datetime.datetime(y + (1 if m == 12 else 0), 1 if m == 12 else m + 1, 1, tzinfo=_jst)
+            q = q.gte("event_date", s.isoformat()).lt("event_date", e.isoformat())
+        except Exception:
+            pass
+    if cat_filter and cat_filter != "all":
+        q = q.eq("category", cat_filter)
+    return q.order("event_date").execute().data or []
+
+
+def _cal_get_creators_map(acct_ids):
+    if not acct_ids:
+        return {}
+    res = get_db().table("creators").select(
+        "acct_id,display_name,photo_url,slug,payout_enabled"
+    ).in_("acct_id", list(set(acct_ids))).execute()
+    return {r["acct_id"]: r for r in (res.data or [])}
+
+
+def _cal_format_date(ev_date_str, ev_date_end_str=None):
+    _jst = datetime.timezone(datetime.timedelta(hours=9))
+    _now = datetime.datetime.now(_jst)
+    try:
+        dt     = datetime.datetime.fromisoformat(ev_date_str.replace("Z", "+00:00"))
+        dt_jst = dt.astimezone(_jst)
+        wd     = _CAL_WEEKDAY_JP[dt_jst.weekday()]
+        d_part = "本日" if dt_jst.date() == _now.date() else f"{dt_jst.month}/{dt_jst.day}({wd})"
+        t_part = dt_jst.strftime("%H:%M")
+        if ev_date_end_str:
+            try:
+                dt_e     = datetime.datetime.fromisoformat(ev_date_end_str.replace("Z", "+00:00"))
+                dt_e_jst = dt_e.astimezone(_jst)
+                return f"{d_part}\u3000{t_part} - {dt_e_jst.strftime('%H:%M')}"
+            except Exception:
+                pass
+        return f"{d_part}\u3000{t_part}\u301c"
+    except Exception:
+        return str(ev_date_str)[:10] if ev_date_str else ""
+
+
+def _cal_create_claim_token(event_id: str):
+    try:
+        res = get_db().table("claim_tokens").insert({"event_id": event_id}).execute()
+        return res.data[0]["token"] if res.data else None
+    except Exception:
+        return None
+
+
+# ── カレンダー一覧ページ ──────────────────────────────────────────
+if page == "calendar":
+    _jst_tz  = datetime.timezone(datetime.timedelta(hours=9))
+    _now_jst = datetime.datetime.now(_jst_tz)
+    cal_month = params.get("cal_month", "all")
+    cal_cat   = params.get("cal_cat",   "all")
+
+    _req_ev_id = params.get("request", "")
+    if _req_ev_id:
+        try:
+            _r = get_db().table("calendar_events").select("request_count").eq("id", _req_ev_id).execute()
+            if _r.data:
+                _new_cnt = (_r.data[0].get("request_count") or 0) + 1
+                get_db().table("calendar_events").update({"request_count": _new_cnt}).eq("id", _req_ev_id).execute()
+        except Exception:
+            pass
+        st.query_params.update({"page": "calendar", "cal_month": cal_month, "cal_cat": cal_cat})
+        st.rerun()
+
+    st.markdown(
+        '<div style="padding:16px 4px 12px;">'
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+        '<span style="font-size:22px;font-weight:900;color:#f0f0f5;">推しカレンダー</span>'
+        '<span style="font-size:20px;">📅</span>'
+        '</div>'
+        '<div style="font-size:13px;color:rgba(240,240,245,0.45);">ゲームのリリース、配信、出勤、ライブ情報！</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    _m_opts = [("all", "すべて")]
+    for _i in range(3):
+        _m = (_now_jst.month - 1 + _i) % 12 + 1
+        _m_opts.append((str(_m), f"{_m}月"))
+    _m_html = '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">'
+    for _mv, _ml in _m_opts:
+        _act = cal_month == _mv
+        _m_html += (
+            f'<a href="?page=calendar&cal_month={_mv}&cal_cat={cal_cat}" '
+            f'style="text-decoration:none;padding:6px 18px;border-radius:20px;font-size:13px;'
+            f'font-weight:{"800" if _act else "600"};'
+            f'background:{"rgba(139,92,246,0.2)" if _act else "rgba(255,255,255,0.05)"};'
+            f'border:{"1px solid rgba(139,92,246,0.6)" if _act else "1px solid rgba(255,255,255,0.1)"};'
+            f'color:{"#c4b5fd" if _act else "rgba(240,240,245,0.6)"};">{_ml}</a>'
+        )
+    _m_html += '</div>'
+    st.markdown(_m_html, unsafe_allow_html=True)
+
+    _c_opts = [
+        ("all",        "🔥 すべて"),
+        ("ゲーム・同人", "🎮 ゲーム・同人"),
+        ("配信・実況",   "📺 配信・実況"),
+        ("コンカフェ",   "☕ コンカフェ"),
+        ("ライブ・路上", "🎸 ライブ・路上"),
+    ]
+    _c_html = '<div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;">'
+    for _cv, _cl in _c_opts:
+        _act = cal_cat == _cv
+        _c_html += (
+            f'<a href="?page=calendar&cal_month={cal_month}&cal_cat={_cv}" '
+            f'style="text-decoration:none;padding:7px 14px;border-radius:20px;font-size:13px;'
+            f'font-weight:{"700" if _act else "500"};'
+            f'background:{"rgba(255,255,255,0.1)" if _act else "transparent"};'
+            f'border:{"1px solid rgba(255,255,255,0.3)" if _act else "1px solid rgba(255,255,255,0.1)"};'
+            f'color:{"#f0f0f5" if _act else "rgba(240,240,245,0.5)"};">{_cl}</a>'
+        )
+    _c_html += '</div>'
+    st.markdown(_c_html, unsafe_allow_html=True)
+
+    _events      = _cal_get_events(cal_month, cal_cat)
+    _acct_ids    = [e["creator_acct"] for e in _events if e.get("creator_acct")]
+    _creator_map = _cal_get_creators_map(_acct_ids)
+
+    if not _events:
+        st.markdown(
+            '<div style="text-align:center;padding:60px 0;color:rgba(240,240,245,0.35);font-size:14px;">'
+            '📭 この期間のイベントはまだありません</div>',
+            unsafe_allow_html=True,
+        )
+
+    for _ev in _events:
+        _cat      = _ev.get("category", "ライブ・路上")
+        _bcol     = _CAL_CAT_COLORS.get(_cat, "#8b5cf6")
+        _status   = _ev.get("status", "unverified")
+        _ev_id    = _ev.get("id", "")
+        _ev_type  = _ev.get("event_type", "その他")
+        _type_bg, _type_col = _CAL_TYPE_COLORS.get(_ev_type, _CAL_TYPE_COLORS["その他"])
+        _c_data   = _creator_map.get(_ev.get("creator_acct", ""), {})
+        _verified = _status == "verified" and bool(_c_data)
+        _dname    = (_c_data.get("display_name") or _ev.get("temp_display_name", "???")) if _verified else _ev.get("temp_display_name", "???")
+        _photo    = (_c_data.get("photo_url") or _ev.get("temp_photo_url", ""))          if _verified else _ev.get("temp_photo_url", "")
+        _slug     = _c_data.get("slug", "")
+        _c_url    = f"?page=support&acct={_slug}" if (_verified and _slug) else "#"
+
+        if _photo:
+            _avatar = (
+                f'<img src="{_photo}" style="width:48px;height:48px;border-radius:50%;'
+                f'object-fit:cover;flex-shrink:0;border:2px solid rgba(255,255,255,0.1);">'
+            )
+        else:
+            _emoji  = _CAL_CAT_EMOJI.get(_cat, "🎤")
+            _avatar = (
+                f'<div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.07);'
+                f'border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;'
+                f'justify-content:center;font-size:22px;flex-shrink:0;">{_emoji}</div>'
+            )
+
+        _vbadge = (
+            '<span style="font-size:11px;color:#60a5fa;background:rgba(59,130,246,0.15);'
+            'border:1px solid rgba(59,130,246,0.3);border-radius:20px;padding:1px 8px;">✓ 認証済み</span>'
+            if _verified else
+            '<span style="font-size:11px;color:rgba(240,240,245,0.4);background:rgba(255,255,255,0.05);'
+            'border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:1px 8px;">仮登録</span>'
+        )
+
+        _date_str = _cal_format_date(_ev.get("event_date", ""), _ev.get("event_date_end"))
+        _loc      = _ev.get("location", "")
+        _loc_html = (
+            f'<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;'
+            f'color:rgba(240,240,245,0.55);background:rgba(255,255,255,0.05);'
+            f'border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:3px 10px;'
+            f'white-space:nowrap;">📍 {_loc}</span>'
+        ) if _loc else ""
+
+        _req_cnt = _ev.get("request_count", 0)
+        if _verified:
+            _abtn = (
+                f'<a href="{_c_url}" style="display:inline-flex;align-items:center;gap:5px;'
+                f'padding:8px 18px;border-radius:20px;'
+                f'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;'
+                f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">💖 応援・支援する</a>'
+            )
+        else:
+            _req_label = "📡 OshiPay開始をリクエスト" + (f" ({_req_cnt})" if _req_cnt > 0 else "")
+            _abtn = (
+                f'<a href="?page=calendar&cal_month={cal_month}&cal_cat={cal_cat}&request={_ev_id}" '
+                f'style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;'
+                f'border-radius:20px;background:rgba(249,115,22,0.12);'
+                f'border:1px solid rgba(249,115,22,0.4);color:#fb923c;'
+                f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">{_req_label}</a>'
+            )
+
+        _desc      = _ev.get("description", "")
+        _desc_html = (
+            f'<div style="font-size:13px;color:rgba(240,240,245,0.65);line-height:1.6;margin:6px 0 0;">{_desc}</div>'
+        ) if _desc else ""
+
+        st.markdown(
+            f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);'
+            f'border-left:3px solid {_bcol};border-radius:12px;padding:14px 16px;margin-bottom:10px;">'
+            f'<div style="display:flex;gap:12px;align-items:flex-start;">'
+            f'{_avatar}'
+            f'<div style="flex:1;min-width:0;">'
+            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap;">'
+            f'<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:{_type_bg};color:{_type_col};font-weight:700;">{_ev_type}</span>'
+            f'<span style="font-size:12px;color:rgba(240,240,245,0.45);">📅 {_date_str}</span>'
+            f'</div>'
+            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap;">'
+            f'<a href="{_c_url}" style="font-size:15px;font-weight:900;color:#f0f0f5;text-decoration:none;">{_dname}</a>'
+            f'{_vbadge}'
+            f'</div>'
+            f'{_desc_html}'
+            f'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;">'
+            f'{_loc_html}'
+            f'{_abtn}'
+            f'</div>'
+            f'</div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        '<a href="?page=calendar_post" style="position:fixed;bottom:24px;right:24px;z-index:9999;'
+        'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;border-radius:28px;'
+        'padding:13px 20px;font-size:14px;font-weight:700;text-decoration:none;'
+        'display:inline-flex;align-items:center;gap:7px;'
+        'box-shadow:0 4px 20px rgba(139,92,246,0.4);">➕ 予定を投稿する</a>',
+        unsafe_allow_html=True,
+    )
+
+
+# ── 投稿分岐モーダルページ ──────────────────────────────────────────
+if page == "calendar_post":
+    st.markdown(
+        '<div style="max-width:480px;margin:40px auto 0;background:rgba(30,30,45,0.98);'
+        'border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:32px 28px;'
+        'box-shadow:0 20px 60px rgba(0,0,0,0.6);">'
+        '<div style="font-size:18px;font-weight:900;color:#f0f0f5;margin-bottom:6px;text-align:center;">'
+        'カレンダーに予定を追加</div>'
+        '<div style="font-size:12px;color:rgba(240,240,245,0.4);text-align:center;margin-bottom:28px;">'
+        '投稿方法を選んでください</div>'
+        '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);'
+        'border-radius:14px;padding:20px;margin-bottom:16px;">'
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        '<span style="font-size:18px;">🛡️</span>'
+        '<span style="font-size:15px;font-weight:800;color:#f0f0f5;">クリエイターご本人ですか？</span>'
+        '</div>'
+        '<div style="font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:16px;line-height:1.6;">'
+        'アカウントを作成し、口座（Stripe）を連携すると、カレンダーに自分の予定を登録して直接投げ銭を受け取れるようになります。'
+        '</div>'
+        '<div style="display:flex;gap:10px;">'
+        '<a href="?page=dashboard&tab=new" style="flex:1;text-align:center;padding:11px;border-radius:10px;'
+        'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;font-size:13px;font-weight:700;text-decoration:none;">'
+        '1分でアカウント作成</a>'
+        '<a href="?page=dashboard" style="flex:1;text-align:center;padding:11px;border-radius:10px;'
+        'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);'
+        'color:#f0f0f5;font-size:13px;font-weight:700;text-decoration:none;">ログイン</a>'
+        '</div></div>'
+        '<div style="display:flex;align-items:center;gap:10px;margin:16px 0;">'
+        '<div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>'
+        '<span style="font-size:12px;color:rgba(240,240,245,0.35);">または</span>'
+        '<div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>'
+        '</div>'
+        '<div style="background:rgba(249,115,22,0.05);border:1px solid rgba(249,115,22,0.2);'
+        'border-radius:14px;padding:20px;">'
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        '<span style="font-size:16px;">ℹ️</span>'
+        '<span style="font-size:14px;font-weight:800;color:rgba(240,240,245,0.85);">'
+        '【運営・代理店専用】代理で仮登録する</span></div>'
+        '<div style="font-size:12px;color:rgba(240,240,245,0.45);margin-bottom:16px;line-height:1.6;">'
+        'クリエイターに代わってイベント情報を「仮掲載」します。ファンからの応援リクエストを集め、営業時のアプローチに活用できます。'
+        '</div>'
+        '<a href="?page=calendar_agent" style="display:block;text-align:center;padding:11px;border-radius:10px;'
+        'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);'
+        'color:#f0f0f5;font-size:13px;font-weight:700;text-decoration:none;">'
+        '代理登録フォームを開く</a></div>'
+        '<div style="text-align:center;margin-top:20px;">'
+        '<a href="?page=calendar" style="font-size:12px;color:rgba(240,240,245,0.35);text-decoration:none;">'
+        '← カレンダーに戻る</a></div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ── 代理登録フォームページ ──────────────────────────────────────────
+if page == "calendar_agent":
+    st.markdown('<div class="oshi-logo"><span class="text">oshipay</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">【代理店専用】イベント仮登録</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-subtitle">クリエイターのイベントを代理で仮登録します</div>', unsafe_allow_html=True)
+
+    if "agent_auth_ok"   not in st.session_state: st.session_state["agent_auth_ok"]   = False
+    if "agent_submitted" not in st.session_state: st.session_state["agent_submitted"] = False
+    if "agent_claim_url" not in st.session_state: st.session_state["agent_claim_url"] = ""
+
+    if not st.session_state["agent_auth_ok"]:
+        with st.form("agent_code_form"):
+            _code_in = st.text_input("代理店コード", type="password", placeholder="コードを入力してください")
+            if st.form_submit_button("認証する", use_container_width=True):
+                if _code_in.strip() == _CAL_AGENT_CODE:
+                    st.session_state["agent_auth_ok"] = True
+                    st.rerun()
+                else:
+                    st.error("コードが正しくありません。")
+
+    elif not st.session_state["agent_submitted"]:
+        st.success("✅ 認証済み。イベント情報を入力してください。")
+        with st.form("agent_event_form"):
+            st.markdown("**クリエイター情報**")
+            _f_name  = st.text_input("クリエイター名 *", placeholder="例：路上シンガーYUKI")
+            _f_photo = st.text_input("アイコン画像URL（任意）", placeholder="https://...")
+            _f_cat   = st.selectbox("カテゴリ *", _CAL_CATEGORIES)
+            st.markdown("---")
+            st.markdown("**イベント情報**")
+            _f_type      = st.selectbox("イベント種別 *", _CAL_EVENT_TYPES)
+            _f_date      = st.date_input("開催日 *", min_value=datetime.date.today())
+            _t_col1, _t_col2 = st.columns(2)
+            _f_time      = _t_col1.time_input("開始時刻", value=datetime.time(18, 0))
+            _f_time_end  = _t_col2.time_input("終了時刻（任意）", value=datetime.time(18, 0))
+            _f_loc       = st.text_input("場所 / プラットフォーム", placeholder="例：秋葉原○○店 / YouTube Live")
+            _f_desc      = st.text_area("告知メッセージ（任意）", placeholder="例：初配信です！ぜひ見に来てね！", max_chars=200)
+
+            if st.form_submit_button("🚀 仮登録する", use_container_width=True):
+                if not _f_name.strip():
+                    st.error("クリエイター名は必須です。")
+                else:
+                    _jst_tz2 = datetime.timezone(datetime.timedelta(hours=9))
+                    _ev_dt   = datetime.datetime(
+                        _f_date.year, _f_date.month, _f_date.day,
+                        _f_time.hour, _f_time.minute, tzinfo=_jst_tz2,
+                    )
+                    _ev_dt_end = None
+                    if _f_time_end != _f_time:
+                        _ev_dt_end = datetime.datetime(
+                            _f_date.year, _f_date.month, _f_date.day,
+                            _f_time_end.hour, _f_time_end.minute, tzinfo=_jst_tz2,
+                        )
+                    _ins = {
+                        "temp_display_name": _f_name.strip(),
+                        "temp_photo_url":    _f_photo.strip() or None,
+                        "status":            "unverified",
+                        "category":          _f_cat,
+                        "event_type":        _f_type,
+                        "event_date":        _ev_dt.isoformat(),
+                        "location":          _f_loc.strip() or None,
+                        "description":       _f_desc.strip() or None,
+                        "agent_code":        _CAL_AGENT_CODE,
+                    }
+                    if _ev_dt_end:
+                        _ins["event_date_end"] = _ev_dt_end.isoformat()
+                    try:
+                        _ins_res = get_db().table("calendar_events").insert(_ins).execute()
+                        if _ins_res.data:
+                            _new_ev_id = _ins_res.data[0]["id"]
+                            _tok       = _cal_create_claim_token(_new_ev_id)
+                            if _tok:
+                                st.session_state["agent_claim_url"] = f"https://oshipay.me/?page=calendar_claim&token={_tok}"
+                            st.session_state["agent_submitted"] = True
+                            st.rerun()
+                        else:
+                            st.error("登録に失敗しました。もう一度お試しください。")
+                    except Exception as _e_ins:
+                        st.error(f"エラーが発生しました: {_e_ins}")
+
+    else:
+        st.success("🎉 イベントをカレンダーに仮登録しました！")
+        _claim_url = st.session_state.get("agent_claim_url", "")
+        if _claim_url:
+            st.markdown(
+                '<div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);'
+                'border-radius:14px;padding:20px;margin:16px 0;">'
+                '<div style="font-size:14px;font-weight:800;color:#c4b5fd;margin-bottom:8px;">'
+                '🔗 クリエイター引き継ぎURL（Claim URL）</div>'
+                '<div style="font-size:12px;color:rgba(240,240,245,0.6);line-height:1.6;">'
+                'このURLをクリエイターの公式DMに送ってください。<br>'
+                'クリエイターがURLを開いてアカウント登録すると、仮登録データが本人のアカウントに紐付きます。'
+                '</div></div>',
+                unsafe_allow_html=True,
+            )
+            st.code(_claim_url)
+            if st.button("📋 URLをコピー", use_container_width=True):
+                components.html(
+                    f'<script>navigator.clipboard.writeText("{_claim_url}").catch(function(){{}});</script>',
+                    height=0,
+                )
+                st.toast("✅ クリップボードにコピーしました！")
+
+        _btn_c1, _btn_c2 = st.columns(2)
+        if _btn_c1.button("📅 カレンダーを見る", use_container_width=True):
+            st.session_state["agent_submitted"] = False
+            st.session_state["agent_claim_url"] = ""
+            st.query_params["page"] = "calendar"
+            st.rerun()
+        if _btn_c2.button("➕ 続けて登録する", use_container_width=True, type="secondary"):
+            st.session_state["agent_submitted"] = False
+            st.session_state["agent_claim_url"] = ""
+            st.rerun()
+
+    st.markdown(
+        '<div style="text-align:center;margin-top:16px;">'
+        '<a href="?page=calendar" style="font-size:12px;color:rgba(240,240,245,0.35);text-decoration:none;">'
+        '← カレンダーに戻る</a></div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ── Claim 引き継ぎページ ──────────────────────────────────────────
+if page == "calendar_claim":
+    st.markdown('<div class="oshi-logo"><span class="text">oshipay</span></div>', unsafe_allow_html=True)
+
+    _tok_param = params.get("token", "")
+    if not _tok_param:
+        st.error("無効なURLです。")
+        st.link_button("📅 カレンダーを見る", "?page=calendar", use_container_width=True)
+        st.stop()
+
+    try:
+        _tok_res  = get_db().table("claim_tokens").select("*").eq("token", _tok_param).limit(1).execute()
+        _tok_data = (_tok_res.data or [None])[0]
+    except Exception:
+        _tok_data = None
+
+    if not _tok_data:
+        st.error("このURLは無効です。")
+        st.link_button("📅 カレンダーを見る", "?page=calendar", use_container_width=True)
+        st.stop()
+
+    if _tok_data.get("is_used"):
+        st.info("✅ このイベントはすでに引き継ぎ済みです。")
+        st.link_button("📅 カレンダーを見る", "?page=calendar", use_container_width=True)
+        st.stop()
+
+    _exp_str = _tok_data.get("expires_at", "")
+    if _exp_str:
+        try:
+            _exp_dt = datetime.datetime.fromisoformat(_exp_str.replace("Z", "+00:00"))
+            if datetime.datetime.now(datetime.timezone.utc) > _exp_dt:
+                st.error("このURLは有効期限切れです。運営にご連絡ください。")
+                st.link_button("📅 カレンダーを見る", "?page=calendar", use_container_width=True)
+                st.stop()
+        except Exception:
+            pass
+
+    _claim_ev_id = _tok_data.get("event_id", "")
+    try:
+        _ev_res  = get_db().table("calendar_events").select("*").eq("id", _claim_ev_id).limit(1).execute()
+        _ev_data = (_ev_res.data or [None])[0]
+    except Exception:
+        _ev_data = None
+
+    if not _ev_data:
+        st.error("対象イベントが見つかりません。")
+        st.link_button("📅 カレンダーを見る", "?page=calendar", use_container_width=True)
+        st.stop()
+
+    _temp_name = _ev_data.get("temp_display_name", "???")
+    _ev_type3  = _ev_data.get("event_type", "")
+    _ev_date3  = _cal_format_date(_ev_data.get("event_date", ""))
+
+    st.markdown(
+        f'<div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);'
+        f'border-radius:16px;padding:20px;margin:12px 0;">'
+        f'<div style="font-size:16px;font-weight:900;color:#f0f0f5;margin-bottom:4px;">'
+        f'「{_temp_name}」のイベント</div>'
+        f'<div style="font-size:13px;color:rgba(240,240,245,0.6);">{_ev_type3} ・ {_ev_date3}</div>'
+        f'<div style="font-size:12px;color:rgba(240,240,245,0.45);margin-top:8px;">'
+        f'このイベントはあなたのものですか？</div></div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("**このイベントを引き継いで、OshiPayアカウントと連携しましょう！**")
+
+    _logged_in_acct = st.session_state.get("creator_auth", "")
+    if _logged_in_acct:
+        _c_inf = get_db().table("creators").select("display_name").eq("acct_id", _logged_in_acct).limit(1).execute()
+        _c_nm  = _c_inf.data[0].get("display_name", _logged_in_acct) if _c_inf.data else _logged_in_acct
+        st.info(f"ログイン中： **{_c_nm}** としてこのイベントを引き継ぎます。")
+        if st.button("✅ このアカウントで引き継ぐ", use_container_width=True):
+            try:
+                get_db().table("calendar_events").update({
+                    "creator_acct": _logged_in_acct,
+                    "status": "verified",
+                }).eq("id", _claim_ev_id).execute()
+                get_db().table("claim_tokens").update({"is_used": True}).eq("token", _tok_param).execute()
+                st.success("🎉 引き継ぎ完了！イベントがあなたのアカウントに紐付きました。")
+                st.balloons()
+                st.link_button("📅 カレンダーを見る", "?page=calendar", use_container_width=True)
+            except Exception as _e_claim:
+                st.error(f"引き継ぎ中にエラーが発生しました: {_e_claim}")
+    else:
+        st.session_state["pending_claim_token"] = _tok_param
+        st.session_state["pending_claim_ev_id"] = _claim_ev_id
+        _cl1, _cl2 = st.columns(2)
+        _cl1.link_button("📝 新規アカウント作成", "?page=dashboard&tab=new", use_container_width=True)
+        _cl2.link_button("🔑 ログイン",           "?page=dashboard",         use_container_width=True)
+        st.markdown(
+            '<div style="font-size:12px;color:rgba(240,240,245,0.4);text-align:center;margin-top:8px;">'
+            'ログイン後、このURLを再度開いて引き継ぎを完了してください。</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        '<div style="text-align:center;margin-top:20px;">'
+        '<a href="?page=calendar" style="font-size:12px;color:rgba(240,240,245,0.35);text-decoration:none;">'
+        '← カレンダーに戻る</a></div>',
+        unsafe_allow_html=True,
+    )
