@@ -4475,6 +4475,66 @@ else: # Dashboard
             st.query_params["acct"] = acct_id
             st.rerun()
 
+        # ── カレンダーにイベントを登録する ──
+        st.markdown('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0;">', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:15px;font-weight:700;color:rgba(240,240,245,0.85);margin-bottom:8px;">📅 推しカレンダーに予定を登録する</div>', unsafe_allow_html=True)
+        with st.expander("➕ イベントを登録する"):
+            _dash_ev_name = _cr_data.get("display_name") or _cr_data.get("name") or acct_id
+            _dash_ev_photo = _cr_data.get("photo_url") or ""
+            _dash_cat  = st.selectbox("カテゴリ *", ["ゲーム・同人", "配信・実況", "コンカフェ", "ライブ・路上"], key="dash_cal_cat")
+            _dash_type = st.selectbox("イベント種別 *", ["リリース", "配信", "初配信", "出勤", "ライブ", "ストリート", "その他"], key="dash_cal_type")
+            _dash_date = st.date_input("リリース日/配信日/出勤日/開催日 *", min_value=datetime.date.today(), key="dash_cal_date")
+            _dash_use_time = st.checkbox("時刻を指定する", value=True, key="dash_cal_use_time")
+            _dash_time = _dash_time_end = None
+            if _dash_use_time:
+                _dt_c1, _dt_c2 = st.columns(2)
+                _dash_time     = _dt_c1.time_input("開始時刻", value=datetime.time(18, 0), key="dash_cal_time")
+                _dash_time_end = _dt_c2.time_input("終了時刻（任意）", value=datetime.time(18, 0), key="dash_cal_time_end")
+            _dash_loc  = st.text_input("場所/プラットフォーム/ゲーム名", placeholder="例：渋谷○○ / YouTube Live", key="dash_cal_loc")
+            _dash_url  = st.text_input("関連URL（任意）", placeholder="例：https://youtube.com/live/xxxx", key="dash_cal_url")
+            _dash_desc = st.text_area("告知メッセージ（任意）", placeholder="例：初配信です！ぜひ見に来てね！", max_chars=200, key="dash_cal_desc")
+            if st.button("📅 カレンダーに登録する", use_container_width=True, key="dash_cal_submit"):
+                _jst_tz_d = datetime.timezone(datetime.timedelta(hours=9))
+                if _dash_use_time and _dash_time:
+                    _dash_ev_dt = datetime.datetime(
+                        _dash_date.year, _dash_date.month, _dash_date.day,
+                        _dash_time.hour, _dash_time.minute, tzinfo=_jst_tz_d,
+                    )
+                    _dash_ev_dt_end = None
+                    if _dash_time_end and _dash_time_end != _dash_time:
+                        _dash_ev_dt_end = datetime.datetime(
+                            _dash_date.year, _dash_date.month, _dash_date.day,
+                            _dash_time_end.hour, _dash_time_end.minute, tzinfo=_jst_tz_d,
+                        )
+                else:
+                    _dash_ev_dt     = datetime.datetime(_dash_date.year, _dash_date.month, _dash_date.day, 0, 0, tzinfo=_jst_tz_d)
+                    _dash_ev_dt_end = None
+                _dash_desc_combined = _dash_desc.strip()
+                if _dash_url.strip():
+                    _dash_desc_combined = (_dash_desc_combined + "\n" + _dash_url.strip()).strip()
+                _dash_ins = {
+                    "creator_acct":      acct_id,
+                    "temp_display_name": _dash_ev_name,
+                    "temp_photo_url":    _dash_ev_photo or None,
+                    "status":            "verified",
+                    "category":          _dash_cat,
+                    "event_type":        _dash_type,
+                    "event_date":        _dash_ev_dt.isoformat(),
+                    "location":          _dash_loc.strip() or None,
+                    "description":       _dash_desc_combined or None,
+                }
+                if _dash_ev_dt_end:
+                    _dash_ins["event_date_end"] = _dash_ev_dt_end.isoformat()
+                try:
+                    _dash_ins_res = get_db().table("calendar_events").insert(_dash_ins).execute()
+                    if _dash_ins_res.data:
+                        st.success("🎉 カレンダーに登録しました！")
+                        st.link_button("📅 カレンダーを確認する", "?page=calendar", use_container_width=True)
+                    else:
+                        st.error("登録に失敗しました。もう一度お試しください。")
+                except Exception as _e_dash_ins:
+                    st.error(f"エラーが発生しました: {_e_dash_ins}")
+
         # OAuth判定
         _cr_is_oauth = bool(_cr_data.get("google_sub") or _cr_data.get("discord_sub") or _cr_data.get("line_sub"))
 
@@ -4808,6 +4868,60 @@ def _cal_create_claim_token(event_id: str):
         return None
 
 
+# ── カレンダー投稿モーダル（@st.dialog） ────────────────────────────
+@st.dialog("カレンダーに予定を追加")
+def _cal_post_modal():
+    st.markdown(
+        '<div style="font-size:12px;color:rgba(240,240,245,0.4);text-align:center;margin-bottom:20px;">'
+        '投稿方法を選んでください</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);'
+        'border-radius:14px;padding:20px;margin-bottom:16px;">'
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        '<span style="font-size:18px;">🛡️</span>'
+        '<span style="font-size:15px;font-weight:800;color:#f0f0f5;">クリエイターご本人ですか？</span>'
+        '</div>'
+        '<div style="font-size:12px;color:rgba(240,240,245,0.5);margin-bottom:16px;line-height:1.6;">'
+        'アカウントを作成し、口座（Stripe）を連携すると、カレンダーに自分の予定を登録して直接投げ銭を受け取れるようになります。'
+        '</div>'
+        '<div style="display:flex;gap:10px;">'
+        '<a href="?page=dashboard&tab=new" style="flex:1;text-align:center;padding:11px;border-radius:10px;'
+        'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;font-size:13px;font-weight:700;text-decoration:none;">'
+        '1分でアカウント作成</a>'
+        '<a href="?page=dashboard" style="flex:1;text-align:center;padding:11px;border-radius:10px;'
+        'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);'
+        'color:#f0f0f5;font-size:13px;font-weight:700;text-decoration:none;">ログイン</a>'
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div style="display:flex;align-items:center;gap:10px;margin:16px 0;">'
+        '<div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>'
+        '<span style="font-size:12px;color:rgba(240,240,245,0.35);">または</span>'
+        '<div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div style="background:rgba(249,115,22,0.05);border:1px solid rgba(249,115,22,0.2);'
+        'border-radius:14px;padding:20px;">'
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        '<span style="font-size:16px;">ℹ️</span>'
+        '<span style="font-size:14px;font-weight:800;color:rgba(240,240,245,0.85);">'
+        '【運営・代理店専用】代理で仮登録する</span></div>'
+        '<div style="font-size:12px;color:rgba(240,240,245,0.45);margin-bottom:16px;line-height:1.6;">'
+        'クリエイターに代わってイベント情報を「仮掲載」します。ファンからの応援リクエストを集め、営業時のアプローチに活用できます。'
+        '</div>'
+        '<a href="?page=calendar_agent" style="display:block;text-align:center;padding:11px;border-radius:10px;'
+        'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);'
+        'color:#f0f0f5;font-size:13px;font-weight:700;text-decoration:none;">'
+        '代理登録フォームを開く</a></div>',
+        unsafe_allow_html=True,
+    )
+
+
 # ── カレンダー一覧ページ ──────────────────────────────────────────
 if page == "calendar":
     _jst_tz  = datetime.timezone(datetime.timedelta(hours=9))
@@ -4980,14 +5094,27 @@ if page == "calendar":
             unsafe_allow_html=True,
         )
 
+    # FABボタン（モーダルダイアログを開く）
     st.markdown(
-        '<a href="?page=calendar_post" style="position:fixed;bottom:24px;right:24px;z-index:9999;'
-        'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;border-radius:28px;'
-        'padding:13px 20px;font-size:14px;font-weight:700;text-decoration:none;'
-        'display:inline-flex;align-items:center;gap:7px;'
-        'box-shadow:0 4px 20px rgba(139,92,246,0.4);">➕ 予定を投稿する</a>',
+        '<style>'
+        'div[data-testid="stButton"].fab-cal > button {'
+        '  position:fixed !important; bottom:24px !important; right:24px !important;'
+        '  z-index:9999 !important;'
+        '  background:linear-gradient(135deg,#8b5cf6,#ec4899) !important;'
+        '  color:white !important; border-radius:28px !important;'
+        '  padding:13px 20px !important; font-size:14px !important;'
+        '  font-weight:700 !important; border:none !important; width:auto !important;'
+        '  box-shadow:0 4px 20px rgba(139,92,246,0.4) !important;'
+        '  cursor:pointer !important;'
+        '}'
+        '</style>',
         unsafe_allow_html=True,
     )
+    st.markdown('<div class="fab-cal">', unsafe_allow_html=True)
+    if st.button("➕ 予定を投稿する", key="fab_cal_post"):
+        _cal_post_modal()
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.stop()
 
 
 # ── 投稿分岐モーダルページ ──────────────────────────────────────────
@@ -5064,45 +5191,96 @@ if page == "calendar_agent":
 
     elif not st.session_state["agent_submitted"]:
         st.success("✅ 認証済み。イベント情報を入力してください。")
+
+        # アイコン画像アップロード（フォーム外で先に処理）
+        st.markdown("**クリエイター情報**")
+        _f_name  = st.text_input("クリエイター名 *", placeholder="例：路上シンガーYUKI")
+        _f_cat   = st.selectbox("カテゴリ *", _CAL_CATEGORIES)
+
+        st.markdown("アイコン画像（任意）")
+        _f_icon_file = st.file_uploader("JPG / PNG / WEBP", type=["jpg","jpeg","png","webp"], key="agent_icon_upload")
+        _f_photo_url = ""
+        if _f_icon_file is not None:
+            try:
+                _supa_url  = st.secrets["SUPABASE_URL"].rstrip("/")
+                _supa_key  = st.secrets["SUPABASE_KEY"]
+                import uuid as _uuid_mod
+                _icon_path = f"agent_icons/{_uuid_mod.uuid4().hex}.{_f_icon_file.name.rsplit('.',1)[-1].lower()}"
+                _icon_bytes = _f_icon_file.read()
+                import urllib.request as _urlreq
+                _upload_req = _urlreq.Request(
+                    f"{_supa_url}/storage/v1/object/creator-photos/{_icon_path}",
+                    data=_icon_bytes,
+                    headers={
+                        "apikey":        _supa_key,
+                        "Authorization": f"Bearer {_supa_key}",
+                        "Content-Type":  _f_icon_file.type or "image/jpeg",
+                        "x-upsert":      "true",
+                    },
+                    method="POST",
+                )
+                with _urlreq.urlopen(_upload_req) as _r:
+                    if _r.status in (200, 201):
+                        _f_photo_url = f"{_supa_url}/storage/v1/object/public/creator-photos/{_icon_path}"
+                        st.image(_f_photo_url, width=80)
+                        st.caption("✅ アイコン画像をアップロードしました")
+                    else:
+                        st.warning("画像のアップロードに失敗しました。URLは空になります。")
+            except Exception as _e_icon:
+                st.warning(f"画像アップロードエラー: {_e_icon}")
+
+        st.markdown("---")
+        st.markdown("**イベント情報**")
+
         with st.form("agent_event_form"):
-            st.markdown("**クリエイター情報**")
-            _f_name  = st.text_input("クリエイター名 *", placeholder="例：路上シンガーYUKI")
-            _f_photo = st.text_input("アイコン画像URL（任意）", placeholder="https://...")
-            _f_cat   = st.selectbox("カテゴリ *", _CAL_CATEGORIES)
-            st.markdown("---")
-            st.markdown("**イベント情報**")
-            _f_type      = st.selectbox("イベント種別 *", _CAL_EVENT_TYPES)
-            _f_date      = st.date_input("開催日 *", min_value=datetime.date.today())
-            _t_col1, _t_col2 = st.columns(2)
-            _f_time      = _t_col1.time_input("開始時刻", value=datetime.time(18, 0))
-            _f_time_end  = _t_col2.time_input("終了時刻（任意）", value=datetime.time(18, 0))
-            _f_loc       = st.text_input("場所 / プラットフォーム", placeholder="例：秋葉原○○店 / YouTube Live")
-            _f_desc      = st.text_area("告知メッセージ（任意）", placeholder="例：初配信です！ぜひ見に来てね！", max_chars=200)
+            _f_type  = st.selectbox("イベント種別 *", _CAL_EVENT_TYPES)
+            _f_date  = st.date_input("リリース日/配信日/出勤日/開催日 *", min_value=datetime.date.today())
+
+            _use_time = st.checkbox("時刻を指定する", value=True)
+            _f_time = _f_time_end = None
+            if _use_time:
+                _t_col1, _t_col2 = st.columns(2)
+                _f_time     = _t_col1.time_input("開始時刻", value=datetime.time(18, 0))
+                _f_time_end = _t_col2.time_input("終了時刻（任意）", value=datetime.time(18, 0))
+
+            _f_loc  = st.text_input("場所/プラットフォーム/ゲーム名", placeholder="例：秋葉原○○店 / YouTube Live / Minecraft")
+            _f_url  = st.text_input("関連URL（任意）", placeholder="例：https://youtube.com/live/xxxx")
+            _f_desc = st.text_area("告知メッセージ（任意）", placeholder="例：初配信です！ぜひ見に来てね！", max_chars=200)
 
             if st.form_submit_button("🚀 仮登録する", use_container_width=True):
                 if not _f_name.strip():
                     st.error("クリエイター名は必須です。")
                 else:
                     _jst_tz2 = datetime.timezone(datetime.timedelta(hours=9))
-                    _ev_dt   = datetime.datetime(
-                        _f_date.year, _f_date.month, _f_date.day,
-                        _f_time.hour, _f_time.minute, tzinfo=_jst_tz2,
-                    )
-                    _ev_dt_end = None
-                    if _f_time_end != _f_time:
-                        _ev_dt_end = datetime.datetime(
+                    if _use_time and _f_time:
+                        _ev_dt = datetime.datetime(
                             _f_date.year, _f_date.month, _f_date.day,
-                            _f_time_end.hour, _f_time_end.minute, tzinfo=_jst_tz2,
+                            _f_time.hour, _f_time.minute, tzinfo=_jst_tz2,
                         )
+                        _ev_dt_end = None
+                        if _f_time_end and _f_time_end != _f_time:
+                            _ev_dt_end = datetime.datetime(
+                                _f_date.year, _f_date.month, _f_date.day,
+                                _f_time_end.hour, _f_time_end.minute, tzinfo=_jst_tz2,
+                            )
+                    else:
+                        _ev_dt     = datetime.datetime(_f_date.year, _f_date.month, _f_date.day, 0, 0, tzinfo=_jst_tz2)
+                        _ev_dt_end = None
+
+                    # URLがあれば説明に追記
+                    _desc_combined = _f_desc.strip()
+                    if _f_url.strip():
+                        _desc_combined = (_desc_combined + "\n" + _f_url.strip()).strip()
+
                     _ins = {
                         "temp_display_name": _f_name.strip(),
-                        "temp_photo_url":    _f_photo.strip() or None,
+                        "temp_photo_url":    _f_photo_url or None,
                         "status":            "unverified",
                         "category":          _f_cat,
                         "event_type":        _f_type,
                         "event_date":        _ev_dt.isoformat(),
                         "location":          _f_loc.strip() or None,
-                        "description":       _f_desc.strip() or None,
+                        "description":       _desc_combined or None,
                         "agent_code":        _CAL_AGENT_CODE,
                     }
                     if _ev_dt_end:
@@ -5113,7 +5291,7 @@ if page == "calendar_agent":
                             _new_ev_id = _ins_res.data[0]["id"]
                             _tok       = _cal_create_claim_token(_new_ev_id)
                             if _tok:
-                                st.session_state["agent_claim_url"] = f"https://oshipay.me/?page=calendar_claim&token={_tok}"
+                                st.session_state["agent_claim_url"] = f"https://oshipay.streamlit.app/?page=calendar_claim&token={_tok}"
                             st.session_state["agent_submitted"] = True
                             st.rerun()
                         else:
