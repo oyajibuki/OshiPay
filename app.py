@@ -3731,7 +3731,7 @@ elif page == "supporter_dashboard":
         st.rerun()
     st.stop()
 
-else: # Dashboard
+elif page == "dashboard": # Dashboard
     st.markdown('<div class="oshi-logo"><span class="text">oshipay</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">QRコードを発行</div>', unsafe_allow_html=True)
     # アカウントIDの特定
@@ -4778,6 +4778,7 @@ else: # Dashboard
             st.rerun()
     st.markdown(f'<div class="oshi-footer">Powered by <a href="https://oshipay.me/index.html">oshipay</a></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="legal-links text-center pt-2"><a href="https://oshipay.me/terms" target="_blank">利用規約</a><a href="https://oshipay.me/privacy" target="_blank">プライバシーポリシー</a><a href="https://oshipay.me/tokusho" target="_blank">特定商取引法</a></div>', unsafe_allow_html=True)
+    st.stop()
 
 # ================================================================
 # 📅 推しカレンダー機能
@@ -5167,6 +5168,7 @@ if page == "calendar_post":
         '← カレンダーに戻る</a></div></div>',
         unsafe_allow_html=True,
     )
+    st.stop()
 
 
 # ── 代理登録フォームページ ──────────────────────────────────────────
@@ -5339,6 +5341,7 @@ if page == "calendar_agent":
         '← カレンダーに戻る</a></div>',
         unsafe_allow_html=True,
     )
+    st.stop()
 
 
 # ── Claim 引き継ぎページ ──────────────────────────────────────────
@@ -5425,14 +5428,40 @@ if page == "calendar_claim":
             except Exception as _e_claim:
                 st.error(f"引き継ぎ中にエラーが発生しました: {_e_claim}")
     else:
-        st.session_state["pending_claim_token"] = _tok_param
-        st.session_state["pending_claim_ev_id"] = _claim_ev_id
-        _cl1, _cl2 = st.columns(2)
-        _cl1.link_button("📝 新規アカウント作成", "?page=dashboard&tab=new", use_container_width=True)
-        _cl2.link_button("🔑 ログイン",           "?page=dashboard",         use_container_width=True)
         st.markdown(
-            '<div style="font-size:12px;color:rgba(240,240,245,0.4);text-align:center;margin-top:8px;">'
-            'ログイン後、このURLを再度開いて引き継ぎを完了してください。</div>',
+            '<div style="font-size:13px;color:rgba(240,240,245,0.75);margin-bottom:14px;">'
+            'OshiPayアカウントにログインして引き継ぎを完了しましょう。</div>',
+            unsafe_allow_html=True,
+        )
+        with st.form("claim_login_form"):
+            _cl_acct_in = st.text_input(
+                "アカウントID / メールアドレス / ユーザー名",
+                placeholder="acct_xxx または your@email.com または slug",
+            )
+            _cl_pass_in = st.text_input("パスワード", type="password")
+            if st.form_submit_button("🔑 ログインして引き継ぐ", use_container_width=True):
+                _cl_id = _cl_acct_in.strip()
+                _cl_pw = _cl_pass_in.strip()
+                if _cl_id and _cl_pw:
+                    _cl_hash = hash_password(_cl_pw)
+                    try:
+                        _cl_res = get_db().table("creators").select("acct_id").or_(
+                            f"acct_id.eq.{_cl_id},email.eq.{_cl_id.lower()},slug.eq.{_cl_id.lower()}"
+                        ).eq("password_hash", _cl_hash).limit(1).execute()
+                        if _cl_res.data:
+                            st.session_state["creator_auth"] = _cl_res.data[0]["acct_id"]
+                            st.rerun()
+                        else:
+                            st.error("IDまたはパスワードが違います。")
+                    except Exception as _e_cl:
+                        st.error(f"ログインエラー: {_e_cl}")
+                else:
+                    st.warning("ID・パスワードを入力してください。")
+        st.markdown(
+            '<div style="font-size:12px;color:rgba(240,240,245,0.4);text-align:center;margin-top:10px;">'
+            'アカウントをお持ちでない場合は '
+            '<a href="?page=dashboard&tab=new" style="color:#8b5cf6;">こちらで作成</a>してから、'
+            'このURLを再度開いてください。</div>',
             unsafe_allow_html=True,
         )
 
@@ -5442,3 +5471,4 @@ if page == "calendar_claim":
         '← カレンダーに戻る</a></div>',
         unsafe_allow_html=True,
     )
+    st.stop()
