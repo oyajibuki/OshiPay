@@ -4828,6 +4828,22 @@ _CAL_CATEGORIES  = ["ゲーム・同人", "配信・実況", "コンカフェ", 
 _CAL_EVENT_TYPES = ["リリース", "配信", "初配信", "出勤", "ライブ", "ストリート", "その他"]
 _CAL_AGENT_CODE  = "oshipay2025"
 _CAL_WEEKDAY_JP  = ["月", "火", "水", "木", "金", "土", "日"]
+_JP_HOLIDAYS = {
+    # 2025
+    datetime.date(2025, 1, 1), datetime.date(2025, 1, 13), datetime.date(2025, 2, 11),
+    datetime.date(2025, 2, 23), datetime.date(2025, 3, 20), datetime.date(2025, 4, 29),
+    datetime.date(2025, 5, 3),  datetime.date(2025, 5, 4),  datetime.date(2025, 5, 5),
+    datetime.date(2025, 7, 21), datetime.date(2025, 8, 11), datetime.date(2025, 9, 15),
+    datetime.date(2025, 9, 23), datetime.date(2025, 10, 13),datetime.date(2025, 11, 3),
+    datetime.date(2025, 11, 23),
+    # 2026
+    datetime.date(2026, 1, 1),  datetime.date(2026, 1, 12), datetime.date(2026, 2, 11),
+    datetime.date(2026, 2, 23), datetime.date(2026, 3, 20), datetime.date(2026, 4, 29),
+    datetime.date(2026, 5, 3),  datetime.date(2026, 5, 4),  datetime.date(2026, 5, 6),
+    datetime.date(2026, 7, 20), datetime.date(2026, 8, 11), datetime.date(2026, 9, 21),
+    datetime.date(2026, 9, 23), datetime.date(2026, 10, 12),datetime.date(2026, 11, 3),
+    datetime.date(2026, 11, 23),
+}
 _CAL_CAT_COLORS  = {
     "ゲーム・同人": "#8b5cf6",
     "配信・実況":   "#3b82f6",
@@ -4878,6 +4894,33 @@ def _cal_get_creators_map(acct_ids):
         "acct_id,display_name,photo_url,slug,payout_enabled"
     ).in_("acct_id", list(set(acct_ids))).execute()
     return {r["acct_id"]: r for r in (res.data or [])}
+
+
+def _cal_date_parts(ev_date_str, ev_date_end_str=None):
+    """カード左端の日付ブロック用に (月表示, 日, 曜日, 赤フラグ, 時刻文字列) を返す"""
+    _jst = datetime.timezone(datetime.timedelta(hours=9))
+    try:
+        dt      = datetime.datetime.fromisoformat(ev_date_str.replace("Z", "+00:00"))
+        dt_jst  = dt.astimezone(_jst)
+        wd_idx  = dt_jst.weekday()          # 0=月 … 5=土 6=日
+        is_red  = wd_idx >= 5 or dt_jst.date() in _JP_HOLIDAYS
+        t_str   = dt_jst.strftime("%H:%M")
+        if ev_date_end_str:
+            try:
+                dt_e    = datetime.datetime.fromisoformat(ev_date_end_str.replace("Z", "+00:00"))
+                dt_e_jst= dt_e.astimezone(_jst)
+                t_str   = f"{t_str}–{dt_e_jst.strftime('%H:%M')}"
+            except Exception:
+                pass
+        return (
+            f"{dt_jst.month}月",        # 例: "4月"
+            str(dt_jst.day),            # 例: "20"
+            _CAL_WEEKDAY_JP[wd_idx],    # 例: "日"
+            is_red,
+            t_str,
+        )
+    except Exception:
+        return ("", "?", "?", False, "")
 
 
 def _cal_format_date(ev_date_str, ev_date_end_str=None):
@@ -5083,6 +5126,11 @@ if page == "calendar":
         )
 
         _date_str = _cal_format_date(_ev.get("event_date", ""), _ev.get("event_date_end"))
+        _d_month, _d_day, _d_wd, _d_red, _d_time = _cal_date_parts(
+            _ev.get("event_date", ""), _ev.get("event_date_end")
+        )
+        _d_col   = "#ef4444" if _d_red else "#f0f0f5"   # 土日祝=赤 / 平日=白
+        _d_wd_col= "#ef4444" if _d_red else "rgba(240,240,245,0.45)"
         _loc = _ev.get("location", "")
 
         # ① 説明末尾のURLを抽出し、場所ボタンのリンク先にする（URLは本文に表示しない）
@@ -5142,15 +5190,26 @@ if page == "calendar":
             f'line-height:1.6;margin:6px 0 0;">{_desc}</div>'
         ) if _desc else ""
 
+        # 左端の大型日付ブロック
+        _date_block = (
+            f'<div style="min-width:54px;max-width:54px;text-align:center;flex-shrink:0;'
+            f'border-right:1px solid rgba(255,255,255,0.08);padding-right:12px;margin-right:4px;">'
+            f'<div style="font-size:10px;font-weight:700;color:rgba(240,240,245,0.38);'
+            f'letter-spacing:0.04em;margin-bottom:1px;">{_d_month}</div>'
+            f'<div style="font-size:38px;font-weight:900;line-height:1;color:{_d_col};">{_d_day}</div>'
+            f'<div style="font-size:12px;font-weight:800;color:{_d_wd_col};margin-top:2px;">({_d_wd})</div>'
+            f'<div style="font-size:10px;color:rgba(240,240,245,0.35);margin-top:4px;white-space:nowrap;">{_d_time}</div>'
+            f'</div>'
+        )
         st.markdown(
             f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);'
             f'border-left:3px solid {_bcol};border-radius:12px;padding:14px 16px;margin-bottom:10px;">'
             f'<div style="display:flex;gap:12px;align-items:flex-start;">'
+            f'{_date_block}'
             f'{_avatar}'
             f'<div style="flex:1;min-width:0;">'
             f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap;">'
             f'<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:{_type_bg};color:{_type_col};font-weight:700;">{_ev_type}</span>'
-            f'<span style="font-size:12px;color:rgba(240,240,245,0.45);">📅 {_date_str}</span>'
             f'</div>'
             f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap;">'
             f'<a href="{_name_url}" target="_top" style="font-size:15px;font-weight:900;color:#f0f0f5;text-decoration:none;">{_dname}</a>'
