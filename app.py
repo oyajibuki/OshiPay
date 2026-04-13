@@ -5139,28 +5139,28 @@ if page == "calendar":
         _ev_url    = _url_m.group(1) if _url_m else ""
         _desc      = _re_cal.sub(r'\n?(https?://\S+)\s*$', '', _desc_full).strip()
 
-        # 場所をリンクボタン化（URL あれば飛べる、なければ非リンクバッジ）
+        # 場所をリンクボタン化（URL あれば飛べる、なければ非リンクバッジ）— 大きめスタイル
         _btn_style = (
-            'display:inline-flex;align-items:center;gap:4px;font-size:12px;'
-            'border-radius:6px;padding:3px 10px;white-space:nowrap;text-decoration:none;'
+            'display:inline-flex;align-items:center;gap:5px;font-size:15px;font-weight:700;'
+            'border-radius:8px;padding:5px 14px;white-space:nowrap;text-decoration:none;'
         )
         if _ev_url and _loc:
             _loc_html = (
                 f'<a href="{_ev_url}" target="_blank" style="{_btn_style}'
-                f'color:#8b5cf6;background:rgba(139,92,246,0.1);'
+                f'color:#a78bfa;background:rgba(139,92,246,0.12);'
                 f'border:1px solid rgba(139,92,246,0.35);">📍 {_loc}</a>'
             )
         elif _ev_url and not _loc:
             _loc_html = (
                 f'<a href="{_ev_url}" target="_blank" style="{_btn_style}'
-                f'color:#8b5cf6;background:rgba(139,92,246,0.1);'
+                f'color:#a78bfa;background:rgba(139,92,246,0.12);'
                 f'border:1px solid rgba(139,92,246,0.35);">🔗 リンクを見る</a>'
             )
         elif _loc:
             _loc_html = (
-                f'<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;'
-                f'color:rgba(240,240,245,0.55);background:rgba(255,255,255,0.05);'
-                f'border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:3px 10px;'
+                f'<span style="display:inline-flex;align-items:center;gap:5px;font-size:15px;font-weight:700;'
+                f'color:rgba(240,240,245,0.7);background:rgba(255,255,255,0.05);'
+                f'border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 14px;'
                 f'white-space:nowrap;">📍 {_loc}</span>'
             )
         else:
@@ -5208,8 +5208,11 @@ if page == "calendar":
             f'{_date_block}'
             f'{_avatar}'
             f'<div style="flex:1;min-width:0;">'
-            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap;">'
-            f'<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:{_type_bg};color:{_type_col};font-weight:700;">{_ev_type}</span>'
+            f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;flex-wrap:wrap;">'
+            f'<span style="font-size:11px;padding:2px 10px;border-radius:20px;font-weight:800;'
+            f'background:{_bcol}22;color:{_bcol};border:1px solid {_bcol}55;">{_cat}</span>'
+            f'<span style="font-size:11px;color:rgba(240,240,245,0.3);">›</span>'
+            f'<span style="font-size:11px;padding:2px 10px;border-radius:20px;background:{_type_bg};color:{_type_col};font-weight:700;">{_ev_type}</span>'
             f'</div>'
             f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap;">'
             f'<a href="{_name_url}" target="_top" style="font-size:15px;font-weight:900;color:#f0f0f5;text-decoration:none;">{_dname}</a>'
