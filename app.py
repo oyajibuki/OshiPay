@@ -4491,8 +4491,12 @@ elif page == "dashboard": # Dashboard
         st.markdown('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0;">', unsafe_allow_html=True)
         st.markdown('<div style="font-size:15px;font-weight:700;color:rgba(240,240,245,0.85);margin-bottom:8px;">📅 推しカレンダーに予定を登録する</div>', unsafe_allow_html=True)
         with st.expander("➕ イベントを登録する"):
-            _dash_ev_name = _cr_data.get("display_name") or _cr_data.get("name") or acct_id
             _dash_ev_photo = _cr_data.get("photo_url") or ""
+            _dash_title = st.text_input(
+                "見出し（イベント名・タイトル）*",
+                placeholder="例：渋谷路上ライブ / WalkCraftリリース / 夜の配信",
+                key="dash_cal_title",
+            )
             _dash_cat  = st.selectbox("カテゴリ *", ["ゲーム・同人", "配信・実況", "コンカフェ", "ライブ・路上"], key="dash_cal_cat")
             _dash_type = st.selectbox("イベント種別 *", ["リリース", "配信", "初配信", "出勤", "ライブ", "ストリート", "その他"], key="dash_cal_type")
             _dash_date = st.date_input("リリース日/配信日/出勤日/開催日 *", key="dash_cal_date")
@@ -4506,6 +4510,9 @@ elif page == "dashboard": # Dashboard
             _dash_url  = st.text_input("関連URL（任意）", placeholder="例：https://youtube.com/live/xxxx", key="dash_cal_url")
             _dash_desc = st.text_area("告知メッセージ（任意）", placeholder="例：初配信です！ぜひ見に来てね！", max_chars=200, key="dash_cal_desc")
             if st.button("📅 カレンダーに登録する", use_container_width=True, key="dash_cal_submit"):
+                if not _dash_title.strip():
+                    st.error("見出しは必須です。")
+                    st.stop()
                 _jst_tz_d = datetime.timezone(datetime.timedelta(hours=9))
                 if _dash_use_time and _dash_time:
                     _dash_ev_dt = datetime.datetime(
@@ -4526,7 +4533,7 @@ elif page == "dashboard": # Dashboard
                     _dash_desc_combined = (_dash_desc_combined + "\n" + _dash_url.strip()).strip()
                 _dash_ins = {
                     "creator_acct":      acct_id,
-                    "temp_display_name": _dash_ev_name,
+                    "temp_display_name": _dash_title.strip(),
                     "temp_photo_url":    _dash_ev_photo or None,
                     "status":            "verified",
                     "category":          _dash_cat,
@@ -4547,33 +4554,108 @@ elif page == "dashboard": # Dashboard
                 except Exception as _e_dash_ins:
                     st.error(f"エラーが発生しました: {_e_dash_ins}")
 
-        # ── 登録済みイベントの管理（削除）──
+        # ── 登録済みイベントの管理（編集・削除）──
         try:
             _my_evs = get_db().table("calendar_events").select(
-                "id,event_type,event_date,category,location"
+                "id,temp_display_name,event_type,event_date,event_date_end,category,location,description"
             ).eq("creator_acct", acct_id).eq("is_deleted", False).order(
                 "event_date", desc=True
             ).execute().data or []
         except Exception:
             _my_evs = []
         if _my_evs:
-            with st.expander(f"🗑️ 登録済みイベントを管理 ({len(_my_evs)}件)"):
+            with st.expander(f"✏️ 登録済みイベントを管理 ({len(_my_evs)}件)"):
                 for _mev in _my_evs:
-                    _mev_id   = _mev["id"]
-                    _mev_type = _mev.get("event_type", "")
-                    _mev_raw  = (_mev.get("event_date") or "")[:16].replace("T", " ")
-                    _mev_loc  = _mev.get("location", "")
-                    _mev_label = f"**{_mev_type}** {_mev_raw}" + (f" / {_mev_loc}" if _mev_loc else "")
-                    _dc1, _dc2 = st.columns([5, 1])
+                    _mev_id    = _mev["id"]
+                    _mev_title = _mev.get("temp_display_name") or _mev.get("event_type", "")
+                    _mev_raw   = (_mev.get("event_date") or "")[:16].replace("T", " ")
+                    _mev_loc   = _mev.get("location", "") or ""
+                    _mev_label = f"**{_mev_title}** {_mev_raw}" + (f" / {_mev_loc}" if _mev_loc else "")
+                    _dc1, _dc2, _dc3 = st.columns([5, 1, 1])
                     _dc1.markdown(_mev_label)
-                    if _dc2.button("🗑️", key=f"del_cal_{_mev_id}", help="削除"):
+                    # 編集ボタン
+                    if _dc2.button("✏️", key=f"edit_cal_{_mev_id}", help="編集"):
+                        st.session_state["_cal_editing"] = _mev_id
+                        st.rerun()
+                    # 削除ボタン
+                    if _dc3.button("🗑️", key=f"del_cal_{_mev_id}", help="削除"):
                         try:
                             get_db().table("calendar_events").update(
                                 {"is_deleted": True}
                             ).eq("id", _mev_id).execute()
+                            if st.session_state.get("_cal_editing") == _mev_id:
+                                st.session_state.pop("_cal_editing", None)
                             st.rerun()
                         except Exception as _e_del:
                             st.error(f"削除エラー: {_e_del}")
+
+                    # ── インライン編集フォーム ──
+                    if st.session_state.get("_cal_editing") == _mev_id:
+                        with st.container(border=True):
+                            st.markdown("##### ✏️ イベントを編集")
+                            # URLを説明から分離して初期値に
+                            _mev_desc_full = _mev.get("description") or ""
+                            import re as _re_edit
+                            _mev_url_m   = _re_edit.search(r'(https?://\S+)\s*$', _mev_desc_full)
+                            _mev_url_val = _mev_url_m.group(1) if _mev_url_m else ""
+                            _mev_desc_val= _re_edit.sub(r'\n?(https?://\S+)\s*$', '', _mev_desc_full).strip()
+
+                            _e_title = st.text_input("見出し *", value=_mev_title, key=f"e_title_{_mev_id}")
+                            _e_cat   = st.selectbox("カテゴリ", ["ゲーム・同人", "配信・実況", "コンカフェ", "ライブ・路上"],
+                                                    index=["ゲーム・同人","配信・実況","コンカフェ","ライブ・路上"].index(_mev.get("category","ライブ・路上")) if _mev.get("category") in ["ゲーム・同人","配信・実況","コンカフェ","ライブ・路上"] else 0,
+                                                    key=f"e_cat_{_mev_id}")
+                            _e_type  = st.selectbox("イベント種別", ["リリース","配信","初配信","出勤","ライブ","ストリート","その他"],
+                                                    index=["リリース","配信","初配信","出勤","ライブ","ストリート","その他"].index(_mev.get("event_type","その他")) if _mev.get("event_type") in ["リリース","配信","初配信","出勤","ライブ","ストリート","その他"] else 6,
+                                                    key=f"e_type_{_mev_id}")
+                            # 日付・時刻
+                            try:
+                                _jst_e  = datetime.timezone(datetime.timedelta(hours=9))
+                                _e_dt   = datetime.datetime.fromisoformat((_mev.get("event_date") or "").replace("Z","+00:00")).astimezone(_jst_e)
+                                _e_date_v = _e_dt.date()
+                                _e_time_v = _e_dt.time()
+                            except Exception:
+                                _e_date_v = datetime.date.today()
+                                _e_time_v = datetime.time(18, 0)
+                            _e_date = st.date_input("日付", value=_e_date_v, key=f"e_date_{_mev_id}")
+                            _e_tc1, _e_tc2 = st.columns(2)
+                            _e_time     = _e_tc1.time_input("開始時刻", value=_e_time_v, key=f"e_time_{_mev_id}")
+                            _e_time_end = _e_tc2.time_input("終了時刻（任意）", value=_e_time_v, key=f"e_tend_{_mev_id}")
+                            _e_loc  = st.text_input("場所/プラットフォーム/ゲーム名", value=_mev_loc, key=f"e_loc_{_mev_id}")
+                            _e_url  = st.text_input("関連URL（任意）", value=_mev_url_val, key=f"e_url_{_mev_id}")
+                            _e_desc = st.text_area("告知メッセージ（任意）", value=_mev_desc_val, max_chars=200, key=f"e_desc_{_mev_id}")
+                            _eb1, _eb2 = st.columns(2)
+                            if _eb1.button("💾 保存する", use_container_width=True, key=f"save_cal_{_mev_id}"):
+                                if not _e_title.strip():
+                                    st.error("見出しは必須です。")
+                                else:
+                                    _jst_eu = datetime.timezone(datetime.timedelta(hours=9))
+                                    _e_ev_dt = datetime.datetime(_e_date.year, _e_date.month, _e_date.day,
+                                                                  _e_time.hour, _e_time.minute, tzinfo=_jst_eu)
+                                    _e_desc_combined = _e_desc.strip()
+                                    if _e_url.strip():
+                                        _e_desc_combined = (_e_desc_combined + "\n" + _e_url.strip()).strip()
+                                    _e_upd = {
+                                        "temp_display_name": _e_title.strip(),
+                                        "category":          _e_cat,
+                                        "event_type":        _e_type,
+                                        "event_date":        _e_ev_dt.isoformat(),
+                                        "location":          _e_loc.strip() or None,
+                                        "description":       _e_desc_combined or None,
+                                    }
+                                    if _e_time_end and _e_time_end != _e_time:
+                                        _e_ev_dt_end = datetime.datetime(_e_date.year, _e_date.month, _e_date.day,
+                                                                          _e_time_end.hour, _e_time_end.minute, tzinfo=_jst_eu)
+                                        _e_upd["event_date_end"] = _e_ev_dt_end.isoformat()
+                                    try:
+                                        get_db().table("calendar_events").update(_e_upd).eq("id", _mev_id).execute()
+                                        st.session_state.pop("_cal_editing", None)
+                                        st.success("✅ 更新しました！")
+                                        st.rerun()
+                                    except Exception as _e_upd_err:
+                                        st.error(f"更新エラー: {_e_upd_err}")
+                            if _eb2.button("キャンセル", use_container_width=True, key=f"cancel_cal_{_mev_id}"):
+                                st.session_state.pop("_cal_editing", None)
+                                st.rerun()
 
         # OAuth判定
         _cr_is_oauth = bool(_cr_data.get("google_sub") or _cr_data.get("discord_sub") or _cr_data.get("line_sub"))
@@ -5097,7 +5179,9 @@ if page == "calendar":
         _type_bg, _type_col = _CAL_TYPE_COLORS.get(_ev_type, _CAL_TYPE_COLORS["その他"])
         _c_data   = _creator_map.get(_ev.get("creator_acct", ""), {})
         _verified = _status == "verified" and bool(_c_data)
-        _dname    = (_c_data.get("display_name") or _ev.get("temp_display_name", "???")) if _verified else _ev.get("temp_display_name", "???")
+        # 見出し（temp_display_name）を優先、なければcreator display_name
+        _ev_title = _ev.get("temp_display_name") or (_c_data.get("display_name") if _verified else "") or "???"
+        _dname    = _ev_title
         _photo    = (_c_data.get("photo_url") or _ev.get("temp_photo_url", ""))          if _verified else _ev.get("temp_photo_url", "")
         # ②「応援・支援する」URL → oshipay.me/creator.html?id=acct_xxx
         _acct_id_url = _c_data.get("acct_id", "") if _verified else ""
@@ -5171,17 +5255,22 @@ if page == "calendar":
             f'</div>'
         ) if _sub_text else ""
 
-        # ── 「詳細を見る」ボタン（左下）/ 場所バッジ
+        # ── 場所／詳細ボタン（左下）
         _detail_style = (
             'display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;'
             'border-radius:8px;padding:6px 14px;white-space:nowrap;text-decoration:none;'
         )
-        if _ev_url:
-            _label_loc = f"📍 {_loc}" if _loc else "詳細を見る"
+        if _ev_url and _loc:
             _detail_btn = (
-                f'<a href="{_ev_url}" target="_blank" style="{_detail_style}'
+                f'<a href="{_ev_url}" target="_blank" rel="noopener noreferrer" style="{_detail_style}'
                 f'color:#c4b5fd;background:rgba(139,92,246,0.15);'
-                f'border:1px solid rgba(139,92,246,0.4);">{_label_loc} ↗</a>'
+                f'border:1px solid rgba(139,92,246,0.4);">📍 {_loc} ↗</a>'
+            )
+        elif _ev_url:
+            _detail_btn = (
+                f'<a href="{_ev_url}" target="_blank" rel="noopener noreferrer" style="{_detail_style}'
+                f'color:#c4b5fd;background:rgba(139,92,246,0.15);'
+                f'border:1px solid rgba(139,92,246,0.4);">詳細を見る ↗</a>'
             )
         elif _loc:
             _detail_btn = (
@@ -5190,6 +5279,7 @@ if page == "calendar":
             )
         else:
             _detail_btn = ""
+        _loc_body_html = ""  # 場所はボタンで表示（本文には出さない）
 
         # ── 応援ボタン（右下）— target="_blank" で確実に開く
         _req_cnt = _ev.get("request_count", 0)
@@ -5245,15 +5335,18 @@ if page == "calendar":
             f'<div style="display:flex;gap:12px;align-items:flex-start;">'
             f'{_date_block}'
             f'<div style="flex:1;min-width:0;">'
-            # プロジェクト名（大見出し）
-            f'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
-            f'<span style="font-size:20px;">{_cat_emoji}</span>'
+            # 見出し（大きな白文字ヒーロータイトル）
+            f'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">'
+            f'<span style="font-size:22px;">{_cat_emoji}</span>'
             f'<a href="{_name_url}" target="_blank" rel="noopener noreferrer" '
-            f'style="font-size:20px;font-weight:900;color:#f0f0f5;text-decoration:none;line-height:1.2;">{_dname}</a>'
+            f'style="font-size:22px;font-weight:900;color:#ffffff;text-decoration:none;line-height:1.2;'
+            f'letter-spacing:-0.02em;">{_dname}</a>'
             f'{_vbadge}'
             f'</div>'
             # サブ情報（小アバター＋名前）
             f'{_sub_html}'
+            # 場所（大きな白テキスト）
+            f'{_loc_body_html}'
             # 説明文
             f'{_desc_html}'
             # アクションボタン行
@@ -5368,7 +5461,7 @@ if page == "calendar_agent":
 
         # アイコン画像アップロード（フォーム外で先に処理）
         st.markdown("**クリエイター情報**")
-        _f_name  = st.text_input("クリエイター名 *", placeholder="例：路上シンガーYUKI")
+        _f_name  = st.text_input("見出し（イベント名・プロジェクト名）*", placeholder="例：路上シンガーYUKI / WalkCraftリリース")
         _f_cat   = st.selectbox("カテゴリ *", _CAL_CATEGORIES)
 
         st.markdown("アイコン画像（任意）")
