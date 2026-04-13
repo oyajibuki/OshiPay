@@ -4483,7 +4483,7 @@ elif page == "dashboard": # Dashboard
             _dash_ev_photo = _cr_data.get("photo_url") or ""
             _dash_cat  = st.selectbox("カテゴリ *", ["ゲーム・同人", "配信・実況", "コンカフェ", "ライブ・路上"], key="dash_cal_cat")
             _dash_type = st.selectbox("イベント種別 *", ["リリース", "配信", "初配信", "出勤", "ライブ", "ストリート", "その他"], key="dash_cal_type")
-            _dash_date = st.date_input("リリース日/配信日/出勤日/開催日 *", min_value=datetime.date.today(), key="dash_cal_date")
+            _dash_date = st.date_input("リリース日/配信日/出勤日/開催日 *", key="dash_cal_date")
             _dash_use_time = st.checkbox("時刻を指定する", value=True, key="dash_cal_use_time")
             _dash_time = _dash_time_end = None
             if _dash_use_time:
@@ -4534,6 +4534,34 @@ elif page == "dashboard": # Dashboard
                         st.error("登録に失敗しました。もう一度お試しください。")
                 except Exception as _e_dash_ins:
                     st.error(f"エラーが発生しました: {_e_dash_ins}")
+
+        # ── 登録済みイベントの管理（削除）──
+        try:
+            _my_evs = get_db().table("calendar_events").select(
+                "id,event_type,event_date,category,location"
+            ).eq("creator_acct", acct_id).eq("is_deleted", False).order(
+                "event_date", desc=True
+            ).execute().data or []
+        except Exception:
+            _my_evs = []
+        if _my_evs:
+            with st.expander(f"🗑️ 登録済みイベントを管理 ({len(_my_evs)}件)"):
+                for _mev in _my_evs:
+                    _mev_id   = _mev["id"]
+                    _mev_type = _mev.get("event_type", "")
+                    _mev_raw  = (_mev.get("event_date") or "")[:16].replace("T", " ")
+                    _mev_loc  = _mev.get("location", "")
+                    _mev_label = f"**{_mev_type}** {_mev_raw}" + (f" / {_mev_loc}" if _mev_loc else "")
+                    _dc1, _dc2 = st.columns([5, 1])
+                    _dc1.markdown(_mev_label)
+                    if _dc2.button("🗑️", key=f"del_cal_{_mev_id}", help="削除"):
+                        try:
+                            get_db().table("calendar_events").update(
+                                {"is_deleted": True}
+                            ).eq("id", _mev_id).execute()
+                            st.rerun()
+                        except Exception as _e_del:
+                            st.error(f"削除エラー: {_e_del}")
 
         # OAuth判定
         _cr_is_oauth = bool(_cr_data.get("google_sub") or _cr_data.get("discord_sub") or _cr_data.get("line_sub"))
@@ -4925,10 +4953,9 @@ def _cal_post_modal():
 
 # ── カレンダー一覧ページ ──────────────────────────────────────────
 if page == "calendar":
+    import re as _re_cal
     _jst_tz  = datetime.timezone(datetime.timedelta(hours=9))
     _now_jst = datetime.datetime.now(_jst_tz)
-    cal_month = params.get("cal_month", "all")
-    cal_cat   = params.get("cal_cat",   "all")
 
     _req_ev_id = params.get("request", "")
     if _req_ev_id:
@@ -4939,11 +4966,30 @@ if page == "calendar":
                 get_db().table("calendar_events").update({"request_count": _new_cnt}).eq("id", _req_ev_id).execute()
         except Exception:
             pass
-        st.query_params.update({"page": "calendar", "cal_month": cal_month, "cal_cat": cal_cat})
+        st.query_params.update({"page": "calendar"})
         st.rerun()
 
+    # ── ナビゲーションヘッダー ──
     st.markdown(
-        '<div style="padding:16px 4px 12px;">'
+        '<div style="display:flex;align-items:center;justify-content:space-between;'
+        'padding:8px 4px 4px;margin-bottom:4px;">'
+        '<a href="https://oshipay.me/" style="font-size:12px;color:rgba(240,240,245,0.45);'
+        'text-decoration:none;">← TOP</a>'
+        '<div style="display:flex;gap:6px;align-items:center;">'
+        '<a href="?page=ranking" style="font-size:11px;color:rgba(240,240,245,0.6);text-decoration:none;'
+        'background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);'
+        'border-radius:14px;padding:4px 10px;white-space:nowrap;">🏆 ランキング</a>'
+        '<a href="https://discord.com/invite/3k2AjuR8" target="_blank" '
+        'style="font-size:11px;color:rgba(114,137,218,0.9);text-decoration:none;'
+        'background:rgba(114,137,218,0.1);border:1px solid rgba(114,137,218,0.3);'
+        'border-radius:14px;padding:4px 10px;white-space:nowrap;">💬 Discord</a>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div style="padding:4px 4px 12px;">'
         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
         '<span style="font-size:22px;font-weight:900;color:#f0f0f5;">推しカレンダー</span>'
         '<span style="font-size:20px;">📅</span>'
@@ -4953,44 +4999,28 @@ if page == "calendar":
         unsafe_allow_html=True,
     )
 
-    _m_opts = [("all", "すべて")]
-    for _i in range(3):
-        _m = (_now_jst.month - 1 + _i) % 12 + 1
-        _m_opts.append((str(_m), f"{_m}月"))
-    _m_html = '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">'
-    for _mv, _ml in _m_opts:
-        _act = cal_month == _mv
-        _m_html += (
-            f'<a href="?page=calendar&cal_month={_mv}&cal_cat={cal_cat}" '
-            f'style="text-decoration:none;padding:6px 18px;border-radius:20px;font-size:13px;'
-            f'font-weight:{"800" if _act else "600"};'
-            f'background:{"rgba(139,92,246,0.2)" if _act else "rgba(255,255,255,0.05)"};'
-            f'border:{"1px solid rgba(139,92,246,0.6)" if _act else "1px solid rgba(255,255,255,0.1)"};'
-            f'color:{"#c4b5fd" if _act else "rgba(240,240,245,0.6)"};">{_ml}</a>'
-        )
-    _m_html += '</div>'
-    st.markdown(_m_html, unsafe_allow_html=True)
+    # ── 月フィルター（st.pills でスムーズ切り替え・白くならない）──
+    _m_vals = ["all"] + [str((_now_jst.month - 1 + i) % 12 + 1) for i in range(3)]
+    _m_map  = {"all": "すべて", **{str(m): f"{m}月" for m in range(1, 13)}}
+    _cal_mv = st.pills(
+        "月", _m_vals,
+        format_func=lambda v: _m_map.get(v, v),
+        default="all", key="cal_month_pills",
+        label_visibility="collapsed",
+    )
+    cal_month = _cal_mv if _cal_mv else "all"
 
-    _c_opts = [
-        ("all",        "🔥 すべて"),
-        ("ゲーム・同人", "🎮 ゲーム・同人"),
-        ("配信・実況",   "📺 配信・実況"),
-        ("コンカフェ",   "☕ コンカフェ"),
-        ("ライブ・路上", "🎸 ライブ・路上"),
-    ]
-    _c_html = '<div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;">'
-    for _cv, _cl in _c_opts:
-        _act = cal_cat == _cv
-        _c_html += (
-            f'<a href="?page=calendar&cal_month={cal_month}&cal_cat={_cv}" '
-            f'style="text-decoration:none;padding:7px 14px;border-radius:20px;font-size:13px;'
-            f'font-weight:{"700" if _act else "500"};'
-            f'background:{"rgba(255,255,255,0.1)" if _act else "transparent"};'
-            f'border:{"1px solid rgba(255,255,255,0.3)" if _act else "1px solid rgba(255,255,255,0.1)"};'
-            f'color:{"#f0f0f5" if _act else "rgba(240,240,245,0.5)"};">{_cl}</a>'
-        )
-    _c_html += '</div>'
-    st.markdown(_c_html, unsafe_allow_html=True)
+    # ── カテゴリフィルター ──
+    _c_vals = ["all", "ゲーム・同人", "配信・実況", "コンカフェ", "ライブ・路上"]
+    _c_map  = {"all": "🔥 すべて", "ゲーム・同人": "🎮 ゲーム・同人", "配信・実況": "📺 配信・実況",
+               "コンカフェ": "☕ コンカフェ", "ライブ・路上": "🎸 ライブ・路上"}
+    _cal_cv = st.pills(
+        "カテゴリ", _c_vals,
+        format_func=lambda v: _c_map.get(v, v),
+        default="all", key="cal_cat_pills",
+        label_visibility="collapsed",
+    )
+    cal_cat = _cal_cv if _cal_cv else "all"
 
     _events      = _cal_get_events(cal_month, cal_cat)
     _acct_ids    = [e["creator_acct"] for e in _events if e.get("creator_acct")]
@@ -5014,8 +5044,10 @@ if page == "calendar":
         _verified = _status == "verified" and bool(_c_data)
         _dname    = (_c_data.get("display_name") or _ev.get("temp_display_name", "???")) if _verified else _ev.get("temp_display_name", "???")
         _photo    = (_c_data.get("photo_url") or _ev.get("temp_photo_url", ""))          if _verified else _ev.get("temp_photo_url", "")
-        _slug     = _c_data.get("slug", "")
-        _c_url    = f"?page=support&acct={_slug}" if (_verified and _slug) else "#"
+        # ②「応援・支援する」URL → oshipay.me/creator.html?id=acct_xxx
+        _acct_id_url = _c_data.get("acct_id", "") if _verified else ""
+        _c_url       = f"https://oshipay.me/creator.html?id={_acct_id_url}" if _acct_id_url else "#"
+        _name_url    = _c_url  # 名前のリンクも同じ
 
         if _photo:
             _avatar = (
@@ -5050,7 +5082,7 @@ if page == "calendar":
         _req_cnt = _ev.get("request_count", 0)
         if _verified:
             _abtn = (
-                f'<a href="{_c_url}" style="display:inline-flex;align-items:center;gap:5px;'
+                f'<a href="{_c_url}" target="_top" style="display:inline-flex;align-items:center;gap:5px;'
                 f'padding:8px 18px;border-radius:20px;'
                 f'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;'
                 f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">💖 応援・支援する</a>'
@@ -5058,17 +5090,28 @@ if page == "calendar":
         else:
             _req_label = "📡 OshiPay開始をリクエスト" + (f" ({_req_cnt})" if _req_cnt > 0 else "")
             _abtn = (
-                f'<a href="?page=calendar&cal_month={cal_month}&cal_cat={cal_cat}&request={_ev_id}" '
+                f'<a href="?page=calendar&request={_ev_id}" '
                 f'style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;'
                 f'border-radius:20px;background:rgba(249,115,22,0.12);'
                 f'border:1px solid rgba(249,115,22,0.4);color:#fb923c;'
                 f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">{_req_label}</a>'
             )
 
-        _desc      = _ev.get("description", "")
-        _desc_html = (
-            f'<div style="font-size:13px;color:rgba(240,240,245,0.65);line-height:1.6;margin:6px 0 0;">{_desc}</div>'
-        ) if _desc else ""
+        # ④ 説明文中のURLをリンク化
+        _desc = _ev.get("description", "")
+        if _desc:
+            _desc_linked = _re_cal.sub(
+                r'(https?://[^\s<>"\']+)',
+                r'<a href="\1" target="_blank" style="color:#8b5cf6;text-decoration:underline;'
+                r'word-break:break-all;">\1</a>',
+                _desc,
+            )
+            _desc_html = (
+                f'<div style="font-size:13px;color:rgba(240,240,245,0.65);'
+                f'line-height:1.6;margin:6px 0 0;">{_desc_linked}</div>'
+            )
+        else:
+            _desc_html = ""
 
         st.markdown(
             f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);'
@@ -5081,12 +5124,12 @@ if page == "calendar":
             f'<span style="font-size:12px;color:rgba(240,240,245,0.45);">📅 {_date_str}</span>'
             f'</div>'
             f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap;">'
-            f'<a href="{_c_url}" style="font-size:15px;font-weight:900;color:#f0f0f5;text-decoration:none;">{_dname}</a>'
+            f'<a href="{_name_url}" target="_top" style="font-size:15px;font-weight:900;color:#f0f0f5;text-decoration:none;">{_dname}</a>'
             f'{_vbadge}'
             f'</div>'
             f'{_desc_html}'
-            f'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;">'
-            f'{_loc_html}'
+            f'<div style="display:flex;align-items:center;gap:8px;margin-top:10px;">'
+            f'<div style="flex:1">{_loc_html}</div>'
             f'{_abtn}'
             f'</div>'
             f'</div>'
@@ -5236,7 +5279,7 @@ if page == "calendar_agent":
 
         with st.form("agent_event_form"):
             _f_type  = st.selectbox("イベント種別 *", _CAL_EVENT_TYPES)
-            _f_date  = st.date_input("リリース日/配信日/出勤日/開催日 *", min_value=datetime.date.today())
+            _f_date  = st.date_input("リリース日/配信日/出勤日/開催日 *")
 
             _use_time = st.checkbox("時刻を指定する", value=True)
             _f_time = _f_time_end = None
