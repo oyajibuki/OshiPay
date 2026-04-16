@@ -5118,6 +5118,284 @@ def _cal_post_modal():
     )
 
 
+def _cal_get_events_range(start_date, end_date, cat_filter="all"):
+    """指定期間のイベントを取得し event_date 順で返す"""
+    _jst = datetime.timezone(datetime.timedelta(hours=9))
+    s_iso = datetime.datetime(start_date.year, start_date.month, start_date.day, tzinfo=_jst).isoformat()
+    e_iso = datetime.datetime(end_date.year, end_date.month, end_date.day, tzinfo=_jst).isoformat()
+    q = get_db().table("calendar_events").select("*").eq("is_deleted", False)
+    q = q.gte("event_date", s_iso).lt("event_date", e_iso)
+    if cat_filter and cat_filter != "all":
+        q = q.eq("category", cat_filter)
+    return q.order("event_date").execute().data or []
+
+
+_CAL_POPUP_JS = (
+    '<style>'
+    'html,body{background:transparent;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;}'
+    '.ev-chip{cursor:pointer;transition:opacity .12s;}'
+    '.ev-chip:hover{opacity:.75;}'
+    '#_ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;}'
+    '#_pop{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);'
+    'background:#16162a;border:1px solid rgba(255,255,255,.18);border-radius:14px;'
+    'padding:20px 22px 18px;min-width:220px;max-width:300px;z-index:101;'
+    'box-shadow:0 20px 60px rgba(0,0,0,.75);}'
+    '#_px{position:absolute;top:8px;right:12px;background:none;border:none;'
+    'color:rgba(240,240,245,.4);font-size:18px;cursor:pointer;line-height:1;padding:0;}'
+    '</style>'
+    '<div id="_ov" onclick="cP()"></div>'
+    '<div id="_pop"><button id="_px" onclick="cP()">✕</button><div id="_pb"></div></div>'
+    '<script>'
+    'function sE(el){'
+    ' var t=el.dataset.title,tm=el.dataset.time,cat=el.dataset.cat,'
+    '     cc=el.dataset.catcol,cr=el.dataset.creator,u=el.dataset.url;'
+    ' var h=\'<div style="font-size:15px;font-weight:900;color:#fff;margin-bottom:10px;line-height:1.3;">\'+t+\'</div>\';'
+    ' if(tm)h+=\'<div style="font-size:12px;color:rgba(240,240,245,.55);margin-bottom:8px;">🗓 \'+tm+\'</div>\';'
+    ' h+=\'<span style="font-size:11px;padding:2px 9px;border-radius:20px;font-weight:700;'
+    '      background:\'+cc+\'22;color:\'+cc+\';border:1px solid \'+cc+\'44;">\'+cat+\'</span>\';'
+    ' if(cr)h+=\'<div style="font-size:12px;color:rgba(240,240,245,.5);margin-top:10px;">👤 \'+cr+\'</div>\';'
+    ' if(u)h+=\'<div style="margin-top:14px;"><a href="\'+u+\'" target="_blank"'
+    '  style="font-size:13px;font-weight:700;color:#c4b5fd;text-decoration:none;">詳細を見る ↗</a></div>\';'
+    ' document.getElementById("_pb").innerHTML=h;'
+    ' document.getElementById("_ov").style.display="block";'
+    ' document.getElementById("_pop").style.display="block";'
+    '}'
+    'function cP(){'
+    ' document.getElementById("_ov").style.display="none";'
+    ' document.getElementById("_pop").style.display="none";'
+    '}'
+    'document.addEventListener("keydown",function(e){if(e.key==="Escape")cP();});'
+    '</script>'
+)
+
+
+def _cal_chip(ev, creator_map, date_str=""):
+    """週次/月次グリッド用チップ（クリックでポップアップ、ナビゲーションなし）"""
+    import html as _hm
+    import re as _rm
+    _jst  = datetime.timezone(datetime.timedelta(hours=9))
+    cat   = ev.get("category", "ライブ・路上")
+    bcol  = _CAL_CAT_COLORS.get(cat, "#8b5cf6")
+    status = ev.get("status", "unverified")
+    c_data = creator_map.get(ev.get("creator_acct", ""), {})
+    verified = status == "verified" and bool(c_data)
+    title = ev.get("temp_display_name") or (c_data.get("display_name") if verified else "") or "???"
+    try:
+        dt_jst = datetime.datetime.fromisoformat(ev["event_date"].replace("Z", "+00:00")).astimezone(_jst)
+        t_str  = dt_jst.strftime("%H:%M")
+        full_dt = f"{dt_jst.month}/{dt_jst.day}（{_CAL_WEEKDAY_JP[dt_jst.weekday()]}） {t_str}"
+    except Exception:
+        t_str = ""; full_dt = ""
+    prefix = f"{t_str} " if t_str and t_str != "00:00" else ""
+    creator_name = (c_data.get("display_name") or c_data.get("name") or "") if verified else ""
+    desc_full = ev.get("description", "")
+    url_m = _rm.search(r'(https?://\S+)\s*$', desc_full)
+    ev_url = url_m.group(1) if url_m else ""
+    if not ev_url and verified:
+        acct_id = c_data.get("acct_id", "")
+        if acct_id:
+            ev_url = f"https://oshipay.me/creator.html?id={acct_id}"
+    d_title   = _hm.escape(title,        quote=True)
+    d_time    = _hm.escape(full_dt,      quote=True)
+    d_cat     = _hm.escape(cat,          quote=True)
+    d_creator = _hm.escape(creator_name, quote=True)
+    d_url     = _hm.escape(ev_url,       quote=True)
+    return (
+        f'<div class="ev-chip" onclick="sE(this)" '
+        f'data-title="{d_title}" data-time="{d_time}" data-cat="{d_cat}" '
+        f'data-catcol="{bcol}" data-creator="{d_creator}" data-url="{d_url}" '
+        f'style="background:{bcol}22;border:1px solid {bcol}55;border-radius:4px;'
+        f'font-size:9px;color:{bcol};padding:1px 3px;margin:1px 0;'
+        f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+        f'{prefix}{_hm.escape(title)}</div>'
+    )
+
+
+def _cal_week_html(week_start, events, creator_map):
+    """週次グリッド HTML - 時間軸付きタイムライン形式"""
+    _jst = datetime.timezone(datetime.timedelta(hours=9))
+    today = datetime.datetime.now(_jst).date()
+    days  = [week_start + datetime.timedelta(days=i) for i in range(7)]
+    DAY_NAMES = ["月", "火", "水", "木", "金", "土", "日"]
+
+    # イベントを「終日(00:00)」と「時刻あり」に分類
+    allday_by_date: dict = {}
+    timed_by_date:  dict = {}
+    for ev in events:
+        try:
+            dt = datetime.datetime.fromisoformat(ev["event_date"].replace("Z", "+00:00")).astimezone(_jst)
+            dk = dt.strftime("%Y-%m-%d")
+            if dt.hour == 0 and dt.minute == 0:
+                allday_by_date.setdefault(dk, []).append(ev)
+            else:
+                timed_by_date.setdefault(dk, {}).setdefault(dt.hour, []).append(ev)
+        except Exception:
+            pass
+
+    # 表示時間範囲: イベントがある時間 ±1 or デフォルト 8〜22
+    all_hours = [h for dv in timed_by_date.values() for h in dv.keys()]
+    hour_min = max(0,  min(all_hours) - 1) if all_hours else 8
+    hour_max = min(23, max(all_hours) + 1) if all_hours else 22
+
+    TIME_COL = "44px"   # 左の時刻列幅
+
+    # ── ヘッダー行（曜日＋日付）──
+    header = f'<tr><th style="width:{TIME_COL};border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);"></th>'
+    for i, (d, dn) in enumerate(zip(days, DAY_NAMES)):
+        is_sat = (i == 5)
+        is_red = (i == 6) or (d in _JP_HOLIDAYS)
+        if is_sat:
+            hbg, hcol = "rgba(59,130,246,0.15)", "#93c5fd"
+        elif is_red:
+            hbg, hcol = "rgba(239,68,68,0.15)", "#fca5a5"
+        else:
+            hbg, hcol = "rgba(255,255,255,0.04)", "rgba(240,240,245,0.75)"
+        is_today = (d == today)
+        day_num = (
+            f'<span style="display:inline-block;background:#f97316;color:#fff;border-radius:50%;'
+            f'width:22px;height:22px;line-height:22px;font-size:12px;font-weight:900;text-align:center;">{d.day}</span>'
+            if is_today else
+            f'<span style="font-size:14px;font-weight:800;color:{hcol};">{d.day}</span>'
+        )
+        header += (
+            f'<th style="background:{hbg};border:1px solid rgba(255,255,255,0.08);'
+            f'padding:6px 2px;text-align:center;">'
+            f'<div style="font-size:11px;color:{hcol};font-weight:700;margin-bottom:3px;">{dn}</div>'
+            f'<div>{day_num}</div>'
+            f'</th>'
+        )
+    header += '</tr>'
+
+    # ── 終日行（時刻なしイベント）──
+    has_allday = any(allday_by_date.get(d.strftime("%Y-%m-%d")) for d in days)
+    allday_row = ""
+    if has_allday:
+        allday_row = (
+            f'<tr><td style="width:{TIME_COL};border:1px solid rgba(255,255,255,0.08);'
+            f'background:rgba(255,255,255,0.03);font-size:9px;color:rgba(240,240,245,0.4);'
+            f'text-align:center;padding:2px;vertical-align:top;">終日</td>'
+        )
+        for i, d in enumerate(days):
+            dk = d.strftime("%Y-%m-%d")
+            evs = allday_by_date.get(dk, [])
+            chips = "".join(_cal_chip(ev, creator_map, dk) for ev in evs)
+            is_sat = (i == 5)
+            is_red = (i == 6) or (d in _JP_HOLIDAYS)
+            cbg = "rgba(59,130,246,0.05)" if is_sat else ("rgba(239,68,68,0.05)" if is_red else "rgba(255,255,255,0.02)")
+            allday_row += (
+                f'<td style="background:{cbg};border:1px solid rgba(255,255,255,0.08);'
+                f'padding:2px;vertical-align:top;min-height:28px;">{chips}</td>'
+            )
+        allday_row += '</tr>'
+
+    # ── 時間軸行 ──
+    time_rows = ""
+    for h in range(hour_min, hour_max + 1):
+        row = (
+            f'<tr><td style="width:{TIME_COL};border:1px solid rgba(255,255,255,0.06);'
+            f'background:rgba(255,255,255,0.02);font-size:10px;color:rgba(240,240,245,0.35);'
+            f'text-align:right;padding:2px 4px 0 0;vertical-align:top;white-space:nowrap;">'
+            f'{h:02d}:00</td>'
+        )
+        for i, d in enumerate(days):
+            dk = d.strftime("%Y-%m-%d")
+            evs = timed_by_date.get(dk, {}).get(h, [])
+            # 複数イベントは横並び（flex-wrap）
+            chips = "".join(_cal_chip(ev, creator_map, dk) for ev in evs)
+            inner = f'<div style="display:flex;flex-wrap:wrap;gap:1px;">{chips}</div>' if evs else ""
+            is_sat = (i == 5)
+            is_red = (i == 6) or (d in _JP_HOLIDAYS)
+            cbg = "rgba(59,130,246,0.05)" if is_sat else ("rgba(239,68,68,0.05)" if is_red else "rgba(255,255,255,0.02)")
+            row += (
+                f'<td style="background:{cbg};border:1px solid rgba(255,255,255,0.06);'
+                f'padding:2px;vertical-align:top;min-height:48px;">{inner}</td>'
+            )
+        row += '</tr>'
+        time_rows += row
+
+    grid = (
+        f'<div style="overflow-x:auto;overflow-y:auto;'
+        f'-webkit-overflow-scrolling:touch;border:1px solid rgba(255,255,255,0.08);border-radius:8px;">'
+        f'<table style="width:100%;border-collapse:collapse;table-layout:fixed;">'
+        f'<thead>{header}</thead>'
+        f'<tbody>{allday_row}{time_rows}</tbody>'
+        f'</table></div>'
+    )
+    return _CAL_POPUP_JS + grid
+
+
+def _cal_month_html(year, month, events, creator_map):
+    """月次グリッド HTML"""
+    import calendar as _calmod
+    _jst = datetime.timezone(datetime.timedelta(hours=9))
+    today = datetime.datetime.now(_jst).date()
+    DAY_NAMES = ["月", "火", "水", "木", "金", "土", "日"]
+    by_date: dict = {}
+    for ev in events:
+        try:
+            dk = datetime.datetime.fromisoformat(ev["event_date"].replace("Z", "+00:00")).astimezone(_jst).strftime("%Y-%m-%d")
+            by_date.setdefault(dk, []).append(ev)
+        except Exception:
+            pass
+    first_wd = datetime.date(year, month, 1).weekday()
+    days_in_month = _calmod.monthrange(year, month)[1]
+    th_row = ""
+    for i, dn in enumerate(DAY_NAMES):
+        is_sat = (i == 5)
+        is_sun = (i == 6)
+        col = "#93c5fd" if is_sat else ("#fca5a5" if is_sun else "rgba(240,240,245,0.6)")
+        bg  = "rgba(59,130,246,0.1)" if is_sat else ("rgba(239,68,68,0.1)" if is_sun else "rgba(255,255,255,0.03)")
+        th_row += (
+            f'<th style="background:{bg};border:1px solid rgba(255,255,255,0.08);'
+            f'padding:5px 2px;text-align:center;font-size:12px;font-weight:700;color:{col};">{dn}</th>'
+        )
+    rows_html = ""
+    for week in range(6):
+        row = ""
+        has_day = False
+        for wd in range(7):
+            cell_num = week * 7 + wd - first_wd + 1
+            if cell_num < 1 or cell_num > days_in_month:
+                row += '<td style="background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.05);padding:2px;min-height:80px;"></td>'
+                continue
+            has_day = True
+            d  = datetime.date(year, month, cell_num)
+            dk = d.strftime("%Y-%m-%d")
+            evs = by_date.get(dk, [])
+            is_sat   = (wd == 5)
+            is_red   = (wd == 6) or (d in _JP_HOLIDAYS)
+            is_today = (d == today)
+            if is_today:
+                bg       = "rgba(139,92,246,0.15)"
+                day_html = (f'<span style="display:inline-block;background:#f97316;color:#fff;border-radius:50%;'
+                            f'width:18px;height:18px;line-height:18px;font-size:11px;font-weight:900;text-align:center;">{cell_num}</span>')
+            elif is_sat:
+                bg       = "rgba(59,130,246,0.05)"
+                day_html = f'<span style="font-size:11px;font-weight:700;color:#93c5fd;">{cell_num}</span>'
+            elif is_red:
+                bg       = "rgba(239,68,68,0.05)"
+                day_html = f'<span style="font-size:11px;font-weight:700;color:#fca5a5;">{cell_num}</span>'
+            else:
+                bg       = "rgba(255,255,255,0.02)"
+                day_html = f'<span style="font-size:11px;font-weight:700;color:rgba(240,240,245,0.7);">{cell_num}</span>'
+            chips = "".join(_cal_chip(ev, creator_map, dk) for ev in evs)
+            row += (
+                f'<td style="background:{bg};border:1px solid rgba(255,255,255,0.08);'
+                f'padding:2px;vertical-align:top;min-height:80px;">'
+                f'<div style="margin-bottom:2px;">{day_html}</div>'
+                f'{chips}</td>'
+            )
+        if has_day:
+            rows_html += f'<tr>{row}</tr>'
+    grid = (
+        f'<table style="width:100%;border-collapse:collapse;table-layout:fixed;">'
+        f'<thead><tr>{th_row}</tr></thead>'
+        f'<tbody>{rows_html}</tbody>'
+        f'</table>'
+    )
+    return _CAL_POPUP_JS + grid
+
+
 # ── カレンダー一覧ページ ──────────────────────────────────────────
 if page == "calendar":
     import re as _re_cal
@@ -5189,206 +5467,298 @@ if page == "calendar":
     )
     cal_cat = _cal_cv if _cal_cv else "all"
 
-    _events      = _cal_get_events(cal_month, cal_cat)
-    _acct_ids    = [e["creator_acct"] for e in _events if e.get("creator_acct")]
-    _creator_map = _cal_get_creators_map(_acct_ids)
+    # ── 表示モード ──
+    _view_vals = ["list", "week", "month"]
+    _view_map  = {"list": "📋 リスト", "week": "📅 週次", "month": "🗓 月次"}
+    _cal_vv = st.pills(
+        "表示モード", _view_vals,
+        format_func=lambda v: _view_map.get(v, v),
+        default="list", key="cal_view_pills",
+        label_visibility="collapsed",
+    )
+    cal_view = _cal_vv if _cal_vv else "list"
 
-    if not _events:
-        st.markdown(
-            '<div style="text-align:center;padding:60px 0;color:rgba(240,240,245,0.35);font-size:14px;">'
-            '📭 この期間のイベントはまだありません</div>',
+    # ── 週次ビュー ──────────────────────────────────────────────────────
+    if cal_view == "week":
+        if "cal_week_offset" not in st.session_state:
+            st.session_state.cal_week_offset = 0
+        _wc1, _wc2, _wc3 = st.columns([1, 3, 1])
+        with _wc1:
+            if st.button("＜ 前週", key="cal_prev_week", use_container_width=True):
+                st.session_state.cal_week_offset -= 1
+                st.rerun()
+        with _wc3:
+            if st.button("次週 ＞", key="cal_next_week", use_container_width=True):
+                st.session_state.cal_week_offset += 1
+                st.rerun()
+        _wk_off     = st.session_state.cal_week_offset
+        _week_start = (_now_jst - datetime.timedelta(days=_now_jst.weekday())).date() + datetime.timedelta(weeks=_wk_off)
+        _week_end   = _week_start + datetime.timedelta(days=7)
+        _week_last  = _week_end - datetime.timedelta(days=1)
+        _wc2.markdown(
+            f'<div style="text-align:center;font-size:13px;color:rgba(240,240,245,0.7);padding:6px 0;">'
+            f'{_week_start.month}/{_week_start.day}（月）〜{_week_last.month}/{_week_last.day}（日）</div>',
             unsafe_allow_html=True,
         )
-
-    for _ev in _events:
-        _cat      = _ev.get("category", "ライブ・路上")
-        _bcol     = _CAL_CAT_COLORS.get(_cat, "#8b5cf6")
-        _status   = _ev.get("status", "unverified")
-        _ev_id    = _ev.get("id", "")
-        _ev_type  = _ev.get("event_type", "その他")
-        _type_bg, _type_col = _CAL_TYPE_COLORS.get(_ev_type, _CAL_TYPE_COLORS["その他"])
-        _c_data   = _creator_map.get(_ev.get("creator_acct", ""), {})
-        _verified = _status == "verified" and bool(_c_data)
-        # 見出し（temp_display_name）を優先、なければcreator display_name
-        _ev_title = _ev.get("temp_display_name") or (_c_data.get("display_name") if _verified else "") or "???"
-        _dname    = _ev_title
-        _photo    = (_c_data.get("photo_url") or _ev.get("temp_photo_url", ""))          if _verified else _ev.get("temp_photo_url", "")
-        # ②「応援・支援する」URL → oshipay.me/creator.html?id=acct_xxx
-        _acct_id_url = _c_data.get("acct_id", "") if _verified else ""
-        _c_url       = f"https://oshipay.me/creator.html?id={_acct_id_url}" if _acct_id_url else "#"
-        _name_url    = _c_url  # 名前のリンクも同じ
-
-        if _photo:
-            _avatar = (
-                f'<img src="{_photo}" style="width:48px;height:48px;border-radius:50%;'
-                f'object-fit:cover;flex-shrink:0;border:2px solid rgba(255,255,255,0.1);">'
+        _events      = _cal_get_events_range(_week_start, _week_end, cal_cat)
+        _acct_ids    = [e["creator_acct"] for e in _events if e.get("creator_acct")]
+        _creator_map = _cal_get_creators_map(_acct_ids)
+        if not _events:
+            st.markdown(
+                '<div style="text-align:center;padding:40px 0;color:rgba(240,240,245,0.35);font-size:14px;">'
+                '📭 この週のイベントはありません</div>',
+                unsafe_allow_html=True,
             )
         else:
-            _emoji  = _CAL_CAT_EMOJI.get(_cat, "🎤")
-            _avatar = (
-                f'<div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.07);'
-                f'border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;'
-                f'justify-content:center;font-size:22px;flex-shrink:0;">{_emoji}</div>'
-            )
+            import streamlit.components.v1 as _stc
+            _stc.html(_cal_week_html(_week_start, _events, _creator_map), height=700, scrolling=True)
 
-        _vbadge = (
-            '<span style="font-size:11px;color:#60a5fa;background:rgba(59,130,246,0.15);'
-            'border:1px solid rgba(59,130,246,0.3);border-radius:20px;padding:1px 8px;">✓ 認証済み</span>'
-            if _verified else
-            '<span style="font-size:11px;color:rgba(240,240,245,0.4);background:rgba(255,255,255,0.05);'
-            'border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:1px 8px;">仮登録</span>'
-        )
-
-        _date_str = _cal_format_date(_ev.get("event_date", ""), _ev.get("event_date_end"))
-        _d_month, _d_day, _d_wd, _d_red, _d_time = _cal_date_parts(
-            _ev.get("event_date", ""), _ev.get("event_date_end")
-        )
-        _d_col   = "#ef4444" if _d_red else "#f0f0f5"   # 土日祝=赤 / 平日=白
-        _d_wd_col= "#ef4444" if _d_red else "rgba(240,240,245,0.45)"
-        _loc = _ev.get("location", "")
-
-        # ① 説明末尾のURLを抽出し、場所ボタンのリンク先にする（URLは本文に表示しない）
-        _desc_full = _ev.get("description", "")
-        _url_m     = _re_cal.search(r'(https?://\S+)\s*$', _desc_full)
-        _ev_url    = _url_m.group(1) if _url_m else ""
-        _desc      = _re_cal.sub(r'\n?(https?://\S+)\s*$', '', _desc_full).strip()
-
-        # ── カテゴリ絵文字（見出し横に使う）
-        _cat_emoji = _CAL_CAT_EMOJI.get(_cat, "🎤")
-
-        # ── サブ情報（クリエイター名 | ジャンル）
-        if _verified:
-            _cr_name  = _c_data.get("name", "") or _c_data.get("display_name", "")
-            _cr_genre = _c_data.get("genre", "")
-            _sub_parts = [p for p in [_cr_name, _cr_genre] if p]
-            _sub_text  = " | ".join(_sub_parts) if _sub_parts else ""
-        else:
-            _sub_text = ""
-
-        # サブ情報の小アバター
-        if _photo and _verified:
-            _mini_av = (
-                f'<img src="{_photo}" style="width:20px;height:20px;border-radius:50%;'
-                f'object-fit:cover;flex-shrink:0;border:1px solid rgba(255,255,255,0.15);">'
-            )
-        else:
-            _mini_av = (
-                f'<span style="width:20px;height:20px;border-radius:50%;'
-                f'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);'
-                f'display:inline-flex;align-items:center;justify-content:center;'
-                f'font-size:11px;flex-shrink:0;">{_cat_emoji}</span>'
-            )
-        _sub_html = (
-            f'<div style="display:flex;align-items:center;gap:6px;margin-top:5px;">'
-            f'{_mini_av}'
-            f'<span style="font-size:12px;color:rgba(240,240,245,0.45);font-weight:600;">{_sub_text}</span>'
-            f'</div>'
-        ) if _sub_text else ""
-
-        # ── 場所／詳細ボタン（左下）
-        _detail_style = (
-            'display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;'
-            'border-radius:8px;padding:6px 14px;white-space:nowrap;text-decoration:none;'
-        )
-        if _ev_url and _loc:
-            _detail_btn = (
-                f'<a href="{_ev_url}" target="_blank" rel="noopener noreferrer" style="{_detail_style}'
-                f'color:#c4b5fd;background:rgba(139,92,246,0.15);'
-                f'border:1px solid rgba(139,92,246,0.4);">📍 {_loc} ↗</a>'
-            )
-        elif _ev_url:
-            _detail_btn = (
-                f'<a href="{_ev_url}" target="_blank" rel="noopener noreferrer" style="{_detail_style}'
-                f'color:#c4b5fd;background:rgba(139,92,246,0.15);'
-                f'border:1px solid rgba(139,92,246,0.4);">詳細を見る ↗</a>'
-            )
-        elif _loc:
-            _detail_btn = (
-                f'<span style="{_detail_style}color:#fbbf24;background:rgba(251,191,36,0.1);'
-                f'border:1px solid rgba(251,191,36,0.35);">📍 {_loc}</span>'
-            )
-        else:
-            _detail_btn = ""
-        _loc_body_html = ""  # 場所はボタンで表示（本文には出さない）
-
-        # ── 応援ボタン（右下）— target="_blank" で確実に開く
-        _req_cnt = _ev.get("request_count", 0)
-        if _verified:
-            _abtn = (
-                f'<a href="{_c_url}" target="_blank" rel="noopener noreferrer" '
-                f'style="display:inline-flex;align-items:center;gap:5px;'
-                f'padding:8px 18px;border-radius:20px;'
-                f'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;'
-                f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">💖 応援・支援する</a>'
-            )
-        else:
-            _req_label = "📡 OshiPay開始をリクエスト" + (f" ({_req_cnt})" if _req_cnt > 0 else "")
-            _abtn = (
-                f'<a href="?page=calendar&request={_ev_id}" target="_blank" rel="noopener noreferrer" '
-                f'style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;'
-                f'border-radius:20px;background:rgba(249,115,22,0.12);'
-                f'border:1px solid rgba(249,115,22,0.4);color:#fb923c;'
-                f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">{_req_label}</a>'
-            )
-
-        # ── 説明文
-        _desc_html = (
-            f'<div style="font-size:13px;color:rgba(240,240,245,0.6);'
-            f'line-height:1.6;margin:8px 0 0;">{_desc}</div>'
-        ) if _desc else ""
-
-        # ── 左端の大型日付ブロック
-        _date_block = (
-            f'<div style="min-width:54px;max-width:54px;text-align:center;flex-shrink:0;'
-            f'border-right:1px solid rgba(255,255,255,0.08);padding-right:12px;margin-right:4px;">'
-            f'<div style="font-size:10px;font-weight:700;color:rgba(240,240,245,0.38);'
-            f'letter-spacing:0.04em;margin-bottom:1px;">{_d_month}</div>'
-            f'<div style="font-size:38px;font-weight:900;line-height:1;color:{_d_col};">{_d_day}</div>'
-            f'<div style="font-size:12px;font-weight:800;color:{_d_wd_col};margin-top:2px;">({_d_wd})</div>'
-            f'<div style="font-size:10px;color:rgba(240,240,245,0.35);margin-top:4px;white-space:nowrap;">{_d_time}</div>'
-            f'</div>'
-        )
-
-        # ── カード全体
-        st.markdown(
-            # カード外枠
-            f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);'
-            f'border-left:3px solid {_bcol};border-radius:12px;padding:14px 16px;margin-bottom:10px;">'
-            # ① バッジ行（カード最上部）
-            f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;flex-wrap:wrap;">'
-            f'<span style="font-size:11px;padding:2px 10px;border-radius:20px;font-weight:800;'
-            f'background:{_bcol}22;color:{_bcol};border:1px solid {_bcol}55;">{_cat}</span>'
-            f'<span style="font-size:11px;color:rgba(240,240,245,0.3);">›</span>'
-            f'<span style="font-size:11px;padding:2px 10px;border-radius:20px;background:{_type_bg};color:{_type_col};font-weight:700;">{_ev_type}</span>'
-            f'</div>'
-            # ② メイン行（日付 ＋ コンテンツ）
-            f'<div style="display:flex;gap:12px;align-items:flex-start;">'
-            f'{_date_block}'
-            f'<div style="flex:1;min-width:0;">'
-            # 見出し（大きな白文字ヒーロータイトル）
-            f'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">'
-            f'<span style="font-size:22px;">{_cat_emoji}</span>'
-            f'<a href="{_name_url}" target="_blank" rel="noopener noreferrer" '
-            f'style="font-size:22px;font-weight:900;color:#ffffff;text-decoration:none;line-height:1.2;'
-            f'letter-spacing:-0.02em;">{_dname}</a>'
-            f'{_vbadge}'
-            f'</div>'
-            # サブ情報（小アバター＋名前）
-            f'{_sub_html}'
-            # 場所（大きな白テキスト）
-            f'{_loc_body_html}'
-            # 説明文
-            f'{_desc_html}'
-            # アクションボタン行
-            f'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap;">'
-            f'<div>{_detail_btn}</div>'
-            f'{_abtn}'
-            f'</div>'
-            f'</div>'  # flex:1
-            f'</div>'  # メイン行
-            f'</div>',  # カード外枠
+    # ── 月次ビュー ──────────────────────────────────────────────────────
+    elif cal_view == "month":
+        import calendar as _calmod2
+        _base_m = int(cal_month) if cal_month != "all" else _now_jst.month
+        _base_y = _now_jst.year
+        if cal_month != "all" and _base_m < _now_jst.month:
+            _base_y += 1
+        if "cal_month_offset" not in st.session_state:
+            st.session_state.cal_month_offset = 0
+        if st.session_state.get("_last_cal_month_pill") != cal_month:
+            st.session_state.cal_month_offset = 0
+            st.session_state["_last_cal_month_pill"] = cal_month
+        _mc1, _mc2, _mc3 = st.columns([1, 3, 1])
+        with _mc1:
+            if st.button("＜ 前月", key="cal_prev_month", use_container_width=True):
+                st.session_state.cal_month_offset -= 1
+                st.rerun()
+        with _mc3:
+            if st.button("次月 ＞", key="cal_next_month", use_container_width=True):
+                st.session_state.cal_month_offset += 1
+                st.rerun()
+        _m_off = st.session_state.cal_month_offset
+        _tgt_m = _base_m + _m_off
+        _tgt_y = _base_y
+        while _tgt_m > 12:
+            _tgt_m -= 12; _tgt_y += 1
+        while _tgt_m < 1:
+            _tgt_m += 12; _tgt_y -= 1
+        _mc2.markdown(
+            f'<div style="text-align:center;font-size:14px;font-weight:700;color:#f0f0f5;padding:6px 0;">'
+            f'{_tgt_y}年{_tgt_m}月</div>',
             unsafe_allow_html=True,
         )
+        _m_start     = datetime.date(_tgt_y, _tgt_m, 1)
+        _m_end       = datetime.date(_tgt_y + (_tgt_m == 12), 1 if _tgt_m == 12 else _tgt_m + 1, 1)
+        _events      = _cal_get_events_range(_m_start, _m_end, cal_cat)
+        _acct_ids    = [e["creator_acct"] for e in _events if e.get("creator_acct")]
+        _creator_map = _cal_get_creators_map(_acct_ids)
+        import streamlit.components.v1 as _stc
+        import calendar as _cml
+        _m_weeks = len(_cml.monthcalendar(_tgt_y, _tgt_m))
+        _m_height = _m_weeks * 90 + 120
+        _stc.html(_cal_month_html(_tgt_y, _tgt_m, _events, _creator_map), height=_m_height, scrolling=False)
+
+    # ── リストビュー（デフォルト）────────────────────────────────────────
+    else:
+        _events      = _cal_get_events(cal_month, cal_cat)
+        _acct_ids    = [e["creator_acct"] for e in _events if e.get("creator_acct")]
+        _creator_map = _cal_get_creators_map(_acct_ids)
+
+        if not _events:
+            st.markdown(
+                '<div style="text-align:center;padding:60px 0;color:rgba(240,240,245,0.35);font-size:14px;">'
+                '📭 この期間のイベントはまだありません</div>',
+                unsafe_allow_html=True,
+            )
+
+        for _ev in _events:
+            _cat      = _ev.get("category", "ライブ・路上")
+            _bcol     = _CAL_CAT_COLORS.get(_cat, "#8b5cf6")
+            _status   = _ev.get("status", "unverified")
+            _ev_id    = _ev.get("id", "")
+            _ev_type  = _ev.get("event_type", "その他")
+            _type_bg, _type_col = _CAL_TYPE_COLORS.get(_ev_type, _CAL_TYPE_COLORS["その他"])
+            _c_data   = _creator_map.get(_ev.get("creator_acct", ""), {})
+            _verified = _status == "verified" and bool(_c_data)
+            # 見出し（temp_display_name）を優先、なければcreator display_name
+            _ev_title = _ev.get("temp_display_name") or (_c_data.get("display_name") if _verified else "") or "???"
+            _dname    = _ev_title
+            _photo    = (_c_data.get("photo_url") or _ev.get("temp_photo_url", ""))          if _verified else _ev.get("temp_photo_url", "")
+            # ②「応援・支援する」URL → oshipay.me/creator.html?id=acct_xxx
+            _acct_id_url = _c_data.get("acct_id", "") if _verified else ""
+            _c_url       = f"https://oshipay.me/creator.html?id={_acct_id_url}" if _acct_id_url else "#"
+            _name_url    = _c_url  # 名前のリンクも同じ
+    
+            if _photo:
+                _avatar = (
+                    f'<img src="{_photo}" style="width:48px;height:48px;border-radius:50%;'
+                    f'object-fit:cover;flex-shrink:0;border:2px solid rgba(255,255,255,0.1);">'
+                )
+            else:
+                _emoji  = _CAL_CAT_EMOJI.get(_cat, "🎤")
+                _avatar = (
+                    f'<div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.07);'
+                    f'border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;'
+                    f'justify-content:center;font-size:22px;flex-shrink:0;">{_emoji}</div>'
+                )
+    
+            _vbadge = (
+                '<span style="font-size:11px;color:#60a5fa;background:rgba(59,130,246,0.15);'
+                'border:1px solid rgba(59,130,246,0.3);border-radius:20px;padding:1px 8px;">✓ 認証済み</span>'
+                if _verified else
+                '<span style="font-size:11px;color:rgba(240,240,245,0.4);background:rgba(255,255,255,0.05);'
+                'border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:1px 8px;">仮登録</span>'
+            )
+    
+            _date_str = _cal_format_date(_ev.get("event_date", ""), _ev.get("event_date_end"))
+            _d_month, _d_day, _d_wd, _d_red, _d_time = _cal_date_parts(
+                _ev.get("event_date", ""), _ev.get("event_date_end")
+            )
+            _d_col   = "#ef4444" if _d_red else "#f0f0f5"   # 土日祝=赤 / 平日=白
+            _d_wd_col= "#ef4444" if _d_red else "rgba(240,240,245,0.45)"
+            _loc = _ev.get("location", "")
+    
+            # ① 説明末尾のURLを抽出し、場所ボタンのリンク先にする（URLは本文に表示しない）
+            _desc_full = _ev.get("description", "")
+            _url_m     = _re_cal.search(r'(https?://\S+)\s*$', _desc_full)
+            _ev_url    = _url_m.group(1) if _url_m else ""
+            _desc      = _re_cal.sub(r'\n?(https?://\S+)\s*$', '', _desc_full).strip()
+    
+            # ── カテゴリ絵文字（見出し横に使う）
+            _cat_emoji = _CAL_CAT_EMOJI.get(_cat, "🎤")
+    
+            # ── サブ情報（クリエイター名 | ジャンル）
+            if _verified:
+                _cr_name  = _c_data.get("name", "") or _c_data.get("display_name", "")
+                _cr_genre = _c_data.get("genre", "")
+                _sub_parts = [p for p in [_cr_name, _cr_genre] if p]
+                _sub_text  = " | ".join(_sub_parts) if _sub_parts else ""
+            else:
+                _sub_text = ""
+    
+            # サブ情報の小アバター
+            if _photo and _verified:
+                _mini_av = (
+                    f'<img src="{_photo}" style="width:20px;height:20px;border-radius:50%;'
+                    f'object-fit:cover;flex-shrink:0;border:1px solid rgba(255,255,255,0.15);">'
+                )
+            else:
+                _mini_av = (
+                    f'<span style="width:20px;height:20px;border-radius:50%;'
+                    f'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);'
+                    f'display:inline-flex;align-items:center;justify-content:center;'
+                    f'font-size:11px;flex-shrink:0;">{_cat_emoji}</span>'
+                )
+            _sub_html = (
+                f'<div style="display:flex;align-items:center;gap:6px;margin-top:5px;">'
+                f'{_mini_av}'
+                f'<span style="font-size:12px;color:rgba(240,240,245,0.45);font-weight:600;">{_sub_text}</span>'
+                f'</div>'
+            ) if _sub_text else ""
+    
+            # ── 場所／詳細ボタン（左下）
+            _detail_style = (
+                'display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;'
+                'border-radius:8px;padding:6px 14px;white-space:nowrap;text-decoration:none;'
+            )
+            if _ev_url and _loc:
+                _detail_btn = (
+                    f'<a href="{_ev_url}" target="_blank" rel="noopener noreferrer" style="{_detail_style}'
+                    f'color:#c4b5fd;background:rgba(139,92,246,0.15);'
+                    f'border:1px solid rgba(139,92,246,0.4);">📍 {_loc} ↗</a>'
+                )
+            elif _ev_url:
+                _detail_btn = (
+                    f'<a href="{_ev_url}" target="_blank" rel="noopener noreferrer" style="{_detail_style}'
+                    f'color:#c4b5fd;background:rgba(139,92,246,0.15);'
+                    f'border:1px solid rgba(139,92,246,0.4);">詳細を見る ↗</a>'
+                )
+            elif _loc:
+                _detail_btn = (
+                    f'<span style="{_detail_style}color:#fbbf24;background:rgba(251,191,36,0.1);'
+                    f'border:1px solid rgba(251,191,36,0.35);">📍 {_loc}</span>'
+                )
+            else:
+                _detail_btn = ""
+            _loc_body_html = ""  # 場所はボタンで表示（本文には出さない）
+    
+            # ── 応援ボタン（右下）— target="_blank" で確実に開く
+            _req_cnt = _ev.get("request_count", 0)
+            if _verified:
+                _abtn = (
+                    f'<a href="{_c_url}" target="_blank" rel="noopener noreferrer" '
+                    f'style="display:inline-flex;align-items:center;gap:5px;'
+                    f'padding:8px 18px;border-radius:20px;'
+                    f'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:white;'
+                    f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">💖 応援・支援する</a>'
+                )
+            else:
+                _req_label = "📡 OshiPay開始をリクエスト" + (f" ({_req_cnt})" if _req_cnt > 0 else "")
+                _abtn = (
+                    f'<a href="?page=calendar&request={_ev_id}" target="_blank" rel="noopener noreferrer" '
+                    f'style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;'
+                    f'border-radius:20px;background:rgba(249,115,22,0.12);'
+                    f'border:1px solid rgba(249,115,22,0.4);color:#fb923c;'
+                    f'font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">{_req_label}</a>'
+                )
+    
+            # ── 説明文
+            _desc_html = (
+                f'<div style="font-size:13px;color:rgba(240,240,245,0.6);'
+                f'line-height:1.6;margin:8px 0 0;">{_desc}</div>'
+            ) if _desc else ""
+    
+            # ── 左端の大型日付ブロック
+            _date_block = (
+                f'<div style="min-width:54px;max-width:54px;text-align:center;flex-shrink:0;'
+                f'border-right:1px solid rgba(255,255,255,0.08);padding-right:12px;margin-right:4px;">'
+                f'<div style="font-size:10px;font-weight:700;color:rgba(240,240,245,0.38);'
+                f'letter-spacing:0.04em;margin-bottom:1px;">{_d_month}</div>'
+                f'<div style="font-size:38px;font-weight:900;line-height:1;color:{_d_col};">{_d_day}</div>'
+                f'<div style="font-size:12px;font-weight:800;color:{_d_wd_col};margin-top:2px;">({_d_wd})</div>'
+                f'<div style="font-size:10px;color:rgba(240,240,245,0.35);margin-top:4px;white-space:nowrap;">{_d_time}</div>'
+                f'</div>'
+            )
+    
+            # ── カード全体
+            st.markdown(
+                # カード外枠
+                f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);'
+                f'border-left:3px solid {_bcol};border-radius:12px;padding:14px 16px;margin-bottom:10px;">'
+                # ① バッジ行（カード最上部）
+                f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;flex-wrap:wrap;">'
+                f'<span style="font-size:11px;padding:2px 10px;border-radius:20px;font-weight:800;'
+                f'background:{_bcol}22;color:{_bcol};border:1px solid {_bcol}55;">{_cat}</span>'
+                f'<span style="font-size:11px;color:rgba(240,240,245,0.3);">›</span>'
+                f'<span style="font-size:11px;padding:2px 10px;border-radius:20px;background:{_type_bg};color:{_type_col};font-weight:700;">{_ev_type}</span>'
+                f'</div>'
+                # ② メイン行（日付 ＋ コンテンツ）
+                f'<div style="display:flex;gap:12px;align-items:flex-start;">'
+                f'{_date_block}'
+                f'<div style="flex:1;min-width:0;">'
+                # 見出し（大きな白文字ヒーロータイトル）
+                f'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">'
+                f'<span style="font-size:22px;">{_cat_emoji}</span>'
+                f'<a href="{_name_url}" target="_blank" rel="noopener noreferrer" '
+                f'style="font-size:22px;font-weight:900;color:#ffffff;text-decoration:none;line-height:1.2;'
+                f'letter-spacing:-0.02em;">{_dname}</a>'
+                f'{_vbadge}'
+                f'</div>'
+                # サブ情報（小アバター＋名前）
+                f'{_sub_html}'
+                # 場所（大きな白テキスト）
+                f'{_loc_body_html}'
+                # 説明文
+                f'{_desc_html}'
+                # アクションボタン行
+                f'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap;">'
+                f'<div>{_detail_btn}</div>'
+                f'{_abtn}'
+                f'</div>'
+                f'</div>'  # flex:1
+                f'</div>'  # メイン行
+                f'</div>',  # カード外枠
+                unsafe_allow_html=True,
+            )
 
     # FABボタン（モーダルダイアログを開く）
     st.markdown(
