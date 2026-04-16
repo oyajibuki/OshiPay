@@ -2713,7 +2713,7 @@ if page == "support" and support_user:
         slider_options = (
             list(range(100, 1000, 100)) +
             list(range(1000, 10000, 500)) +
-            list(range(10000, 100001, 5000))  # 上限10万円（マネーロンダリング対策）
+            list(range(10000, 50001, 5000))  # 上限5万円（JCB審査基準）
         )
     else:
         slider_options = list(range(100, 1100, 100))  # 100〜1000円
@@ -2836,6 +2836,21 @@ if page == "support" and support_user:
             except Exception as _se:
                 st.error(f"サポーターID取得エラー: {_se}")
                 st.stop()
+            # 月間上限チェック（100,000円）
+            _MONTHLY_LIMIT = 100000
+            try:
+                _now_utc = datetime.datetime.now(datetime.timezone.utc)
+                _month_start = datetime.datetime(_now_utc.year, _now_utc.month, 1, tzinfo=datetime.timezone.utc).isoformat()
+                _monthly_res = get_db().table("supports").select("amount").eq("supporter_id", final_sup_id).gte("created_at", _month_start).execute()
+                _monthly_total = sum(s["amount"] for s in (_monthly_res.data or []))
+                if _monthly_total + amt > _MONTHLY_LIMIT:
+                    _remaining = max(0, _MONTHLY_LIMIT - _monthly_total)
+                    st.error(f"月間の応援上限（{_MONTHLY_LIMIT:,}円）に達しています。今月の残り応援可能額は {_remaining:,}円です。")
+                    st.stop()
+            except st.StopException:
+                raise
+            except Exception:
+                pass
             _email_enc = urllib.parse.quote(support_email.strip().lower())
             try:
                 checkout_params = {
@@ -2870,6 +2885,21 @@ if page == "support" and support_user:
                         st.stop()
                 else:
                     _pend_sup_id, _ = get_or_create_supporter_by_email(_pend_email_lc, sup_display_name)
+                # 月間上限チェック（100,000円）
+                try:
+                    _now_utc_p = datetime.datetime.now(datetime.timezone.utc)
+                    _month_start_p = datetime.datetime(_now_utc_p.year, _now_utc_p.month, 1, tzinfo=datetime.timezone.utc).isoformat()
+                    _monthly_res_p = get_db().table("supports").select("amount").eq("supporter_id", _pend_sup_id).gte("created_at", _month_start_p).execute()
+                    _monthly_total_p = sum(s["amount"] for s in (_monthly_res_p.data or []))
+                    _pend_amt_p = int(st.session_state.amt)
+                    if _monthly_total_p + _pend_amt_p > 100000:
+                        _remaining_p = max(0, 100000 - _monthly_total_p)
+                        st.error(f"月間の応援上限（100,000円）に達しています。今月の残り応援可能額は {_remaining_p:,}円です。")
+                        st.stop()
+                except st.StopException:
+                    raise
+                except Exception:
+                    pass
                 # このクリエイターへの通算予約番号を計算（キャンセル済み含む全件）
                 try:
                     _res_cnt = get_db().table("pending_supports").select("id", count="exact").eq("creator_acct", connect_acct).execute()
