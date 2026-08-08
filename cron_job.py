@@ -21,6 +21,8 @@ SUPABASE_KEY     = os.environ["SUPABASE_SERVICE_KEY"]   # service_role キー
 RESEND_API_KEY   = os.environ["RESEND_API_KEY"]
 STRIPE_SECRET    = os.environ["STRIPE_SECRET"]
 BASE_URL         = os.environ.get("APP_URL", "https://oshipay.me").rstrip("/") + "/"
+DR_SUPABASE_URL  = os.environ.get("DR_SUPABASE_URL", "")   # DR(バックアップ)側。未設定なら⑦をスキップ
+DR_SUPABASE_KEY  = os.environ.get("DR_SUPABASE_KEY", "")
 RESEND_FROM      = "noreply@oshipay.me"
 PAYOUT_THRESHOLD = 10000  # ¥10,000以上で自動ペイアウト
 
@@ -253,4 +255,23 @@ for creator in payout_targets:
         print(f"  ペイアウトエラー: {stripe_acct_id} - {e}")
 
 print(f"  自動ペイアウト処理完了: {payout_count}件")
+
+# ══════════════════════════════════════════════════════
+# ⑦ DR keep-alive（無料プランの7日間無操作による自動停止を防ぐ）
+#    DR側は日次の DR Sync 以外アクセスが無く、それが止まると停止される。
+#    毎時ここから軽い読み取りを1回投げて生存させる。読み取りのみ。
+# ══════════════════════════════════════════════════════
+print("── ⑦ DR keep-alive 開始 ──")
+
+if not (DR_SUPABASE_URL and DR_SUPABASE_KEY):
+    print("  DR_SUPABASE_URL / DR_SUPABASE_KEY が未設定のためスキップ")
+else:
+    try:
+        dr = create_client(DR_SUPABASE_URL, DR_SUPABASE_KEY)
+        dr.table("creators").select("acct_id").limit(1).execute()
+        print("  DR ping 成功")
+    except Exception as e:
+        # DRの不調で本番のcronを落とさない
+        print(f"  DR ping 失敗（要確認）: {e}")
+
 print("── cron_job.py 完了 ──")

@@ -24,6 +24,8 @@ jobs:
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          DR_SUPABASE_URL:      ${{ secrets.DR_SUPABASE_URL }}
+          DR_SUPABASE_KEY:      ${{ secrets.DR_SUPABASE_KEY }}
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
           STRIPE_SECRET:        ${{ secrets.STRIPE_SECRET }}
           APP_URL:              https://oshipay.me
