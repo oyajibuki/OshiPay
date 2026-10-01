@@ -1,0 +1,30 @@
+name: Keepalive (scheduled workflows)
+
+# GitHub は公開リポジトリで60日間アクティビティが無いと定期ワークフローを自動停止する。
+# 2026-08 に DR Sync がこれで止まり、DR側Supabaseも7日無操作で一時停止された。
+# 月1回、定期ワークフローを API で enable し直して停止カウントをリセットする（ダミーコミット不要）。
+# このワークフロー自身も対象に含めて自分の停止も防ぐ。
+
+on:
+  schedule:
+    - cron: "0 0 1 * *"    # 毎月1日 09:00 JST（00:00 UTC）
+  workflow_dispatch:         # 手動実行も可能
+
+permissions:
+  actions: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Re-enable scheduled workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for wf in cron.yml dr_sync.yml keepalive.yml; do
+            # gh workflow enable は停止中のものしか対象にしないため API を直接叩く
+            gh api -X PUT "repos/$GH_REPO/actions/workflows/$wf/enable"
+            echo "enabled: $wf"
+          done
